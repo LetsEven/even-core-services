@@ -8,6 +8,7 @@ import DishItem from "./DishItem";
 import CashPaymentModal from "./CashPaymentModal";
 import AddDishModal from "./AddDishModal";
 import PrintTicketModal from "./PrintTicketModal";
+import ContactCustomerModal from "./ContactCustomerModal";
 import { formatFolio } from "../utils/folio";
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
@@ -108,6 +109,7 @@ export default function OrderCard({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAddDish, setShowAddDish] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const [ticketQR, setTicketQR] = useState<QRCodeRow | null>(null);
   const [loadingTicket, setLoadingTicket] = useState(false);
   const [localWaiterName, setLocalWaiterName] = useState(
@@ -266,22 +268,32 @@ export default function OrderCard({
           </span>
         </div>
         <div className="flex items-baseline justify-between gap-2">
-          <div className="flex items-baseline gap-1.5 flex-wrap min-w-0">
-            <h2 className="text-xl font-bold text-even-evergreen">
-              {order.identifier}
-            </h2>
-            {order.customerName && (
-              <span className="text-base text-even-evergreen/80">
-                — {order.customerName}
-              </span>
-            )}
-          </div>
+          <h2 className="text-xl font-bold text-even-evergreen min-w-0 truncate">
+            {order.identifier}
+          </h2>
           {order.folio != null && order.folio !== "" && (
             <span className="shrink-0 text-sm font-mono font-semibold px-2 py-0.5 rounded bg-even-evergreen/10 text-even-evergreen/60">
               #{formatFolio(order.folio)}
             </span>
           )}
         </div>
+        {(order.customerName || order.customerPhone) && (
+          <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+            {order.customerName && (
+              <span className="text-base text-even-evergreen/80">
+                {order.customerName}
+              </span>
+            )}
+            {order.customerPhone && (
+              <button
+                onClick={() => setContactModalOpen(true)}
+                className="flex items-center gap-1 text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-even-grass/20 border border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
+              >
+                Contactar
+              </button>
+            )}
+          </div>
+        )}
         {isPickAndGo ? (
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span
@@ -617,6 +629,13 @@ export default function OrderCard({
           qrCode={ticketQR}
           branchId={currentBranch.id}
           onClose={() => setPrintModalOpen(false)}
+        />
+      )}
+      {contactModalOpen && order.customerPhone && (
+        <ContactCustomerModal
+          customerName={order.customerName || order.identifier}
+          phone={order.customerPhone}
+          onClose={() => setContactModalOpen(false)}
         />
       )}
     </div>

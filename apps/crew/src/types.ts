@@ -80,6 +80,7 @@ export interface Order {
   orderType: OrderType;
   identifier: string;
   customerName?: string | null;
+  customerPhone?: string | null;
   createdAt: string;
   folio?: string | number | null;
   orderNotes?: string | null;

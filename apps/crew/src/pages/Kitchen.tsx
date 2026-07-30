@@ -274,7 +274,7 @@ export default function Kitchen({
             if (depth > 2) return null;
             const folioPart =
               n.folio != null ? `#${formatFolio(n.folio)}` : null;
-            const subtitle = [folioPart, n.identifier || null]
+            const subtitle = [folioPart, n.identifier || null, n.customerName || null]
               .filter(Boolean)
               .join(" · ");
             return (

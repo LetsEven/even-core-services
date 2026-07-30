@@ -1,0 +1,535 @@
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useAuth, useSignIn } from "@clerk/clerk-react";
+import { Mail, KeyRound, Loader2, Eye, EyeOff } from "lucide-react";
+import Kitchen from "./pages/Kitchen";
+import Printers from "./pages/Printers";
+import Historial from "./pages/Historial";
+import Mesas from "./pages/Mesas";
+import { useSocket } from "./hooks/useSocket";
+import type { CrewDevice } from "./hooks/useSocket";
+import { usePrinting } from "./hooks/usePrinting";
+import { useKitchenOrders } from "./hooks/useKitchenOrders";
+import { getBranches } from "./services/api";
+import type { Branch } from "./services/api";
+import type { DishStatus } from "./types";
+import { getOrCreateDeviceId } from "./utils/deviceId";
+
+type Page = "kitchen" | "printers" | "historial" | "mesas";
+
+const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
+
+async function showWindowIfNeeded() {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("show_main_window");
+  } catch {}
+}
+
+async function flashTaskbarIcon() {
+  try {
+    const { getCurrentWindow, UserAttentionType } = await import(
+      "@tauri-apps/api/window"
+    );
+    await getCurrentWindow().requestUserAttention(UserAttentionType.Critical);
+  } catch {}
+}
+
+function playNotificationSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.6);
+  } catch {}
+}
+
+// Inicializar permisos de notificación al arrancar (no en cada orden)
+async function initNotifications() {
+  try {
+    const { isPermissionGranted, requestPermission } = await import(
+      "@tauri-apps/plugin-notification"
+    );
+    const granted = await isPermissionGranted();
+    if (!granted) await requestPermission();
+    console.log("[CREW:NOTIF] Permisos inicializados");
+  } catch {
+    if ("Notification" in window && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+  }
+}
+
+async function sendDesktopNotification(title: string, body: string) {
+  console.log(`[CREW:NOTIF] Enviando notificación: ${title} — ${body}`);
+  try {
+    // Usar comando Rust con PowerShell toast — más confiable en .exe portable Windows
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("notify_new_order", { title, body });
+    console.log("[CREW:NOTIF] Notificación enviada via Rust");
+  } catch (e) {
+    console.warn("[CREW:NOTIF] Rust falló, intentando plugin Tauri:", e);
+    try {
+      const { sendNotification } = await import(
+        "@tauri-apps/plugin-notification"
+      );
+      await sendNotification({ title, body });
+    } catch (e2) {
+      console.warn("[CREW:NOTIF] Plugin falló, intentando Web API:", e2);
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body });
+      }
+    }
+  }
+}
+
+export default function App() {
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { signIn, setActive } = useSignIn();
+  const [page, setPage] = useState<Page>("kitchen");
+  const [branchId, setBranchId] = useState<string | null>(() =>
+    localStorage.getItem("crew_branch_id"),
+  );
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+
+  // Identidad y presencia de dispositivos
+  const deviceId = getOrCreateDeviceId();
+  const [connectedDevices, setConnectedDevices] = useState<CrewDevice[]>([]);
+  const [masterDeviceId, setMasterDeviceId] = useState<string | null>(null);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Cola de notificaciones por orden — vive en App para no perderse al navegar
+  type OrderNotif = {
+    id: string;
+    folio: string | number | null;
+    customerName: string | null;
+    identifier: string;
+    orderedBy: string | null;
+    title?: string;
+  };
+  const [newOrderNotifications, setNewOrderNotifications] = useState<
+    OrderNotif[]
+  >([]);
+  const prevOrderIdsRef = useRef<Set<string> | null>(null);
+
+  // Inicializar permisos de notificación una sola vez al arrancar
+  useEffect(() => {
+    initNotifications();
+  }, []);
+
+  // F12 abre DevTools
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "F12") {
+        import("@tauri-apps/api/core")
+          .then(({ invoke }) => invoke("open_devtools"))
+          .catch(() => {});
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  // Cargar sucursales al estar autenticado
+  useEffect(() => {
+    if (!isSignedIn) return;
+    setBranchesLoading(true);
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const list = await getBranches(token);
+        setBranches(list);
+        // Auto-seleccionar sucursal por defecto en el primer login (igual que
+        // Printers): conserva la guardada si sigue siendo válida, si no usa la
+        // primera. Evita que Kitchen quede sin sucursal activa al iniciar.
+        setBranchId((prev) => {
+          if (prev && list.some((b) => b.id === prev)) return prev;
+          const saved = localStorage.getItem("crew_branch_id");
+          const chosen =
+            (saved && list.find((b) => b.id === saved)?.id) ??
+            list[0]?.id ??
+            null;
+          if (chosen) localStorage.setItem("crew_branch_id", chosen);
+          return chosen;
+        });
+      } catch {
+      } finally {
+        setBranchesLoading(false);
+      }
+    })();
+  }, [isSignedIn, getToken]);
+
+  const handleBranchChange = useCallback((id: string) => {
+    setBranchId((prev) => {
+      if (id !== prev) {
+        setConnectedDevices([]);
+        setMasterDeviceId(null);
+      }
+      return id;
+    });
+    localStorage.setItem("crew_branch_id", id);
+  }, []);
+
+  // Hooks que deben vivir toda la sesión (independiente de la página activa)
+  const { printJob, setMasterDeviceId: setPrintingMaster } =
+    usePrinting(branchId);
+
+  const handleDevicesUpdated = useCallback(
+    (devices: CrewDevice[], master: string | null) => {
+      setConnectedDevices(devices);
+      // Si el master llega como null (se perdió por alguna razón), conservar el
+      // master previo para no perder la impresión del ticket. Solo actualizar
+      // cuando llega un master real (no-null).
+      if (master !== null) {
+        setMasterDeviceId(master);
+        setPrintingMaster(master);
+      }
+    },
+    [setPrintingMaster],
+  );
+
+  const {
+    orders,
+    loading: ordersLoading,
+    error: ordersError,
+    fetchOrders,
+    updateDish,
+    updateOrderCookingStatus,
+    updatePrepTimeExtraMinutes,
+    removeOrder,
+    updateDishFromSocket,
+  } = useKitchenOrders(branchId);
+
+  const handleOrderClosed = useCallback(
+    (orderId: string) => removeOrder(orderId),
+    [removeOrder],
+  );
+  const handleDishStatusChanged = useCallback(
+    (dishId: string, status: DishStatus) =>
+      updateDishFromSocket(dishId, status),
+    [updateDishFromSocket],
+  );
+  // Resetear tracking de notificaciones al cambiar de sucursal
+  useEffect(() => {
+    prevOrderIdsRef.current = null;
+    setNewOrderNotifications([]);
+  }, [branchId]);
+
+  // Inicializar prevOrderIdsRef tras la primera carga real (sin notificar).
+  // Solo cuando la carga terminó (!ordersLoading) para evitar inicializar
+  // con [] mientras las órdenes aún están cargando tras un cambio de sucursal.
+  useEffect(() => {
+    if (prevOrderIdsRef.current === null && !ordersLoading) {
+      prevOrderIdsRef.current = new Set(orders.map((o) => o.id));
+    }
+  }, [orders, ordersLoading]);
+
+  const handleRefetch = useCallback(async () => {
+    console.log(
+      "[CREW:ORDER] Nueva orden recibida — ejecutando refetch + notificación",
+    );
+    const fetched = await fetchOrders();
+    if (!fetched) return;
+
+    if (prevOrderIdsRef.current === null) {
+      prevOrderIdsRef.current = new Set(fetched.map((o) => o.id));
+      return;
+    }
+
+    // Flexbill se notifica por user_order vía handleFlexbillOrder, no aquí
+    const newOnes = fetched.filter(
+      (o) => !prevOrderIdsRef.current!.has(o.id) && o.orderType !== "flex_bill",
+    );
+    prevOrderIdsRef.current = new Set(fetched.map((o) => o.id));
+
+    if (newOnes.length === 0) return;
+
+    setNewOrderNotifications((prev) => [
+      ...prev,
+      ...newOnes.map((o) => ({
+        id: o.id,
+        folio: o.folio ?? null,
+        customerName: o.customerName ?? null,
+        identifier: o.identifier,
+        orderedBy: o.dishes.find((d) => d.orderedBy)?.orderedBy ?? null,
+      })),
+    ]);
+    playNotificationSound();
+    flashTaskbarIcon();
+    sendDesktopNotification(
+      APP_LABEL,
+      newOnes.length === 1
+        ? "Nueva orden recibida"
+        : `${newOnes.length} nuevas órdenes`,
+    );
+    showWindowIfNeeded();
+  }, [fetchOrders]);
+
+  // Notificación por cada user_order de Flexbill (una por persona/folio)
+  const handleFlexbillOrder = useCallback(
+    (data: {
+      folio: string | null;
+      orderedBy: string | null;
+      identifier: string | null;
+    }) => {
+      fetchOrders();
+      setNewOrderNotifications((prev) => [
+        ...prev,
+        {
+          id: `flexbill-${data.folio}`,
+          folio: data.folio,
+          customerName: null,
+          identifier: data.identifier ?? "Flex Bill",
+          orderedBy: null,
+        },
+      ]);
+      playNotificationSound();
+      flashTaskbarIcon();
+      sendDesktopNotification(
+        APP_LABEL,
+        `Nueva orden${data.folio ? ` #${data.folio}` : ""}`,
+      );
+      showWindowIfNeeded();
+    },
+    [fetchOrders],
+  );
+
+  const handleDismissAlert = useCallback((id: string) => {
+    setNewOrderNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const handleTurnoClosed = useCallback(
+    (data: { identifier: string | null; branchNumber: number | null }) => {
+      const currentBranchNumber =
+        branches.find((b) => b.id === branchId)?.branch_number ?? null;
+      if (
+        data.branchNumber !== null &&
+        data.branchNumber !== currentBranchNumber
+      )
+        return;
+
+      const body = data.identifier
+        ? `${data.identifier} intentó ordenar pero el turno está cerrado`
+        : "Un cliente intentó ordenar pero el turno está cerrado";
+      setNewOrderNotifications((prev) => [
+        ...prev,
+        {
+          id: `turno-closed-${Date.now()}`,
+          folio: null,
+          customerName: null,
+          identifier: body,
+          orderedBy: null,
+          title: "Turno cerrado",
+        },
+      ]);
+      playNotificationSound();
+      flashTaskbarIcon();
+      sendDesktopNotification(APP_LABEL, body);
+      showWindowIfNeeded();
+    },
+    [branches, branchId],
+  );
+
+  const handleSilentRefetch = useCallback(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const { setMaster } = useSocket({
+    branchId,
+    deviceId,
+    onOrderClosed: handleOrderClosed,
+    onDishStatusChanged: handleDishStatusChanged,
+    onRefetch: handleRefetch,
+    onSilentRefetch: handleSilentRefetch,
+    onPrintJob: printJob,
+    onDevicesUpdated: handleDevicesUpdated,
+    onFlexbillOrder: handleFlexbillOrder,
+    onTurnoClosed: handleTurnoClosed,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signIn) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive!({ session: result.createdSessionId });
+      } else {
+        setError("Error al iniciar sesión. Intenta de nuevo.");
+      }
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.message || "Credenciales incorrectas.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isLoaded) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "#023828" }}
+      >
+        <div className="w-8 h-8 border-4 border-white/15 border-t-even-grass rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div
+        className="min-h-screen flex flex-col justify-center items-center px-6"
+        style={{ background: "#023828" }}
+      >
+        <div className="w-full max-w-sm flex flex-col items-center">
+          <div className="mb-8 flex flex-col items-center gap-3">
+            <img
+              src="/even/even-asterisk-grass.svg"
+              alt="Even"
+              className="w-16 h-16"
+            />
+            <h1 className="text-even-offwhite text-2xl font-medium uppercase tracking-widest">
+              {APP_LABEL}
+            </h1>
+            <p className="text-even-offwhite/60 text-xs uppercase tracking-widest">
+              Inicia sesión para continuar
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="w-full space-y-3">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-even-offwhite/40 pointer-events-none" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Email"
+                autoComplete="username email"
+                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-md text-even-offwhite placeholder:text-even-offwhite/30 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent"
+              />
+            </div>
+
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-even-offwhite/40 pointer-events-none" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Contraseña"
+                autoComplete="current-password"
+                className="w-full pl-10 pr-10 py-3 bg-white/10 border border-white/20 rounded-md text-even-offwhite placeholder:text-even-offwhite/30 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-even-offwhite/40 hover:text-even-offwhite/70 transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
+            {error && <p className="text-rose-400 text-sm px-1">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-4 w-full py-3 rounded-md text-even-evergreen font-medium text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+              style={{ background: "#82E657" }}
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {loading ? "Entrando..." : "Iniciar sesión"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (page === "printers") {
+    return (
+      <Printers
+        onBack={() => {
+          setBranchId(localStorage.getItem("crew_branch_id"));
+          setPage("kitchen");
+        }}
+        deviceId={deviceId}
+        connectedDevices={connectedDevices}
+        masterDeviceId={masterDeviceId}
+        setMaster={setMaster}
+        onBranchChange={handleBranchChange}
+      />
+    );
+  }
+
+  if (page === "historial") {
+    return (
+      <Historial
+        onBack={() => setPage("kitchen")}
+        onOpenPrinters={() => setPage("printers")}
+        branches={branches}
+        branchesLoading={branchesLoading}
+        branchId={branchId}
+        onBranchChange={handleBranchChange}
+      />
+    );
+  }
+
+  if (page === "mesas") {
+    return (
+      <Mesas
+        onBack={() => setPage("kitchen")}
+        branchId={branchId}
+        branches={branches}
+        onBranchChange={handleBranchChange}
+      />
+    );
+  }
+
+  return (
+    <Kitchen
+      onOpenPrinters={() => setPage("printers")}
+      onOpenHistorial={() => setPage("historial")}
+      onOpenMesas={() => setPage("mesas")}
+      orders={orders}
+      loading={ordersLoading}
+      error={ordersError}
+      fetchOrders={fetchOrders}
+      updateDish={updateDish}
+      updateOrderCookingStatus={updateOrderCookingStatus}
+      updatePrepTimeExtraMinutes={updatePrepTimeExtraMinutes}
+      newOrderNotifications={newOrderNotifications}
+      onDismissAlert={handleDismissAlert}
+      branches={branches}
+      branchesLoading={branchesLoading}
+      branchId={branchId}
+      onBranchChange={handleBranchChange}
+    />
+  );
+}

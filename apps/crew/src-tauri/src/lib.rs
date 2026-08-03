@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -154,7 +154,33 @@ async fn print_raw(ip: String, port: u16, data: Vec<u8>) -> Result<(), String> {
             .map_err(|e| format!("No se pudo conectar a {}: {}", addr, e))?;
         stream.write_all(&data).map_err(|e| format!("Error enviando datos: {}", e))?;
         stream.flush().map_err(|e| e.to_string())?;
-        Ok::<(), String>(())
+
+        // Confirmación real: pedimos el estado offline (DLE EOT 2) para no marcar
+        // el trabajo como exitoso solo porque el socket aceptó los bytes localmente.
+        stream
+            .set_read_timeout(Some(Duration::from_millis(1500)))
+            .map_err(|e| e.to_string())?;
+        stream
+            .write_all(&[0x10, 0x04, 0x02])
+            .map_err(|e| format!("Error consultando estado: {}", e))?;
+
+        let mut status = [0u8; 1];
+        match stream.read(&mut status) {
+            Ok(0) => Err("La impresora cerró la conexión sin responder el estado".to_string()),
+            Ok(_) => {
+                let offline = status[0] & 0x08 != 0; // bit 3: fuera de línea
+                let error = status[0] & 0x40 != 0; // bit 6: error ocurrido
+                if offline || error {
+                    Err(format!(
+                        "Impresora reportó error tras imprimir (status=0x{:02x})",
+                        status[0]
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            Err(e) => Err(format!("La impresora no respondió el estado: {}", e)),
+        }
     })
     .await
     .map_err(|e| e.to_string())?

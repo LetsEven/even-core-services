@@ -544,6 +544,7 @@ export interface MenuItemOption {
   id: string;
   name: string;
   price: number;
+  agotado?: boolean;
 }
 
 export interface MenuItemCustomField {

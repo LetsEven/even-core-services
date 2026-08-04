@@ -461,12 +461,16 @@ export default function AddDishModal({
                           <button
                             key={opt.id}
                             onClick={() =>
+                              !opt.agotado &&
                               handleDropdownChange(field.id, opt.id)
                             }
-                            className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer border-t border-white/8 ${
-                              isSelected
-                                ? "bg-even-grass/15"
-                                : "hover:bg-white/5"
+                            disabled={opt.agotado}
+                            className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors border-t border-white/8 disabled:cursor-default disabled:opacity-40 ${
+                              opt.agotado
+                                ? ""
+                                : isSelected
+                                  ? "bg-even-grass/15 cursor-pointer"
+                                  : "hover:bg-white/5 cursor-pointer"
                             }`}
                           >
                             <div>
@@ -475,10 +479,16 @@ export default function AddDishModal({
                               >
                                 {opt.name}
                               </span>
-                              {opt.price > 0 && (
-                                <span className="text-xs text-even-grass ml-2">
-                                  +${opt.price.toFixed(2)}
+                              {opt.agotado ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
+                                  Agotado
                                 </span>
+                              ) : (
+                                opt.price > 0 && (
+                                  <span className="text-xs text-even-grass ml-2">
+                                    +${opt.price.toFixed(2)}
+                                  </span>
+                                )
                               )}
                             </div>
                             <div
@@ -506,8 +516,9 @@ export default function AddDishModal({
                           (customSelections[field.id] as string[]) ?? [];
                         const isSelected = sel.includes(opt.id);
                         const isDisabled =
-                          !isSelected &&
-                          sel.length >= (field.maxSelections ?? 1);
+                          opt.agotado ||
+                          (!isSelected &&
+                            sel.length >= (field.maxSelections ?? 1));
                         return (
                           <button
                             key={opt.id}
@@ -528,10 +539,16 @@ export default function AddDishModal({
                               >
                                 {opt.name}
                               </span>
-                              {opt.price > 0 && (
-                                <span className="text-xs text-even-grass ml-2">
-                                  +${opt.price.toFixed(2)}
+                              {opt.agotado ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
+                                  Agotado
                                 </span>
+                              ) : (
+                                opt.price > 0 && (
+                                  <span className="text-xs text-even-grass ml-2">
+                                    +${opt.price.toFixed(2)}
+                                  </span>
+                                )
                               )}
                             </div>
                             <div
@@ -575,16 +592,24 @@ export default function AddDishModal({
                         return (
                           <div
                             key={opt.id}
-                            className="flex items-center justify-between px-4 py-3 border-t border-white/8"
+                            className={`flex items-center justify-between px-4 py-3 border-t border-white/8 ${
+                              opt.agotado ? "opacity-40" : ""
+                            }`}
                           >
                             <div>
                               <span className="text-sm text-even-offwhite/70">
                                 {opt.name}
                               </span>
-                              {opt.price > 0 && (
-                                <span className="text-xs text-even-grass ml-2">
-                                  +${opt.price.toFixed(2)}
+                              {opt.agotado ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
+                                  Agotado
                                 </span>
+                              ) : (
+                                opt.price > 0 && (
+                                  <span className="text-xs text-even-grass ml-2">
+                                    +${opt.price.toFixed(2)}
+                                  </span>
+                                )
                               )}
                             </div>
                             <div className="flex items-center gap-3">
@@ -596,7 +621,7 @@ export default function AddDishModal({
                                     Math.max(0, qty - 1),
                                   )
                                 }
-                                disabled={qty <= 0}
+                                disabled={qty <= 0 || opt.agotado}
                                 className="w-7 h-7 flex items-center justify-center rounded-md border border-white/15 text-even-offwhite/50 hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-default"
                               >
                                 <Minus className="w-3 h-3" />
@@ -606,13 +631,15 @@ export default function AddDishModal({
                               </span>
                               <button
                                 onClick={() =>
+                                  !opt.agotado &&
                                   handleQuantityChange(
                                     field.id,
                                     opt.id,
                                     qty + 1,
                                   )
                                 }
-                                className="w-7 h-7 flex items-center justify-center rounded-md border border-white/15 text-even-offwhite/50 hover:bg-white/10 transition-colors cursor-pointer"
+                                disabled={opt.agotado}
+                                className="w-7 h-7 flex items-center justify-center rounded-md border border-white/15 text-even-offwhite/50 hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-default"
                               >
                                 <Plus className="w-3 h-3" />
                               </button>

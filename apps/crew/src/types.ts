@@ -55,7 +55,7 @@ export type ManualPaymentType =
   | "choose-amount";
 
 export interface TableSummary {
-  table_number: number;
+  table_number: string;
   table_order_id: string;
   restaurant_id: number;
   branch_number: number;

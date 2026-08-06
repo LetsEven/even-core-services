@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { printTapPayTicket } from "../hooks/usePrinting";
 import type { Order } from "../types";
 import type { QRCodeRow } from "../services/api";
+import { parseLocationCode } from "../utils/identifier";
 
 interface Props {
   order: Order;
@@ -22,7 +23,7 @@ export default function PrintTicketModal({
   const [printing, setPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
 
-  const tableNumber = parseInt(order.identifier.replace(/\D/g, ""), 10) || null;
+  const tableCode = parseLocationCode(order.identifier);
   const dishTotal = order.dishes.reduce(
     (sum, d) => sum + (d.price ?? 0) * d.quantity,
     0,
@@ -57,7 +58,7 @@ export default function PrintTicketModal({
             Ticket
           </p>
           <h2 className="text-2xl font-bold text-even-offwhite">
-            {tableNumber != null ? `Mesa ${tableNumber}` : order.identifier}
+            {tableCode != null ? `Mesa ${tableCode}` : order.identifier}
           </h2>
         </div>
 

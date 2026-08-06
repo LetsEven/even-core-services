@@ -329,7 +329,7 @@ export interface CreateManualTransactionParams {
 
 export interface TableRow {
   id: string;
-  table_number: number;
+  table_number: string;
   status: "available" | "occupied" | "maintenance";
   has_open_account: boolean;
   has_tap_pay_account?: boolean;
@@ -338,7 +338,7 @@ export interface TableRow {
 export interface QRCodeRow {
   id: string;
   code: string;
-  table_number: number;
+  table_number: string;
   service: string;
 }
 
@@ -392,7 +392,7 @@ export async function getQRCodesForBranch(
 
 export async function checkTablePOS(
   branchId: string,
-  tableNumber: number,
+  tableNumber: string,
   token: string,
 ): Promise<TableActiveSummary | null> {
   const data = await authFetch(
@@ -404,7 +404,7 @@ export async function checkTablePOS(
 
 export async function peekTablePOS(
   branchId: string,
-  tableNumber: number,
+  tableNumber: string,
   token: string,
 ): Promise<boolean> {
   const data = await authFetch(
@@ -422,7 +422,7 @@ export interface OpenTableAccountResult {
 
 export async function openTableAccount(
   branchId: string,
-  tableNumber: number,
+  tableNumber: string,
   token: string,
   service?: "tap_pay" | "flex_bill",
 ): Promise<OpenTableAccountResult> {
@@ -444,7 +444,7 @@ export async function openTableAccount(
 
 export async function getTableActiveSummary(
   branchId: string,
-  tableNumber: number,
+  tableNumber: string,
   token: string,
 ): Promise<TableActiveSummary | null> {
   const data = await authFetch(
@@ -579,7 +579,7 @@ export interface MenuSection {
 export interface AddDishParams {
   restaurantId: number;
   branchNumber: number;
-  tableNumber: number;
+  tableNumber: string;
   item: string;
   quantity: number;
   price: number;

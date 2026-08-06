@@ -10,6 +10,7 @@ import AddDishModal from "./AddDishModal";
 import PrintTicketModal from "./PrintTicketModal";
 import ContactCustomerModal from "./ContactCustomerModal";
 import { formatFolio } from "../utils/folio";
+import { parseLocationCode } from "../utils/identifier";
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
   tap: "Tap Order & Pay",
@@ -232,13 +233,13 @@ export default function OrderCard({
   const handlePrint = async () => {
     if (!currentBranch) return;
     setLoadingTicket(true);
-    const tableNumber = parseInt(order.identifier.replace(/\D/g, ""), 10);
+    const tableCode = parseLocationCode(order.identifier);
     try {
       const token = await getToken();
       if (token) {
         const qrCodes = await getQRCodesForBranch(currentBranch.id, token);
         setTicketQR(
-          qrCodes.find((q) => q.table_number === tableNumber) ?? null,
+          qrCodes.find((q) => q.table_number === tableCode) ?? null,
         );
       } else {
         setTicketQR(null);

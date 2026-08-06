@@ -10,11 +10,7 @@ import type {
   MenuItemCustomField,
 } from "../services/api";
 import { getRestaurantMenu, addDishToFlexBill } from "../services/api";
-
-function parseTableNumber(identifier: string): number {
-  const match = identifier.match(/\d+/);
-  return match ? parseInt(match[0], 10) : 0;
-}
+import { parseLocationCode } from "../utils/identifier";
 
 type CustomSelections = Record<
   string,
@@ -249,7 +245,7 @@ export default function AddDishModal({
         {
           restaurantId: branch.restaurant_id,
           branchNumber: branch.branch_number,
-          tableNumber: parseTableNumber(order.identifier),
+          tableNumber: parseLocationCode(order.identifier) ?? "",
           item: selectedItem.name,
           quantity,
           price: basePrice,

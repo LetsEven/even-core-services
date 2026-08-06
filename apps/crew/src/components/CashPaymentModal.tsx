@@ -27,6 +27,7 @@ import {
   createManualTransaction,
 } from "../services/api";
 import { calculateCommissions } from "../utils/commissionCalculator";
+import { parseLocationCode } from "../utils/identifier";
 
 interface Props {
   order: Order;
@@ -39,14 +40,6 @@ const TIP_OPTIONS = [0, 10, 15, 20] as const;
 
 // Steps: 0=tipo de cobro, 1=propina, 2=método+confirmación
 const STEP_LABELS = ["Tipo de cobro", "Propina", "Confirmar"];
-
-function parseTableNumber(identifier: string): number | null {
-  const match = identifier
-    .replace(/mesa/i, "")
-    .trim()
-    .match(/^(\d+)/);
-  return match ? parseInt(match[1]) : null;
-}
 
 export default function CashPaymentModal({
   order,
@@ -79,7 +72,7 @@ export default function CashPaymentModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isTapPay = order.orderType === "tap_pay";
-  const tableNumber = parseTableNumber(order.identifier);
+  const tableNumber = parseLocationCode(order.identifier);
   const cobradoPor = method === "cash" ? "EFECTIVO" : "TERMINAL";
 
   // Load table summary when step 0 opens (flex_bill only)

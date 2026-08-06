@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getPrinters, type PrinterRecord } from "../services/api";
 import { formatFolio } from "../utils/folio";
+import { getLocationKind, parseLocationCode, padLocationCode } from "../utils/identifier";
 
 const DEVICE_ID_KEY = "crew_device_id";
 
@@ -122,27 +123,35 @@ async function buildTicket(
     `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
   const ordenLabel = formatFolio(folio);
+  const kind = getLocationKind(identifier);
+  const code = parseLocationCode(identifier);
 
   buf.push(0x1b, 0x40); // Init
   buf.push(0x1b, 0x61, 0x01); // Align center
   buf.push(0x1b, 0x21, 0x30); // Double size
-  const num = identifier.match(/\d+/)?.[0];
-  buf.push(
-    ...encodeText(`MESA ${num ? String(num).padStart(2, "0") : identifier}\n`),
-  );
+  // Si no hay código (ej. identifier llegó como "Habitación" sin número),
+  // no reconstruimos "HABITACION <identifier>" — mostramos el identifier
+  // completo, en mayúsculas, tal cual, para no duplicar la palabra.
+  const headerLabel = code
+    ? kind === "room"
+      ? `HABITACION ${padLocationCode(code)}`
+      : kind === "pick"
+        ? identifier.toUpperCase()
+        : `MESA ${padLocationCode(code)}`
+    : identifier.toUpperCase();
+  buf.push(...encodeText(`${headerLabel}\n`));
   if (orderedBy) {
     buf.push(...encodeText(`${orderedBy.toUpperCase()}\n`));
   }
   buf.push(0x1b, 0x61, 0x00); // Align left
   buf.push(0x1d, 0x21, 0x01); // Height x2, width x1 (taller but not wider)
-  let mesaLine: string;
-  if (/habitaci/i.test(identifier) || /cuarto/i.test(identifier)) {
-    mesaLine = `HABITACION: ${num || identifier} MESERO: EVEN\n\n`;
-  } else if (/pick/i.test(identifier)) {
-    mesaLine = `MESERO: EVEN\n\n`;
-  } else {
-    mesaLine = `MESA: ${num ? String(num).padStart(2, "0") : identifier} MESERO: EVEN\n\n`;
-  }
+  const mesaLine = code
+    ? kind === "room"
+      ? `HABITACION: ${padLocationCode(code)} MESERO: EVEN\n\n`
+      : kind === "pick"
+        ? `MESERO: EVEN\n\n`
+        : `MESA: ${padLocationCode(code)} MESERO: EVEN\n\n`
+    : `${identifier.toUpperCase()} MESERO: EVEN\n\n`;
   buf.push(...encodeText(`\nNUMERO DE ORDEN: ${ordenLabel}\n`));
   buf.push(...encodeText(`${fecha}\n`));
   buf.push(...encodeText(mesaLine));
@@ -188,9 +197,9 @@ async function buildPriceTicket(
   const now = new Date();
   const fecha = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
   const hora = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const num = identifier.match(/\d+/)?.[0];
-  const mesaLabel = num
-    ? `MESA ${String(num).padStart(2, "0")}`
+  const priceTicketCode = parseLocationCode(identifier);
+  const mesaLabel = priceTicketCode
+    ? `MESA ${padLocationCode(priceTicketCode)}`
     : identifier.toUpperCase();
 
   buf.push(0x1b, 0x40); // Init

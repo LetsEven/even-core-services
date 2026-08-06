@@ -113,7 +113,7 @@ export default function Mesas({
   const [qrCodes, setQrCodes] = useState<QRCodeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [posTables, setPosTables] = useState<Set<number>>(new Set());
+  const [posTables, setPosTables] = useState<Set<string>>(new Set());
 
   const [selectedTable, setSelectedTable] = useState<TableRow | null>(null);
   const [activeSummary, setActiveSummary] = useState<TableActiveSummary | null>(
@@ -157,7 +157,7 @@ export default function Mesas({
             })),
           ),
         ).then((results) => {
-          const posSet = new Set<number>();
+          const posSet = new Set<string>();
           for (const r of results) {
             if (r.status === "fulfilled" && r.value.has)
               posSet.add(r.value.tableNumber);

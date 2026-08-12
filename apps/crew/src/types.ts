@@ -48,6 +48,7 @@ export interface PaymentTransaction {
 }
 
 export type ManualPaymentMethod = "cash" | "terminal";
+export type ManualCardType = "credito" | "debito" | "amex";
 export type ManualPaymentType =
   | "full-bill"
   | "select-items"

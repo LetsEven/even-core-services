@@ -9,8 +9,10 @@ import {
   Menu,
   History,
   LayoutGrid,
+  UserCog,
 } from "lucide-react";
 import OrderCarousel from "../components/OrderCarousel";
+import WaiterLoginScreen from "../components/WaiterLoginScreen";
 import {
   deleteFcmToken,
   syncTapPayOrderFromPOS,
@@ -20,6 +22,12 @@ import {
 import type { Branch } from "../services/api";
 import type { DishStatus, CookingStatus, Order } from "../types";
 import { formatFolio } from "../utils/folio";
+import {
+  getLoggedWaiter,
+  setLoggedWaiter as persistLoggedWaiter,
+  clearLoggedWaiter,
+  type LoggedWaiter,
+} from "../utils/waiterLogin";
 
 async function showWindow() {
   try {
@@ -130,6 +138,8 @@ export default function Kitchen({
   const [availableWaiters, setAvailableWaiters] = useState<
     { id: string; name: string }[]
   >([{ id: "EVEN", name: "EVEN" }]);
+  const [loggedWaiter, setLoggedWaiter] = useState<LoggedWaiter | null>(null);
+  const [waiterGateChecked, setWaiterGateChecked] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const branchRef = useRef<HTMLDivElement>(null);
   const { signOut } = useClerk();
@@ -187,6 +197,32 @@ export default function Kitchen({
         .catch(() => setAvailableWaiters([{ id: "EVEN", name: "EVEN" }]));
     });
   }, [branchId, getToken]);
+
+  // Identidad de mesero para este dispositivo — se lee de localStorage por
+  // sucursal cada vez que cambia de sucursal.
+  useEffect(() => {
+    if (!branchId) {
+      setWaiterGateChecked(false);
+      return;
+    }
+    setLoggedWaiter(getLoggedWaiter(branchId));
+    setWaiterGateChecked(true);
+  }, [branchId]);
+
+  // Solo pedir identificarse si la sucursal tiene meseros reales de Soft
+  // Restaurant configurados (más allá del "EVEN" genérico de siempre) y
+  // todavía no se decidió nada en este dispositivo para esta sucursal.
+  const hasRealWaiters = availableWaiters.some((w) => w.id !== "EVEN");
+  const showWaiterGate =
+    waiterGateChecked && hasRealWaiters && loggedWaiter === null;
+
+  const restrictedWaiters =
+    loggedWaiter?.id != null
+      ? [
+          { id: "EVEN", name: "EVEN" },
+          { id: loggedWaiter.id, name: loggedWaiter.name! },
+        ]
+      : [{ id: "EVEN", name: "EVEN" }];
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -258,6 +294,20 @@ export default function Kitchen({
     }, 30_000);
     return () => clearInterval(id);
   }, [handleActualizar, loading]);
+
+  if (showWaiterGate && branchId) {
+    return (
+      <WaiterLoginScreen
+        branchId={branchId}
+        availableWaiters={availableWaiters}
+        onResolved={(waiter) => {
+          const toStore: LoggedWaiter = waiter ?? { id: null, name: null };
+          persistLoggedWaiter(branchId, toStore);
+          setLoggedWaiter(toStore);
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -365,6 +415,20 @@ export default function Kitchen({
                 <History className="w-4 h-4 shrink-0" />
                 Historial
               </button>
+
+              {hasRealWaiters && (
+                <button
+                  onClick={() => {
+                    if (branchId) clearLoggedWaiter(branchId);
+                    setLoggedWaiter(null);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <UserCog className="w-4 h-4 shrink-0" />
+                  Cambiar mesero
+                </button>
+              )}
 
               <div className="h-px bg-white/10 mx-3" />
               <button
@@ -503,7 +567,7 @@ export default function Kitchen({
             onPrepTimeExtraChange={updatePrepTimeExtraMinutes}
             currentBranch={branches.find((b) => b.id === branchId) ?? null}
             onOrdersRefresh={() => fetchOrders()}
-            availableWaiters={availableWaiters}
+            availableWaiters={restrictedWaiters}
           />
         )}
       </div>

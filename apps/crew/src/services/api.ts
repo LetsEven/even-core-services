@@ -1,4 +1,9 @@
-import type { Order, TableSummary, DishOrderCrew } from "../types";
+import type {
+  Order,
+  TableSummary,
+  DishOrderCrew,
+  ManualCardType,
+} from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -324,6 +329,10 @@ export interface CreateManualTransactionParams {
   transaction_by: string;
   payment_source: "cash" | "terminal";
   manual_reference: string | null;
+  // Solo aplica cuando payment_source es "terminal" — qué tipo de tarjeta se
+  // cobró en la terminal física del restaurante (no viene de EcartPay, así
+  // que no hay forma de detectarlo automáticamente).
+  manual_card_type: ManualCardType | null;
   currency?: string;
 }
 
@@ -486,6 +495,7 @@ export async function createManualTransaction(
       transaction_by: params.transaction_by,
       payment_source: params.payment_source,
       manual_reference: params.manual_reference,
+      manual_card_type: params.manual_card_type,
       ecartpay_order_id: null,
     }),
   });
@@ -521,6 +531,19 @@ export async function getWaiters(
     token,
   );
   return data.waiters ?? [{ id: "EVEN", name: "EVEN" }];
+}
+
+export async function verifyWaiterPassword(
+  branchId: string,
+  idmesero: string,
+  password: string,
+  token: string,
+): Promise<boolean> {
+  const data = await authFetch("/api/kitchen/waiters/verify", token, {
+    method: "POST",
+    body: JSON.stringify({ branchId, idmesero, password }),
+  });
+  return data.match === true;
 }
 
 export async function updateOrderWaiter(

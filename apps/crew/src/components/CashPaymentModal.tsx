@@ -13,6 +13,7 @@ import type {
   Order,
   ManualPaymentMethod,
   ManualPaymentType,
+  ManualCardType,
   TableSummary,
   DishOrderCrew,
 } from "../types";
@@ -67,7 +68,9 @@ export default function CashPaymentModal({
 
   // Step 2 — método + confirmación
   const [method, setMethod] = useState<ManualPaymentMethod>("cash");
-  const [terminalRef, setTerminalRef] = useState("");
+  const [manualCardType, setManualCardType] = useState<ManualCardType | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -187,7 +190,7 @@ export default function CashPaymentModal({
   function canConfirm() {
     if (totalAmount <= 0) return false;
     if (overpaying) return false;
-    if (method === "terminal") return terminalRef.trim().length > 0;
+    if (method === "terminal") return manualCardType !== null;
     return true;
   }
 
@@ -198,8 +201,6 @@ export default function CashPaymentModal({
     try {
       const token = await getToken();
       if (!token) throw new Error("No autenticado");
-
-      const manualRef = method === "terminal" ? terminalRef.trim() : null;
 
       const txParams = {
         ...(isTapPay
@@ -221,7 +222,8 @@ export default function CashPaymentModal({
         even_rate_applied: commissions.even_rate_applied,
         transaction_by: cobradoPor,
         payment_source: method,
-        manual_reference: manualRef,
+        manual_reference: null,
+        manual_card_type: method === "terminal" ? manualCardType : null,
       };
 
       if (isTapPay && payType === "select-items") {
@@ -287,14 +289,14 @@ export default function CashPaymentModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
       style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="w-full max-w-sm rounded-t-lg sm:rounded-lg overflow-hidden flex flex-col border border-white/10 shadow-2xl"
+        className="w-full max-w-sm rounded-lg overflow-hidden flex flex-col border border-white/10 shadow-2xl"
         style={{ background: "#023828", maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -614,7 +616,7 @@ export default function CashPaymentModal({
                       key={m}
                       onClick={() => {
                         setMethod(m);
-                        setTerminalRef("");
+                        setManualCardType(null);
                       }}
                       className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-lg border transition-all cursor-pointer ${
                         method === m
@@ -641,19 +643,36 @@ export default function CashPaymentModal({
               </div>
 
               {method === "terminal" && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                    Número de referencia *
-                  </label>
-                  <input
-                    type="text"
-                    value={terminalRef}
-                    onChange={(e) => setTerminalRef(e.target.value)}
-                    placeholder="Ej. REF-001234"
-                    className={inputClass}
-                    style={inputStyle}
-                    autoFocus
-                  />
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
+                    Tipo de tarjeta *
+                  </p>
+                  <div className="flex gap-3">
+                    {(
+                      [
+                        { type: "credito", label: "Crédito" },
+                        { type: "debito", label: "Débito" },
+                        { type: "amex", label: "Amex" },
+                      ] as { type: ManualCardType; label: string }[]
+                    ).map(({ type, label }) => (
+                      <button
+                        key={type}
+                        onClick={() => setManualCardType(type)}
+                        className={`flex-1 py-3 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
+                          manualCardType === type
+                            ? "border-even-grass/40 bg-even-grass/10 text-even-grass"
+                            : "border-white/8 text-even-offwhite/40 hover:bg-white/5"
+                        }`}
+                        style={
+                          manualCardType !== type
+                            ? { background: "rgba(255,255,255,0.03)" }
+                            : {}
+                        }
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

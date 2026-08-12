@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, Fragment } from "react";
-import { Banknote, ChevronDown, Loader2, Plus, Printer } from "lucide-react";
+import {
+  Banknote,
+  ChevronDown,
+  Loader2,
+  Plus,
+  Printer,
+  User,
+} from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import type { Order, DishStatus, CookingStatus } from "../types";
 import type { Branch, QRCodeRow } from "../services/api";
@@ -220,7 +227,10 @@ export default function OrderCard({
     }
   };
 
-  const canAddDish = order.orderType === "flex_bill" && currentBranch != null;
+  const canAddDish =
+    order.orderType === "flex_bill" &&
+    currentBranch != null &&
+    order.status !== "paid";
   const canRegisterPayment =
     (order.orderType === "flex_bill" || order.orderType === "tap_pay") &&
     (order.remainingAmount ?? 0) > 0 &&
@@ -408,12 +418,12 @@ export default function OrderCard({
               <button
                 ref={waiterBtnRef}
                 onClick={handleToggleWaiterPicker}
-                className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-even-evergreen/60 hover:text-even-evergreen transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-even-grass/20 border border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
               >
-                <span className="font-medium">Mesero:</span>
-                <span>{localWaiterName}</span>
+                <User className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">{localWaiterName}</span>
                 <ChevronDown
-                  className={`w-3 h-3 transition-transform ${waiterPickerOpen ? "rotate-180" : ""}`}
+                  className={`w-3.5 h-3.5 transition-transform ${waiterPickerOpen ? "rotate-180" : ""}`}
                 />
               </button>
               {waiterPickerOpen && dropdownPos && (
@@ -439,8 +449,9 @@ export default function OrderCard({
               )}
             </>
           ) : (
-            <span className="text-[11px] uppercase tracking-wider text-even-evergreen/50">
-              <span className="font-medium">Mesero:</span> {localWaiterName}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-even-evergreen/10 border border-even-evergreen/20 text-even-evergreen/70 w-fit">
+              <User className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">{localWaiterName}</span>
             </span>
           )}
         </div>

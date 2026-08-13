@@ -1,20 +1,22 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth, useSignIn } from "@clerk/clerk-react";
 import { Mail, KeyRound, Loader2, Eye, EyeOff } from "lucide-react";
-import Kitchen from "./pages/Kitchen";
 import Printers from "./pages/Printers";
 import Historial from "./pages/Historial";
-import Mesas from "./pages/Mesas";
 import { useSocket } from "./hooks/useSocket";
 import type { CrewDevice } from "./hooks/useSocket";
 import { usePrinting } from "./hooks/usePrinting";
 import { useKitchenOrders } from "./hooks/useKitchenOrders";
-import { getBranches } from "./services/api";
+import { getBranches, getWaiters } from "./services/api";
 import type { Branch } from "./services/api";
-import type { DishStatus } from "./types";
+import type { DishStatus, OrderType } from "./types";
 import { getOrCreateDeviceId } from "./utils/deviceId";
+import { getActiveOrderTypes } from "./services/serviceMapping";
+import { SERVICE_REGISTRY } from "./services/registry";
+import NewOrderToasts, { type OrderNotif } from "./components/NewOrderToasts";
+import ServiceSwitcher from "./components/ServiceSwitcher";
 
-type Page = "kitchen" | "printers" | "historial" | "mesas";
+type Page = "home" | "printers" | "historial";
 
 const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
 
@@ -91,12 +93,25 @@ async function sendDesktopNotification(title: string, body: string) {
 export default function App() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signIn, setActive } = useSignIn();
-  const [page, setPage] = useState<Page>("kitchen");
+  const [page, setPage] = useState<Page>("home");
   const [branchId, setBranchId] = useState<string | null>(() =>
     localStorage.getItem("crew_branch_id"),
   );
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
+  // Solo relevante si la sucursal tiene 2+ servicios activos (caso raro) —
+  // ver ServiceSwitcher. Si el valor guardado ya no está entre los activos
+  // (cambio de sucursal, o el servicio se dio de baja), se recalcula abajo.
+  const [selectedOrderType, setSelectedOrderType] = useState<OrderType | null>(
+    null,
+  );
+  // Lista de meseros de la sucursal (Soft Restaurant) — vive a nivel App
+  // para que la compartan Kitchen y SpatialGrid; el picker de mesero por
+  // orden (OrderCard) pide PIN la primera vez que se elige uno no
+  // autenticado en este dispositivo (ver utils/waiterLogin.ts).
+  const [availableWaiters, setAvailableWaiters] = useState<
+    { id: string; name: string }[]
+  >([{ id: "EVEN", name: "EVEN" }]);
 
   // Identidad y presencia de dispositivos
   const deviceId = getOrCreateDeviceId();
@@ -110,14 +125,6 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Cola de notificaciones por orden — vive en App para no perderse al navegar
-  type OrderNotif = {
-    id: string;
-    folio: string | number | null;
-    customerName: string | null;
-    identifier: string;
-    orderedBy: string | null;
-    title?: string;
-  };
   const [newOrderNotifications, setNewOrderNotifications] = useState<
     OrderNotif[]
   >([]);
@@ -170,6 +177,19 @@ export default function App() {
       }
     })();
   }, [isSignedIn, getToken]);
+
+  useEffect(() => {
+    if (!branchId) {
+      setAvailableWaiters([{ id: "EVEN", name: "EVEN" }]);
+      return;
+    }
+    getToken().then((t) => {
+      if (!t) return;
+      getWaiters(branchId, t)
+        .then(setAvailableWaiters)
+        .catch(() => setAvailableWaiters([{ id: "EVEN", name: "EVEN" }]));
+    });
+  }, [branchId, getToken]);
 
   const handleBranchChange = useCallback((id: string) => {
     setBranchId((prev) => {
@@ -248,9 +268,12 @@ export default function App() {
       return;
     }
 
-    // Flexbill se notifica por user_order vía handleFlexbillOrder, no aquí
+    // Toast solo para Pick & Go — los demás servicios ya avisan "nuevo/no
+    // visto" con el pulse del croquis (SpatialGrid), así que un toast
+    // aparte sería ruido duplicado. Pick & Go es lista simple, sin pulse.
     const newOnes = fetched.filter(
-      (o) => !prevOrderIdsRef.current!.has(o.id) && o.orderType !== "flex_bill",
+      (o) =>
+        !prevOrderIdsRef.current!.has(o.id) && o.orderType === "pick_and_go",
     );
     prevOrderIdsRef.current = new Set(fetched.map((o) => o.id));
 
@@ -276,35 +299,6 @@ export default function App() {
     );
     showWindowIfNeeded();
   }, [fetchOrders]);
-
-  // Notificación por cada user_order de Flexbill (una por persona/folio)
-  const handleFlexbillOrder = useCallback(
-    (data: {
-      folio: string | null;
-      orderedBy: string | null;
-      identifier: string | null;
-    }) => {
-      fetchOrders();
-      setNewOrderNotifications((prev) => [
-        ...prev,
-        {
-          id: `flexbill-${data.folio}`,
-          folio: data.folio,
-          customerName: null,
-          identifier: data.identifier ?? "Flex Bill",
-          orderedBy: null,
-        },
-      ]);
-      playNotificationSound();
-      flashTaskbarIcon();
-      sendDesktopNotification(
-        APP_LABEL,
-        `Nueva orden${data.folio ? ` #${data.folio}` : ""}`,
-      );
-      showWindowIfNeeded();
-    },
-    [fetchOrders],
-  );
 
   const handleDismissAlert = useCallback((id: string) => {
     setNewOrderNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -355,7 +349,6 @@ export default function App() {
     onSilentRefetch: handleSilentRefetch,
     onPrintJob: printJob,
     onDevicesUpdated: handleDevicesUpdated,
-    onFlexbillOrder: handleFlexbillOrder,
     onTurnoClosed: handleTurnoClosed,
   });
 
@@ -477,7 +470,7 @@ export default function App() {
       <Printers
         onBack={() => {
           setBranchId(localStorage.getItem("crew_branch_id"));
-          setPage("kitchen");
+          setPage("home");
         }}
         deviceId={deviceId}
         connectedDevices={connectedDevices}
@@ -491,7 +484,7 @@ export default function App() {
   if (page === "historial") {
     return (
       <Historial
-        onBack={() => setPage("kitchen")}
+        onBack={() => setPage("home")}
         onOpenPrinters={() => setPage("printers")}
         branches={branches}
         branchesLoading={branchesLoading}
@@ -501,35 +494,51 @@ export default function App() {
     );
   }
 
-  if (page === "mesas") {
-    return (
-      <Mesas
-        onBack={() => setPage("kitchen")}
-        branchId={branchId}
-        branches={branches}
-        onBranchChange={handleBranchChange}
-      />
-    );
-  }
+  // Pantalla principal — resuelta por servicio contratado (clients.services,
+  // ver serviceMapping.ts). Fallback a Pick & Go si no hay servicio mapeable
+  // (branch/cliente sin `services` bien cargado) — es la pantalla más
+  // genérica y coincide con el comportamiento previo a este cambio.
+  const currentBranch = branches.find((b) => b.id === branchId);
+  const activeOrderTypes = getActiveOrderTypes(currentBranch?.services);
+  // Si hay 2+ servicios, usa la selección del switcher (si sigue siendo
+  // válida para esta sucursal); si no, o si solo hay 1, toma el primero.
+  const resolvedOrderType =
+    (selectedOrderType && activeOrderTypes.includes(selectedOrderType)
+      ? selectedOrderType
+      : activeOrderTypes[0]) ?? "pick_and_go";
+  const HomeScreen = SERVICE_REGISTRY[resolvedOrderType].HomeScreen;
 
   return (
-    <Kitchen
-      onOpenPrinters={() => setPage("printers")}
-      onOpenHistorial={() => setPage("historial")}
-      onOpenMesas={() => setPage("mesas")}
-      orders={orders}
-      loading={ordersLoading}
-      error={ordersError}
-      fetchOrders={fetchOrders}
-      updateDish={updateDish}
-      updateOrderCookingStatus={updateOrderCookingStatus}
-      updatePrepTimeExtraMinutes={updatePrepTimeExtraMinutes}
-      newOrderNotifications={newOrderNotifications}
-      onDismissAlert={handleDismissAlert}
-      branches={branches}
-      branchesLoading={branchesLoading}
-      branchId={branchId}
-      onBranchChange={handleBranchChange}
-    />
+    <div className="min-h-screen flex flex-col">
+      <NewOrderToasts
+        notifications={newOrderNotifications}
+        onDismiss={handleDismissAlert}
+      />
+      <ServiceSwitcher
+        activeOrderTypes={activeOrderTypes}
+        selected={resolvedOrderType}
+        onSelect={setSelectedOrderType}
+      />
+      {/* flex-1 + min-h-0: el HomeScreen llena el espacio restante (no su
+          propio 100vh completo) para que el switcher no empuje scroll extra */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <HomeScreen
+          onOpenPrinters={() => setPage("printers")}
+          onOpenHistorial={() => setPage("historial")}
+          branchId={branchId}
+          branches={branches}
+          branchesLoading={branchesLoading}
+          onBranchChange={handleBranchChange}
+          orders={orders}
+          ordersLoading={ordersLoading}
+          ordersError={ordersError}
+          fetchOrders={fetchOrders}
+          updateDish={updateDish}
+          updateOrderCookingStatus={updateOrderCookingStatus}
+          updatePrepTimeExtraMinutes={updatePrepTimeExtraMinutes}
+          availableWaiters={availableWaiters}
+        />
+      </div>
+    </div>
   );
 }

@@ -16,8 +16,10 @@ import CashPaymentModal from "./CashPaymentModal";
 import AddDishModal from "./AddDishModal";
 import PrintTicketModal from "./PrintTicketModal";
 import ContactCustomerModal from "./ContactCustomerModal";
+import WaiterPinModal from "./WaiterPinModal";
 import { formatFolio } from "../utils/folio";
 import { parseLocationCode } from "../utils/identifier";
+import { isWaiterAuthenticated } from "../utils/waiterLogin";
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
   tap: "Tap Order & Pay",
@@ -130,6 +132,10 @@ export default function OrderCard({
   } | null>(null);
   const waiterPickerRef = useRef<HTMLDivElement>(null);
   const waiterBtnRef = useRef<HTMLButtonElement>(null);
+  const [pinWaiter, setPinWaiter] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const [prepTimePickerOpen, setPrepTimePickerOpen] = useState(false);
   const [prepTimeDropdownPos, setPrepTimeDropdownPos] = useState<{
@@ -172,6 +178,18 @@ export default function OrderCard({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [waiterPickerOpen]);
 
+  // El dropdown es fixed con posición calculada al abrirlo (para no quedar
+  // recortado por el panel scrolleable que lo contiene) — si el usuario
+  // scrollea, el botón se mueve pero el dropdown no, así que se desalinea.
+  // Con `capture: true` en window se detecta el scroll de cualquier
+  // contenedor interno, aunque el evento "scroll" no burbujea.
+  useEffect(() => {
+    if (!waiterPickerOpen) return;
+    const handleScroll = () => setWaiterPickerOpen(false);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [waiterPickerOpen]);
+
   useEffect(() => {
     setPrepTimeInputValue(order.waiterExtraMinutes ?? 0);
   }, [order.waiterExtraMinutes]);
@@ -209,8 +227,7 @@ export default function OrderCard({
     onPrepTimeExtraChange?.(order.id, prepTimeInputValue);
   };
 
-  const handleWaiterSelect = async (waiter: { id: string; name: string }) => {
-    setWaiterPickerOpen(false);
+  const applyWaiterSelection = async (waiter: { id: string; name: string }) => {
     setLocalWaiterName(waiter.name);
     try {
       const token = await getToken();
@@ -225,6 +242,21 @@ export default function OrderCard({
     } catch {
       setLocalWaiterName(order.waiterName ?? "EVEN");
     }
+  };
+
+  const handleWaiterSelect = (waiter: { id: string; name: string }) => {
+    setWaiterPickerOpen(false);
+    // Si nunca se validó el PIN de este mesero en este dispositivo, pedirlo
+    // antes de asignarlo — una vez correcto queda recordado (WaiterPinModal).
+    if (
+      waiter.id !== "EVEN" &&
+      currentBranch &&
+      !isWaiterAuthenticated(currentBranch.id, waiter.id)
+    ) {
+      setPinWaiter(waiter);
+      return;
+    }
+    applyWaiterSelection(waiter);
   };
 
   const canAddDish =
@@ -248,9 +280,7 @@ export default function OrderCard({
       const token = await getToken();
       if (token) {
         const qrCodes = await getQRCodesForBranch(currentBranch.id, token);
-        setTicketQR(
-          qrCodes.find((q) => q.table_number === tableCode) ?? null,
-        );
+        setTicketQR(qrCodes.find((q) => q.table_number === tableCode) ?? null);
       } else {
         setTicketQR(null);
       }
@@ -648,6 +678,18 @@ export default function OrderCard({
           customerName={order.customerName || order.identifier}
           phone={order.customerPhone}
           onClose={() => setContactModalOpen(false)}
+        />
+      )}
+      {pinWaiter && currentBranch && (
+        <WaiterPinModal
+          branchId={currentBranch.id}
+          waiter={pinWaiter}
+          onConfirmed={() => {
+            const waiter = pinWaiter;
+            setPinWaiter(null);
+            applyWaiterSelection(waiter);
+          }}
+          onCancel={() => setPinWaiter(null)}
         />
       )}
     </div>

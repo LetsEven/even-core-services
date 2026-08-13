@@ -1,32 +1,38 @@
-// Identidad de mesero logueado en este dispositivo, por sucursal.
-// - Ausente (localStorage.getItem === null): nunca se preguntó en esta
-//   sucursal/dispositivo -> hay que mostrar el gate.
-// - {id: null, name: null}: se preguntó y el staff eligió "Continuar sin
-//   mesero" -> no volver a preguntar, pero tampoco hay mesero logueado.
-// - {id, name}: mesero logueado.
-export interface LoggedWaiter {
-  id: string | null;
-  name: string | null;
-}
+// Set de meseros autenticados (PIN verificado) en este dispositivo, por
+// sucursal. No hay "un mesero logueado" — cualquier mesero de la lista se
+// puede elegir por orden, y una vez que se valida su PIN una vez en este
+// device, queda recordado para las próximas veces (ver WaiterPinModal).
 
 function key(branchId: string): string {
-  return `crew_waiter_${branchId}`;
+  return `crew_authenticated_waiters_${branchId}`;
 }
 
-export function getLoggedWaiter(branchId: string): LoggedWaiter | null {
-  const raw = localStorage.getItem(key(branchId));
-  if (raw === null) return null;
+function getAuthenticatedWaiterIds(branchId: string): Set<string> {
   try {
-    return JSON.parse(raw) as LoggedWaiter;
+    const raw = localStorage.getItem(key(branchId));
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw));
   } catch {
-    return null;
+    return new Set();
   }
 }
 
-export function setLoggedWaiter(branchId: string, waiter: LoggedWaiter): void {
-  localStorage.setItem(key(branchId), JSON.stringify(waiter));
+export function isWaiterAuthenticated(
+  branchId: string,
+  waiterId: string,
+): boolean {
+  return getAuthenticatedWaiterIds(branchId).has(waiterId);
 }
 
-export function clearLoggedWaiter(branchId: string): void {
-  localStorage.removeItem(key(branchId));
+export function markWaiterAuthenticated(
+  branchId: string,
+  waiterId: string,
+): void {
+  const ids = getAuthenticatedWaiterIds(branchId);
+  ids.add(waiterId);
+  try {
+    localStorage.setItem(key(branchId), JSON.stringify([...ids]));
+  } catch {
+    // silently fail
+  }
 }

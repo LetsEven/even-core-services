@@ -143,6 +143,7 @@ export interface Branch {
   restaurant_id: number;
   max_pending_orders?: number | null;
   tap_pay_print?: boolean;
+  services?: string[];
 }
 
 export async function getBranches(token: string): Promise<Branch[]> {
@@ -344,6 +345,14 @@ export interface TableRow {
   has_tap_pay_account?: boolean;
 }
 
+export interface RoomRow {
+  id: string;
+  room_number: string;
+  status: "available" | "occupied" | "maintenance";
+  has_open_account: boolean;
+  room_order_id?: string | null;
+}
+
 export interface QRCodeRow {
   id: string;
   code: string;
@@ -386,6 +395,17 @@ export async function getTablesForBranch(
     token,
   );
   return data.tables ?? [];
+}
+
+export async function getRoomsForBranch(
+  branchId: string,
+  token: string,
+): Promise<RoomRow[]> {
+  const data = await authFetch(
+    `/api/kitchen/rooms?branchId=${branchId}`,
+    token,
+  );
+  return data.rooms ?? [];
 }
 
 export async function getQRCodesForBranch(
@@ -634,6 +654,42 @@ export async function getRestaurantMenu(
     token,
   );
   return data.data?.menu ?? [];
+}
+
+export interface BulkDishItem {
+  item: string;
+  quantity: number;
+  price: number;
+  customFields?: AddDishParams["customFields"];
+  extraPrice?: number;
+  menuItemId?: number;
+  specialInstructions?: string | null;
+  images?: string[];
+}
+
+export interface OpenTableWithDishesParams {
+  restaurantId: number;
+  branchNumber: number;
+  tableNumber: string;
+  guestName: string;
+  items: BulkDishItem[];
+}
+
+export async function addDishesToFlexBillBulk(
+  params: OpenTableWithDishesParams,
+  token: string,
+): Promise<void> {
+  await authFetch(
+    `/api/restaurants/${params.restaurantId}/branches/${params.branchNumber}/tables/${params.tableNumber}/dishes/bulk`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        guestName: params.guestName,
+        items: params.items,
+      }),
+    },
+  );
 }
 
 export async function addDishToFlexBill(

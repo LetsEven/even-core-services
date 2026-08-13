@@ -1,33 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useClerk, useAuth } from "@clerk/clerk-react";
-import {
-  LogOut,
-  PrinterIcon,
-  RefreshCw,
-  ChevronDown,
-  Check,
-  Menu,
-  History,
-  LayoutGrid,
-  UserCog,
-} from "lucide-react";
+import { useAuth } from "@clerk/clerk-react";
+import { ChevronDown, Check } from "lucide-react";
 import OrderCarousel from "../components/OrderCarousel";
-import WaiterLoginScreen from "../components/WaiterLoginScreen";
-import {
-  deleteFcmToken,
-  syncTapPayOrderFromPOS,
-  saveFcmToken,
-  getWaiters,
-} from "../services/api";
+import AppHeader from "../components/AppHeader";
+import { syncTapPayOrderFromPOS, saveFcmToken } from "../services/api";
 import type { Branch } from "../services/api";
 import type { DishStatus, CookingStatus, Order } from "../types";
-import { formatFolio } from "../utils/folio";
-import {
-  getLoggedWaiter,
-  setLoggedWaiter as persistLoggedWaiter,
-  clearLoggedWaiter,
-  type LoggedWaiter,
-} from "../utils/waiterLogin";
 
 async function showWindow() {
   try {
@@ -81,7 +59,6 @@ const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
 interface Props {
   onOpenPrinters: () => void;
   onOpenHistorial: () => void;
-  onOpenMesas: () => void;
   orders: Order[];
   loading: boolean;
   error: string | null;
@@ -100,25 +77,16 @@ interface Props {
     orderId: string,
     extraMinutes: number,
   ) => Promise<void>;
-  newOrderNotifications: {
-    id: string;
-    folio: string | number | null;
-    customerName: string | null;
-    identifier: string;
-    orderedBy: string | null;
-    title?: string;
-  }[];
-  onDismissAlert: (id: string) => void;
   branches: Branch[];
   branchesLoading: boolean;
   branchId: string | null;
   onBranchChange: (id: string) => void;
+  availableWaiters: { id: string; name: string }[];
 }
 
 export default function Kitchen({
   onOpenPrinters,
   onOpenHistorial,
-  onOpenMesas,
   orders,
   loading,
   error,
@@ -126,34 +94,15 @@ export default function Kitchen({
   updateDish,
   updateOrderCookingStatus,
   updatePrepTimeExtraMinutes,
-  newOrderNotifications,
-  onDismissAlert,
   branches,
   branchesLoading,
   branchId,
   onBranchChange,
+  availableWaiters,
 }: Props) {
   const [branchOpen, setBranchOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [availableWaiters, setAvailableWaiters] = useState<
-    { id: string; name: string }[]
-  >([{ id: "EVEN", name: "EVEN" }]);
-  const [loggedWaiter, setLoggedWaiter] = useState<LoggedWaiter | null>(null);
-  const [waiterGateChecked, setWaiterGateChecked] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const branchRef = useRef<HTMLDivElement>(null);
-  const { signOut } = useClerk();
   const { getToken } = useAuth();
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -165,64 +114,12 @@ export default function Kitchen({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [branchOpen]);
 
-  const handleSignOut = useCallback(async () => {
-    try {
-      const token = await getToken();
-      const fcmToken = await (async () => {
-        try {
-          const { invoke } = await import("@tauri-apps/api/core");
-          return await invoke<string | null>("get_fcm_token");
-        } catch {
-          return null;
-        }
-      })();
-      if (token && fcmToken) await deleteFcmToken(token, fcmToken);
-    } catch {}
-    signOut();
-  }, [getToken, signOut]);
-
   useEffect(() => {
     requestNotificationPermission();
     getToken().then((t) => {
       if (t) registerFcmToken(t);
     });
   }, [getToken]);
-
-  useEffect(() => {
-    if (!branchId) return;
-    getToken().then((t) => {
-      if (!t) return;
-      getWaiters(branchId, t)
-        .then(setAvailableWaiters)
-        .catch(() => setAvailableWaiters([{ id: "EVEN", name: "EVEN" }]));
-    });
-  }, [branchId, getToken]);
-
-  // Identidad de mesero para este dispositivo — se lee de localStorage por
-  // sucursal cada vez que cambia de sucursal.
-  useEffect(() => {
-    if (!branchId) {
-      setWaiterGateChecked(false);
-      return;
-    }
-    setLoggedWaiter(getLoggedWaiter(branchId));
-    setWaiterGateChecked(true);
-  }, [branchId]);
-
-  // Solo pedir identificarse si la sucursal tiene meseros reales de Soft
-  // Restaurant configurados (más allá del "EVEN" genérico de siempre) y
-  // todavía no se decidió nada en este dispositivo para esta sucursal.
-  const hasRealWaiters = availableWaiters.some((w) => w.id !== "EVEN");
-  const showWaiterGate =
-    waiterGateChecked && hasRealWaiters && loggedWaiter === null;
-
-  const restrictedWaiters =
-    loggedWaiter?.id != null
-      ? [
-          { id: "EVEN", name: "EVEN" },
-          { id: loggedWaiter.id, name: loggedWaiter.name! },
-        ]
-      : [{ id: "EVEN", name: "EVEN" }];
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -295,173 +192,17 @@ export default function Kitchen({
     return () => clearInterval(id);
   }, [handleActualizar, loading]);
 
-  if (showWaiterGate && branchId) {
-    return (
-      <WaiterLoginScreen
-        branchId={branchId}
-        availableWaiters={availableWaiters}
-        onResolved={(waiter) => {
-          const toStore: LoggedWaiter = waiter ?? { id: null, name: null };
-          persistLoggedWaiter(branchId, toStore);
-          setLoggedWaiter(toStore);
-        }}
-      />
-    );
-  }
-
   return (
     <div
-      className="relative min-h-screen flex flex-col"
+      className="relative flex-1 min-h-0 flex flex-col"
       style={{ background: "#023828" }}
     >
-      {/* Notificaciones de nueva orden — apiladas como deck */}
-      {newOrderNotifications.length > 0 && (
-        <div
-          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
-          style={{ width: "300px" }}
-        >
-          {newOrderNotifications.map((n, depth) => {
-            if (depth > 2) return null;
-            const folioPart =
-              n.folio != null ? `#${formatFolio(n.folio)}` : null;
-            const subtitle = [folioPart, n.identifier || null, n.customerName || null]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <div
-                key={n.id}
-                className="absolute inset-x-0 top-0 bg-even-evergreen/90 backdrop-blur-xl border border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] rounded-lg px-4 py-3 flex items-center gap-3"
-                style={{
-                  zIndex: 50 - depth,
-                  transform: `translateY(${depth * 12}px) scale(${1 - depth * 0.05})`,
-                  transformOrigin: "top center",
-                  transition: "transform 0.3s ease",
-                  pointerEvents: depth === 0 ? "auto" : "none",
-                }}
-              >
-                {/* Ping dot — contenedor explícito para centrar la animación */}
-                <div className="relative shrink-0 w-3 h-3 flex items-center justify-center">
-                  <span className="absolute inset-0 rounded-full bg-even-grass opacity-60 animate-ping" />
-                  <span className="relative w-2.5 h-2.5 rounded-full bg-even-grass" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-even-offwhite font-semibold text-sm leading-tight">
-                    {n.title ?? "Nueva orden recibida"}
-                  </p>
-                  {subtitle && (
-                    <p className="text-even-offwhite/60 text-xs mt-0.5 leading-tight">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-                <div className="w-px self-stretch bg-white/15 mx-1 shrink-0" />
-                <button
-                  onClick={() => onDismissAlert(n.id)}
-                  className="shrink-0 flex items-center justify-center w-7 h-7 rounded-md bg-even-grass hover:bg-even-grass/90 transition-colors cursor-pointer shadow-sm"
-                  title="Dismiss"
-                >
-                  <Check
-                    className="w-3.5 h-3.5 text-gray-800"
-                    strokeWidth={2.5}
-                  />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Header */}
-      <header className="px-5 pt-5 pb-2 flex items-center justify-between relative">
-        {/* Hamburger menu */}
-        <div ref={menuRef} className="relative">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="p-2 rounded-lg text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition- cursor-pointer"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          {menuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-48 bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl z-50">
-              <button
-                onClick={() => {
-                  onOpenPrinters();
-                  setMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <PrinterIcon className="w-4 h-4 shrink-0" />
-                Impresoras
-              </button>
-
-              <button
-                onClick={() => {
-                  onOpenMesas();
-                  setMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <LayoutGrid className="w-4 h-4 shrink-0" />
-                Mesas
-              </button>
-
-              <button
-                onClick={() => {
-                  onOpenHistorial();
-                  setMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <History className="w-4 h-4 shrink-0" />
-                Historial
-              </button>
-
-              {hasRealWaiters && (
-                <button
-                  onClick={() => {
-                    if (branchId) clearLoggedWaiter(branchId);
-                    setLoggedWaiter(null);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <UserCog className="w-4 h-4 shrink-0" />
-                  Cambiar mesero
-                </button>
-              )}
-
-              <div className="h-px bg-white/10 mx-3" />
-              <button
-                onClick={() => {
-                  handleSignOut();
-                  setMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-rose-400 hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4 shrink-0" />
-                Cerrar sesión
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Logo centrado */}
-        <img
-          src="/even/even-asterisk-grass.svg"
-          className="absolute left-1/2 -translate-x-1/2 w-8 h-8"
-          alt="Even"
-        />
-
-        {/* Actualizar */}
-        <button
-          onClick={() => handleActualizar(true)}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-md text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition-colors text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Actualizar
-        </button>
-      </header>
+      <AppHeader
+        onOpenPrinters={onOpenPrinters}
+        onOpenHistorial={onOpenHistorial}
+        onRefresh={() => handleActualizar(true)}
+        refreshing={loading}
+      />
 
       {/* Logo central */}
       <div className="flex flex-col items-center pb-6 gap-1">
@@ -506,21 +247,6 @@ export default function Kitchen({
             )}
           </div>
         )}
-        {(() => {
-          const currentBranch = branches.find((b) => b.id === branchId);
-          const max = currentBranch?.max_pending_orders ?? null;
-          const count = orders.length;
-          const atLimit = max !== null && count >= max;
-          return (
-            <p
-              className={`text-xs uppercase tracking-widest ${atLimit ? "text-amber-400 font-medium" : "text-even-offwhite/60"}`}
-            >
-              {max !== null
-                ? `${count} / ${max} orden(es) activas${atLimit ? " ⚠️" : ""}`
-                : `${count} orden(es) pendiente(s)`}
-            </p>
-          );
-        })()}
       </div>
 
       {/* Panel claro inferior (Offwhite body) */}
@@ -567,7 +293,7 @@ export default function Kitchen({
             onPrepTimeExtraChange={updatePrepTimeExtraMinutes}
             currentBranch={branches.find((b) => b.id === branchId) ?? null}
             onOrdersRefresh={() => fetchOrders()}
-            availableWaiters={restrictedWaiters}
+            availableWaiters={availableWaiters}
           />
         )}
       </div>

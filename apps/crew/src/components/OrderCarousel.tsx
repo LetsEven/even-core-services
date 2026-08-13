@@ -34,7 +34,6 @@ export default function OrderCarousel({
   if (orders.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3">
-        <div className="text-5xl">✅</div>
         <p className="text-lg font-medium text-even-evergreen uppercase tracking-wider">
           Sin órdenes pendientes
         </p>

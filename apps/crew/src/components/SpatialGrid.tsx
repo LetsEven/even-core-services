@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { ChevronDown, Check, Loader2 } from "lucide-react";
+import { ChevronDown, Check, Loader2, ArrowLeft } from "lucide-react";
 import { peekTablePOS, openTableAccount, type Branch } from "../services/api";
 import type { Order, DishStatus, CookingStatus, OrderType } from "../types";
 import { parseLocationCode } from "../utils/identifier";
@@ -52,20 +52,22 @@ interface Props {
   availableWaiters?: { id: string; name: string }[];
 }
 
-function circleClass(unit: SpatialUnit, pulsing: boolean): string {
+function circleClass(unit: SpatialUnit, active: boolean, pulsing: boolean): string {
   if (unit.status === "maintenance")
     return "bg-even-evergreen/5 border border-even-evergreen/10 text-even-evergreen/25 cursor-default";
   if (unit.has_tap_pay_account)
     return "bg-even-evergreen border border-even-evergreen text-even-offwhite shadow-[0_0_18px_rgba(2,56,40,0.25)] hover:bg-even-evergreen/90 active:scale-90";
-  if (unit.has_open_account) {
+  if (active) {
     const base =
-      "bg-even-grass border border-even-grass/60 text-even-evergreen shadow-[0_0_20px_rgba(130,230,87,0.45)] hover:bg-even-grass/90 active:scale-90";
+      "bg-even-grass border border-even-grass/60 text-even-evergreen hover:bg-even-grass/90 active:scale-90";
+    // Pulsing usa animate-pulse-ring (box-shadow animado) en vez del glow
+    // estático, para no pisarse entre sí — ver @keyframes pulse-ring en index.css.
     return pulsing
-      ? `${base} ring-2 ring-offset-2 ring-offset-even-evergreen ring-even-aqua animate-pulse`
-      : base;
+      ? `${base} animate-pulse-ring`
+      : `${base} shadow-[0_0_20px_rgba(130,230,87,0.45)]`;
   }
   if (pulsing)
-    return "animate-pulse bg-even-grass border border-even-grass/60 text-even-evergreen shadow-[0_0_20px_rgba(130,230,87,0.45)] hover:bg-even-grass/90 active:scale-90";
+    return "bg-even-grass border border-even-grass/60 text-even-evergreen hover:bg-even-grass/90 active:scale-90 animate-pulse-ring";
   return "bg-white border border-even-evergreen/15 text-even-evergreen shadow-sm hover:bg-even-evergreen/5 active:scale-90";
 }
 
@@ -184,11 +186,19 @@ export default function SpatialGrid({
     );
   }
 
-  function isPulsing(unit: SpatialUnit): boolean {
+  // `unit.has_open_account` viene de un fetch separado (getTablesForBranch/
+  // getRoomsForBranch) al de `orders` — si por una carrera entre los dos
+  // fetches o datos huérfanos llegan a desalinearse, una cuenta realmente
+  // abierta (existe en `orders`) no debe quedar invisible en el croquis.
+  function isUnitActive(unit: SpatialUnit): boolean {
+    return unit.has_open_account || findOrderForUnit(unit.number) !== undefined;
+  }
+
+  function isPulsing(unit: SpatialUnit, active: boolean): boolean {
     if (config.pulseKind === "pos_pending") {
-      return !unit.has_open_account && posUnits.has(unit.number);
+      return !active && posUnits.has(unit.number);
     }
-    if (config.pulseKind === "new_unseen" && unit.has_open_account) {
+    if (config.pulseKind === "new_unseen" && active) {
       const order = findOrderForUnit(unit.number);
       return order ? unseenOrders.isUnseen(order.id) : false;
     }
@@ -198,7 +208,7 @@ export default function SpatialGrid({
   async function handleUnitClick(unit: SpatialUnit) {
     if (unit.status === "maintenance" || checkingUnitId) return;
 
-    if (unit.has_open_account) {
+    if (isUnitActive(unit)) {
       const order = findOrderForUnit(unit.number);
       if (order) {
         unseenOrders.markSeen(order.id);
@@ -262,12 +272,17 @@ export default function SpatialGrid({
     }
   }
 
-  const activeCount = units.filter(
-    (u) => u.has_open_account && !u.has_tap_pay_account,
+  // Cuentas activas DE ESTE servicio (no mesas ocupadas por cualquier
+  // servicio — eso ya lo refleja el color del círculo). `orders` ya viene
+  // filtrado a "activas" desde el backend (getActiveOrders), así que contar
+  // por orderType alcanza — importa para Flex Bill en particular, donde una
+  // mesa "ocupada" puede tener cuentas de otro servicio y no de este.
+  const activeCount = orders.filter(
+    (o) => o.orderType === config.orderType,
   ).length;
   const tapPayCount = units.filter((u) => u.has_tap_pay_account).length;
   const availableCount = units.filter(
-    (u) => !u.has_open_account && u.status !== "maintenance",
+    (u) => !isUnitActive(u) && u.status !== "maintenance",
   ).length;
 
   return (
@@ -282,110 +297,153 @@ export default function SpatialGrid({
         refreshing={loading}
       />
 
-      {/* Title + stats */}
-      <div className="flex flex-col items-center pb-5 gap-1">
-        <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
-          {config.pluralLabel}
-        </h1>
-        {branches.length > 0 && (
-          <div className="relative" ref={branchRef}>
-            <button
-              onClick={() => setBranchOpen((v) => !v)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
-            >
-              <span>{branch?.name ?? "Seleccionar sucursal"}</span>
-              {branches.length > 1 && (
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
-                />
+      {/* Title + stats — no se muestra al ver el detalle de una orden */}
+      {!selectedOrder && (
+        <div className="flex flex-col items-center pb-5 gap-1">
+          <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
+            {config.pluralLabel}
+          </h1>
+          {branches.length > 0 && (
+            <div className="relative" ref={branchRef}>
+              <button
+                onClick={() => setBranchOpen((v) => !v)}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
+              >
+                <span>{branch?.name ?? "Seleccionar sucursal"}</span>
+                {branches.length > 1 && (
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
+                  />
+                )}
+              </button>
+              {branchOpen && branches.length > 1 && (
+                <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
+                  {branches.map((b) => (
+                    <li key={b.id}>
+                      <button
+                        onClick={() => {
+                          onBranchChange(b.id);
+                          setBranchOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        <span>{b.name}</span>
+                        {b.id === branchId && (
+                          <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </button>
-            {branchOpen && branches.length > 1 && (
-              <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
-                {branches.map((b) => (
-                  <li key={b.id}>
-                    <button
-                      onClick={() => {
-                        onBranchChange(b.id);
-                        setBranchOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                      <span>{b.name}</span>
-                      {b.id === branchId && (
-                        <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-        {units.length > 0 && !loading && (
-          <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
-            {tapPayCount > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
-                {tapPayCount} en cobro
+            </div>
+          )}
+          {units.length > 0 && !loading && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
+              {tapPayCount > 0 && (
+                <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
+                  {tapPayCount} en cobro
+                </span>
+              )}
+              {activeCount > 0 && (
+                <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
+                  {activeCount}{" "}
+                  {activeCount === 1 ? "cuenta activa" : "cuentas activas"}
+                </span>
+              )}
+              <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
+                {availableCount} {availableCount === 1 ? "libre" : "libres"}
               </span>
-            )}
-            {activeCount > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
-                {activeCount} {activeCount === 1 ? "activa" : "activas"}
-              </span>
-            )}
-            <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
-              {availableCount} {availableCount === 1 ? "libre" : "libres"}
-            </span>
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Glass panel */}
+      {/* Glass panel — croquis o, si hay una orden seleccionada, su detalle */}
       <div
         className="flex-1 rounded-t-lg px-6 py-6 flex flex-col min-h-0 overflow-y-auto text-even-evergreen"
         style={{ background: "#FEFEEB" }}
       >
-        {!branchId && (
-          <p className="text-even-evergreen/50 text-center mt-10">
-            Selecciona una sucursal para ver {config.pluralLabel.toLowerCase()}.
-          </p>
-        )}
-
-        {branchId && (loading || branchesLoading) && (
-          <div className="flex justify-center mt-16">
-            <Loader2 className="w-8 h-8 text-even-evergreen/40 animate-spin" />
+        {selectedOrder ? (
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setSelectedOrderId(null)}
+              className="self-start flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-even-evergreen/60 hover:text-even-evergreen transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Volver a {config.pluralLabel.toLowerCase()}
+            </button>
+            <OrderCard
+              order={selectedOrder}
+              onDishStatusChange={(dishId, status) =>
+                onDishStatusChange(
+                  selectedOrder.id,
+                  selectedOrder.orderType,
+                  dishId,
+                  status,
+                )
+              }
+              onOrderCookingStatusChange={onOrderCookingStatusChange}
+              onPrepTimeExtraChange={onPrepTimeExtraChange}
+              currentBranch={branch}
+              onPaymentRegistered={() => {
+                onOrdersRefresh();
+              }}
+              availableWaiters={availableWaiters}
+            />
           </div>
-        )}
+        ) : (
+          <>
+            {!branchId && (
+              <p className="text-even-evergreen/50 text-center mt-10">
+                Selecciona una sucursal para ver{" "}
+                {config.pluralLabel.toLowerCase()}.
+              </p>
+            )}
 
-        {branchId && !loading && error && (
-          <p className="text-rose-600 text-center mt-10 text-sm">{error}</p>
-        )}
+            {branchId && (loading || branchesLoading) && (
+              <div className="flex justify-center mt-16">
+                <Loader2 className="w-8 h-8 text-even-evergreen/40 animate-spin" />
+              </div>
+            )}
 
-        {branchId && !loading && !error && units.length === 0 && (
-          <p className="text-even-evergreen/50 text-center mt-10 text-sm">
-            No hay {config.pluralLabel.toLowerCase()} registradas para esta
-            sucursal.
-          </p>
-        )}
+            {branchId && !loading && error && (
+              <p className="text-rose-600 text-center mt-10 text-sm">
+                {error}
+              </p>
+            )}
 
-        {branchId && !loading && !error && units.length > 0 && (
-          <div className="grid grid-cols-4 gap-4 justify-items-center">
-            {units.map((unit) => (
-              <button
-                key={unit.id}
-                onClick={() => handleUnitClick(unit)}
-                disabled={unit.status === "maintenance" || !!checkingUnitId}
-                className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-150 disabled:cursor-default cursor-pointer ${circleClass(unit, isPulsing(unit))}`}
-              >
-                {checkingUnitId === unit.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  unit.number
-                )}
-              </button>
-            ))}
-          </div>
+            {branchId && !loading && !error && units.length === 0 && (
+              <p className="text-even-evergreen/50 text-center mt-10 text-sm">
+                No hay {config.pluralLabel.toLowerCase()} registradas para
+                esta sucursal.
+              </p>
+            )}
+
+            {branchId && !loading && !error && units.length > 0 && (
+              <div className="grid grid-cols-4 gap-4 justify-items-center">
+                {units.map((unit) => {
+                  const active = isUnitActive(unit);
+                  return (
+                    <button
+                      key={unit.id}
+                      onClick={() => handleUnitClick(unit)}
+                      disabled={
+                        unit.status === "maintenance" || !!checkingUnitId
+                      }
+                      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-150 disabled:cursor-default cursor-pointer ${circleClass(unit, active, isPulsing(unit, active))}`}
+                    >
+                      {checkingUnitId === unit.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        unit.number
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -501,43 +559,6 @@ export default function SpatialGrid({
         />
       )}
 
-      {/* Detalle de la orden activa — mismo OrderCard que Kitchen */}
-      {selectedOrder && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-y-auto"
-          style={{
-            background: "rgba(0,0,0,0.65)",
-            backdropFilter: "blur(6px)",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedOrderId(null);
-          }}
-        >
-          <div
-            className="w-full max-w-sm my-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <OrderCard
-              order={selectedOrder}
-              onDishStatusChange={(dishId, status) =>
-                onDishStatusChange(
-                  selectedOrder.id,
-                  selectedOrder.orderType,
-                  dishId,
-                  status,
-                )
-              }
-              onOrderCookingStatusChange={onOrderCookingStatusChange}
-              onPrepTimeExtraChange={onPrepTimeExtraChange}
-              currentBranch={branch}
-              onPaymentRegistered={() => {
-                onOrdersRefresh();
-              }}
-              availableWaiters={availableWaiters}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -17,7 +17,7 @@ export function PickAndGoHome(props: HomeScreenProps) {
     <Kitchen
       onOpenPrinters={props.onOpenPrinters}
       onOpenHistorial={props.onOpenHistorial}
-      orders={props.orders}
+      orders={props.orders.filter((o) => o.orderType === "pick_and_go")}
       loading={props.ordersLoading}
       error={props.ordersError}
       fetchOrders={props.fetchOrders}

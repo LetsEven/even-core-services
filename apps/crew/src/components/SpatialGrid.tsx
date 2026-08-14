@@ -163,6 +163,20 @@ export default function SpatialGrid({
     fetchData();
   }, [fetchData]);
 
+  // Refresco periódico — mismo patrón que Kitchen.tsx (handleActualizar).
+  // No depender solo del socket: si el evento no llega (reconexión, o una
+  // orden creada desde otro backend que comparte la misma DB pero no el
+  // mismo servidor de sockets), esto igual pone `units`/`orders` al día.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible" && !loading) {
+        fetchData(false);
+        onOrdersRefresh();
+      }
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [fetchData, loading, onOrdersRefresh]);
+
   useEffect(() => {
     unseenOrders.pruneTo(orders.map((o) => o.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps

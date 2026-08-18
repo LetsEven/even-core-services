@@ -93,6 +93,7 @@ export default function WaiterPinModal({
 
         <input
           type="password"
+          inputMode="numeric"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => {

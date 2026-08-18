@@ -179,7 +179,7 @@ export default function App() {
   }, [isSignedIn, getToken]);
 
   useEffect(() => {
-    if (!branchId) {
+    if (!isSignedIn || !branchId) {
       setAvailableWaiters([{ id: "EVEN", name: "EVEN" }]);
       return;
     }
@@ -189,7 +189,7 @@ export default function App() {
         .then(setAvailableWaiters)
         .catch(() => setAvailableWaiters([{ id: "EVEN", name: "EVEN" }]));
     });
-  }, [branchId, getToken]);
+  }, [isSignedIn, branchId, getToken]);
 
   const handleBranchChange = useCallback((id: string) => {
     setBranchId((prev) => {

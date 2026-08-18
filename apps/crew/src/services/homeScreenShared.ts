@@ -74,7 +74,7 @@ export const tapOrderConfig: SpatialGridConfig = {
   pluralLabel: "Mesas",
   fetchUnits: fetchTableUnits,
   freeUnitClickable: false,
-  pulseKind: "new_unseen",
+  pulseKind: "preparing",
 };
 
 export const flexBillConfig: SpatialGridConfig = {
@@ -83,7 +83,7 @@ export const flexBillConfig: SpatialGridConfig = {
   pluralLabel: "Mesas",
   fetchUnits: fetchTableUnits,
   freeUnitClickable: true,
-  pulseKind: "new_unseen",
+  pulseKind: "preparing",
 };
 
 export const roomServiceConfig: SpatialGridConfig = {
@@ -92,5 +92,5 @@ export const roomServiceConfig: SpatialGridConfig = {
   pluralLabel: "Habitaciones",
   fetchUnits: fetchRoomUnits,
   freeUnitClickable: false,
-  pulseKind: "new_unseen",
+  pulseKind: "preparing",
 };

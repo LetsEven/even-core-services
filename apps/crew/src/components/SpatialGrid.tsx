@@ -4,7 +4,6 @@ import { ChevronDown, Check, Loader2, ArrowLeft } from "lucide-react";
 import { peekTablePOS, openTableAccount, type Branch } from "../services/api";
 import type { Order, DishStatus, CookingStatus, OrderType } from "../types";
 import { parseLocationCode } from "../utils/identifier";
-import { useUnseenOrders } from "../hooks/useUnseenOrders";
 import OrderCard from "./OrderCard";
 import OpenTableWithDishesModal from "./OpenTableWithDishesModal";
 import AppHeader from "./AppHeader";
@@ -28,7 +27,7 @@ export interface SpatialGridConfig {
   pluralLabel: string; // "Mesas" | "Habitaciones"
   fetchUnits: (branchId: string, token: string) => Promise<SpatialUnit[]>;
   freeUnitClickable: boolean;
-  pulseKind: "new_unseen" | "pos_pending" | "none";
+  pulseKind: "preparing" | "pos_pending" | "none";
 }
 
 interface Props {
@@ -52,7 +51,11 @@ interface Props {
   availableWaiters?: { id: string; name: string }[];
 }
 
-function circleClass(unit: SpatialUnit, active: boolean, pulsing: boolean): string {
+function circleClass(
+  unit: SpatialUnit,
+  active: boolean,
+  pulsing: boolean,
+): string {
   if (unit.status === "maintenance")
     return "bg-even-evergreen/5 border border-even-evergreen/10 text-even-evergreen/25 cursor-default";
   if (unit.has_tap_pay_account)
@@ -87,7 +90,6 @@ export default function SpatialGrid({
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
 }: Props) {
   const { getToken } = useAuth();
-  const unseenOrders = useUnseenOrders(branchId);
 
   const [units, setUnits] = useState<SpatialUnit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,11 +180,6 @@ export default function SpatialGrid({
   }, [fetchData, loading, onOrdersRefresh]);
 
   useEffect(() => {
-    unseenOrders.pruneTo(orders.map((o) => o.id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders]);
-
-  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (branchRef.current && !branchRef.current.contains(e.target as Node)) {
         setBranchOpen(false);
@@ -212,9 +209,9 @@ export default function SpatialGrid({
     if (config.pulseKind === "pos_pending") {
       return !active && posUnits.has(unit.number);
     }
-    if (config.pulseKind === "new_unseen" && active) {
+    if (config.pulseKind === "preparing" && active) {
       const order = findOrderForUnit(unit.number);
-      return order ? unseenOrders.isUnseen(order.id) : false;
+      return order ? order.dishes.some((d) => d.status === "preparing") : false;
     }
     return false;
   }
@@ -225,7 +222,6 @@ export default function SpatialGrid({
     if (isUnitActive(unit)) {
       const order = findOrderForUnit(unit.number);
       if (order) {
-        unseenOrders.markSeen(order.id);
         setSelectedOrderId(order.id);
       }
       return;
@@ -402,6 +398,7 @@ export default function SpatialGrid({
               currentBranch={branch}
               onPaymentRegistered={() => {
                 onOrdersRefresh();
+                fetchData(false);
               }}
               availableWaiters={availableWaiters}
             />
@@ -422,15 +419,13 @@ export default function SpatialGrid({
             )}
 
             {branchId && !loading && error && (
-              <p className="text-rose-600 text-center mt-10 text-sm">
-                {error}
-              </p>
+              <p className="text-rose-600 text-center mt-10 text-sm">{error}</p>
             )}
 
             {branchId && !loading && !error && units.length === 0 && (
               <p className="text-even-evergreen/50 text-center mt-10 text-sm">
-                No hay {config.pluralLabel.toLowerCase()} registradas para
-                esta sucursal.
+                No hay {config.pluralLabel.toLowerCase()} registradas para esta
+                sucursal.
               </p>
             )}
 
@@ -572,7 +567,6 @@ export default function SpatialGrid({
           }}
         />
       )}
-
     </div>
   );
 }

@@ -562,6 +562,21 @@ export default function OrderCard({
                     ${(order.remainingAmount ?? 0).toFixed(2)}
                   </span>
                 </div>
+                <div className="flex flex-col items-center flex-1">
+                  <span className="text-[10px] uppercase tracking-widest text-even-evergreen/60">
+                    Pagado + propina
+                  </span>
+                  <span className="text-sm font-semibold text-even-evergreen">
+                    $
+                    {(
+                      (order.totalAmount ?? 0) +
+                      (order.payments ?? []).reduce(
+                        (sum, p) => sum + (p.tipAmount ?? 0),
+                        0,
+                      )
+                    ).toFixed(2)}
+                  </span>
+                </div>
               </div>
             )}
             {(order.payments?.length ?? 0) > 0 && (

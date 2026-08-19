@@ -58,7 +58,6 @@ export default function CashPaymentModal({
   const [dishOrders, setDishOrders] = useState<DishOrderCrew[]>([]);
   const [selectedDishes, setSelectedDishes] = useState<Set<string>>(new Set());
   const [customAmount, setCustomAmount] = useState("");
-  const [equalPeople, setEqualPeople] = useState("2");
   const [loadingData, setLoadingData] = useState(false);
 
   // Step 1 — propina
@@ -76,7 +75,7 @@ export default function CashPaymentModal({
 
   const isTapPay = order.orderType === "tap_pay";
   const tableNumber = parseLocationCode(order.identifier);
-  const cobradoPor = method === "cash" ? "EFECTIVO" : "TERMINAL";
+  const cobradoPor = "MESERO";
 
   // Load table summary when step 0 opens (flex_bill only)
   useEffect(() => {
@@ -152,10 +151,6 @@ export default function CashPaymentModal({
       return dishOrders
         .filter((d) => selectedDishes.has(d.dish_order_id))
         .reduce((sum, d) => sum + d.total_price, 0);
-    }
-    if (payType === "equal-shares") {
-      const n = parseInt(equalPeople) || 2;
-      return parseFloat((remaining / n).toFixed(2));
     }
     if (payType === "choose-amount") return parseFloat(customAmount) || 0;
     return 0;
@@ -351,11 +346,6 @@ export default function CashPaymentModal({
                           desc: "Elige items específicos",
                         },
                         {
-                          type: "equal-shares",
-                          label: "Partes iguales",
-                          desc: "Dividir entre personas",
-                        },
-                        {
                           type: "choose-amount",
                           label: "Elegir monto",
                           desc: "Monto libre",
@@ -432,31 +422,6 @@ export default function CashPaymentModal({
                             </button>
                           ))}
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {payType === "equal-shares" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                        Número de personas
-                      </label>
-                      <input
-                        type="number"
-                        min="2"
-                        value={equalPeople}
-                        onChange={(e) => setEqualPeople(e.target.value)}
-                        className={inputClass}
-                        style={inputStyle}
-                      />
-                      {parseInt(equalPeople) > 1 && (
-                        <p className="text-xs text-even-offwhite/30">
-                          Corresponde $
-                          {(remaining / (parseInt(equalPeople) || 2)).toFixed(
-                            2,
-                          )}{" "}
-                          por persona
-                        </p>
                       )}
                     </div>
                   )}

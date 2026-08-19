@@ -406,7 +406,10 @@ export default function Historial({
                     {order.dishes.map((dish) => {
                       const opts = getOptions(dish.customFields);
                       return (
-                        <div key={dish.id} className="py-1.5 first:pt-0 last:pb-0">
+                        <div
+                          key={dish.id}
+                          className="py-1.5 first:pt-0 last:pb-0"
+                        >
                           <div className="flex items-center gap-1.5 flex-wrap text-sm text-even-evergreen/80">
                             <span className="text-even-evergreen/50">
                               {dish.quantity}×
@@ -443,30 +446,43 @@ export default function Historial({
                   </div>
 
                   {order.orderType === "flex_bill" &&
-                    order.totalAmount != null && (
-                      <div className="flex items-center gap-4 pt-2 border-t border-even-evergreen/10 text-xs">
-                        <span className="text-even-evergreen/60">
-                          Total{" "}
-                          <span className="text-even-evergreen font-medium">
-                            ${order.totalAmount.toFixed(2)}
-                          </span>
-                        </span>
-                        <span className="text-even-evergreen/60">
-                          Pagado{" "}
-                          <span className="text-even-evergreen font-medium">
-                            ${(order.paidAmount ?? 0).toFixed(2)}
-                          </span>
-                        </span>
-                        {(order.remainingAmount ?? 0) > 0 && (
+                    order.totalAmount != null &&
+                    (() => {
+                      const tipTotal = (order.payments ?? []).reduce(
+                        (sum, p) => sum + (p.tipAmount ?? 0),
+                        0,
+                      );
+                      return (
+                        <div className="flex items-center gap-4 pt-2 border-t border-even-evergreen/10 text-xs">
                           <span className="text-even-evergreen/60">
-                            Restante{" "}
-                            <span className="text-amber-600 font-medium">
-                              ${order.remainingAmount!.toFixed(2)}
+                            Total{" "}
+                            <span className="text-even-evergreen font-medium">
+                              ${order.totalAmount!.toFixed(2)}
                             </span>
                           </span>
-                        )}
-                      </div>
-                    )}
+                          <span className="text-even-evergreen/60">
+                            Pagado{" "}
+                            <span className="text-even-evergreen font-medium">
+                              ${(order.paidAmount ?? 0).toFixed(2)}
+                            </span>
+                          </span>
+                          {(order.remainingAmount ?? 0) > 0 && (
+                            <span className="text-even-evergreen/60">
+                              Restante{" "}
+                              <span className="text-amber-600 font-medium">
+                                ${order.remainingAmount!.toFixed(2)}
+                              </span>
+                            </span>
+                          )}
+                          <span className="text-even-evergreen/60">
+                            Pagado + propina{" "}
+                            <span className="text-even-evergreen font-medium">
+                              ${(order.totalAmount! + tipTotal).toFixed(2)}
+                            </span>
+                          </span>
+                        </div>
+                      );
+                    })()}
                 </div>
               );
             })}

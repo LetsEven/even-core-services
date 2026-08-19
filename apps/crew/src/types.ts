@@ -52,7 +52,6 @@ export type ManualCardType = "credito" | "debito" | "amex";
 export type ManualPaymentType =
   | "full-bill"
   | "select-items"
-  | "equal-shares"
   | "choose-amount";
 
 export interface TableSummary {

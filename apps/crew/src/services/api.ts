@@ -408,6 +408,33 @@ export async function getRoomsForBranch(
   return data.rooms ?? [];
 }
 
+export interface ReorderUnit {
+  id: string;
+  display_order: number;
+}
+
+export async function reorderTables(
+  branchId: string,
+  tables: ReorderUnit[],
+  token: string,
+): Promise<void> {
+  await authFetch(`/api/kitchen/tables/reorder`, token, {
+    method: "PUT",
+    body: JSON.stringify({ branchId, tables }),
+  });
+}
+
+export async function reorderRooms(
+  branchId: string,
+  rooms: ReorderUnit[],
+  token: string,
+): Promise<void> {
+  await authFetch(`/api/kitchen/rooms/reorder`, token, {
+    method: "PUT",
+    body: JSON.stringify({ branchId, rooms }),
+  });
+}
+
 export async function getQRCodesForBranch(
   branchId: string,
   token: string,

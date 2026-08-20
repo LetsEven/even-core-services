@@ -1,7 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, Check, Loader2, ArrowLeft } from "lucide-react";
-import { peekTablePOS, openTableAccount, type Branch } from "../services/api";
+import {
+  peekTablePOS,
+  openTableAccount,
+  type Branch,
+  type ReorderUnit,
+} from "../services/api";
 import type { Order, DishStatus, CookingStatus, OrderType } from "../types";
 import { parseLocationCode } from "../utils/identifier";
 import OrderCard from "./OrderCard";
@@ -26,6 +47,11 @@ export interface SpatialGridConfig {
   unitLabel: string; // "Mesa" | "Habitación"
   pluralLabel: string; // "Mesas" | "Habitaciones"
   fetchUnits: (branchId: string, token: string) => Promise<SpatialUnit[]>;
+  reorderUnits: (
+    branchId: string,
+    order: ReorderUnit[],
+    token: string,
+  ) => Promise<void>;
   freeUnitClickable: boolean;
   pulseKind: "preparing" | "pos_pending" | "none";
 }
@@ -51,27 +77,68 @@ interface Props {
   availableWaiters?: { id: string; name: string }[];
 }
 
+// Sin transition/active:scale/hover propios — el grid siempre es
+// arrastrable (@dnd-kit necesita ser el único dueño de `transform` en el
+// elemento, aplicado vía inline style desde useSortable). Pulsing usa
+// animate-pulse-ring (solo box-shadow, no pisa el transform del drag).
 function circleClass(
   unit: SpatialUnit,
   active: boolean,
   pulsing: boolean,
 ): string {
   if (unit.status === "maintenance")
-    return "bg-even-evergreen/5 border border-even-evergreen/10 text-even-evergreen/25 cursor-default";
+    return "bg-even-evergreen/5 border border-even-evergreen/10 text-even-evergreen/25";
   if (unit.has_tap_pay_account)
-    return "bg-even-evergreen border border-even-evergreen text-even-offwhite shadow-[0_0_18px_rgba(2,56,40,0.25)] hover:bg-even-evergreen/90 active:scale-90";
+    return "bg-even-evergreen border border-even-evergreen text-even-offwhite shadow-[0_0_18px_rgba(2,56,40,0.25)]";
   if (active) {
-    const base =
-      "bg-even-grass border border-even-grass/60 text-even-evergreen hover:bg-even-grass/90 active:scale-90";
-    // Pulsing usa animate-pulse-ring (box-shadow animado) en vez del glow
-    // estático, para no pisarse entre sí — ver @keyframes pulse-ring en index.css.
+    const base = "bg-even-grass border border-even-grass/60 text-even-evergreen";
     return pulsing
       ? `${base} animate-pulse-ring`
       : `${base} shadow-[0_0_20px_rgba(130,230,87,0.45)]`;
   }
   if (pulsing)
-    return "bg-even-grass border border-even-grass/60 text-even-evergreen hover:bg-even-grass/90 active:scale-90 animate-pulse-ring";
-  return "bg-white border border-even-evergreen/15 text-even-evergreen shadow-sm hover:bg-even-evergreen/5 active:scale-90";
+    return "bg-even-grass border border-even-grass/60 text-even-evergreen animate-pulse-ring";
+  return "bg-white border border-even-evergreen/15 text-even-evergreen shadow-sm";
+}
+
+function SortableCircle({
+  unit,
+  active,
+  pulsing,
+  disabled,
+  isChecking,
+  onClick,
+}: {
+  unit: SpatialUnit;
+  active: boolean;
+  pulsing: boolean;
+  disabled: boolean;
+  isChecking: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: unit.id, disabled });
+
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm cursor-grab active:cursor-grabbing touch-none disabled:cursor-default ${circleClass(unit, active, pulsing)} ${isDragging ? "opacity-75 shadow-lg z-10" : ""}`}
+    >
+      {isChecking ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        unit.number
+      )}
+    </button>
+  );
 }
 
 export default function SpatialGrid({
@@ -90,6 +157,17 @@ export default function SpatialGrid({
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
 }: Props) {
   const { getToken } = useAuth();
+
+  // Distance de activación mínima para el mouse — evita que un click normal
+  // (tap corto) se interprete como el inicio de un drag. Touch usa un delay
+  // (long-press) en vez de distancia, para no pisarse con el scroll nativo
+  // del panel (que es overflow-y-auto).
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 8 },
+    }),
+  );
 
   const [units, setUnits] = useState<SpatialUnit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,6 +191,9 @@ export default function SpatialGrid({
 
   const [branchOpen, setBranchOpen] = useState(false);
   const branchRef = useRef<HTMLDivElement>(null);
+  // Evita que el refresco periódico pise un drag en curso — no es un "modo",
+  // solo se activa mientras el usuario tiene el dedo/mouse abajo arrastrando.
+  const [isReordering, setIsReordering] = useState(false);
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
 
@@ -171,13 +252,13 @@ export default function SpatialGrid({
   // mismo servidor de sockets), esto igual pone `units`/`orders` al día.
   useEffect(() => {
     const id = setInterval(() => {
-      if (document.visibilityState === "visible" && !loading) {
+      if (document.visibilityState === "visible" && !loading && !isReordering) {
         fetchData(false);
         onOrdersRefresh();
       }
     }, 30_000);
     return () => clearInterval(id);
-  }, [fetchData, loading, onOrdersRefresh]);
+  }, [fetchData, loading, isReordering, onOrdersRefresh]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -279,6 +360,33 @@ export default function SpatialGrid({
     } finally {
       setConfirmUnit(null);
       setOpeningAccount(false);
+    }
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setIsReordering(false);
+    if (!over || active.id === over.id || !branchId) return;
+
+    const oldIndex = units.findIndex((u) => u.id === active.id);
+    const newIndex = units.findIndex((u) => u.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(units, oldIndex, newIndex);
+    setUnits(reordered);
+
+    const token = await getToken();
+    if (!token) return;
+    try {
+      await config.reorderUnits(
+        branchId,
+        reordered.map((u, index) => ({ id: u.id, display_order: index })),
+        token,
+      );
+    } catch (err) {
+      console.error("[SPATIAL-GRID] handleDragEnd error:", err);
+      setError(`No se pudo guardar el nuevo orden de ${config.pluralLabel.toLowerCase()}.`);
+      fetchData(false);
     }
   }
 
@@ -385,15 +493,22 @@ export default function SpatialGrid({
             </button>
             <OrderCard
               order={selectedOrder}
-              onDishStatusChange={(dishId, status) =>
+              onDishStatusChange={(dishId, status) => {
                 onDishStatusChange(
                   selectedOrder.id,
                   selectedOrder.orderType,
                   dishId,
                   status,
-                )
-              }
-              onOrderCookingStatusChange={onOrderCookingStatusChange}
+                );
+                // Entregar el último platillo puede cerrar la cuenta —
+                // refresca `units` para que el círculo del croquis deje de
+                // mostrarse ocupado/verde sin necesitar un refresh manual.
+                if (status === "delivered") fetchData(false);
+              }}
+              onOrderCookingStatusChange={(orderId, status) => {
+                onOrderCookingStatusChange?.(orderId, status);
+                if (status === "delivered") fetchData(false);
+              }}
               onPrepTimeExtraChange={onPrepTimeExtraChange}
               currentBranch={branch}
               onPaymentRegistered={() => {
@@ -430,27 +545,37 @@ export default function SpatialGrid({
             )}
 
             {branchId && !loading && !error && units.length > 0 && (
-              <div className="grid grid-cols-4 gap-4 justify-items-center">
-                {units.map((unit) => {
-                  const active = isUnitActive(unit);
-                  return (
-                    <button
-                      key={unit.id}
-                      onClick={() => handleUnitClick(unit)}
-                      disabled={
-                        unit.status === "maintenance" || !!checkingUnitId
-                      }
-                      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-150 disabled:cursor-default cursor-pointer ${circleClass(unit, active, isPulsing(unit, active))}`}
-                    >
-                      {checkingUnitId === unit.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        unit.number
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={() => setIsReordering(true)}
+                onDragCancel={() => setIsReordering(false)}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={units.map((u) => u.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-4 gap-4 justify-items-center">
+                    {units.map((unit) => {
+                      const active = isUnitActive(unit);
+                      return (
+                        <SortableCircle
+                          key={unit.id}
+                          unit={unit}
+                          active={active}
+                          pulsing={isPulsing(unit, active)}
+                          disabled={
+                            unit.status === "maintenance" || !!checkingUnitId
+                          }
+                          isChecking={checkingUnitId === unit.id}
+                          onClick={() => handleUnitClick(unit)}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </>
         )}

@@ -1,5 +1,12 @@
 import type { SpatialGridConfig, SpatialUnit } from "../components/SpatialGrid";
-import { getTablesForBranch, getRoomsForBranch, type Branch } from "./api";
+import {
+  getTablesForBranch,
+  getRoomsForBranch,
+  reorderTables,
+  reorderRooms,
+  type Branch,
+  type ReorderUnit,
+} from "./api";
 import type { Order, DishStatus, CookingStatus } from "../types";
 
 // Props comunes que App.tsx tiene disponibles y que cada HomeScreen necesita,
@@ -59,11 +66,28 @@ async function fetchRoomUnits(
   }));
 }
 
+function reorderTableUnits(
+  branchId: string,
+  order: ReorderUnit[],
+  token: string,
+): Promise<void> {
+  return reorderTables(branchId, order, token);
+}
+
+function reorderRoomUnits(
+  branchId: string,
+  order: ReorderUnit[],
+  token: string,
+): Promise<void> {
+  return reorderRooms(branchId, order, token);
+}
+
 export const tapPayConfig: SpatialGridConfig = {
   orderType: "tap_pay",
   unitLabel: "Mesa",
   pluralLabel: "Mesas",
   fetchUnits: fetchTableUnits,
+  reorderUnits: reorderTableUnits,
   freeUnitClickable: true,
   pulseKind: "pos_pending",
 };
@@ -73,6 +97,7 @@ export const tapOrderConfig: SpatialGridConfig = {
   unitLabel: "Mesa",
   pluralLabel: "Mesas",
   fetchUnits: fetchTableUnits,
+  reorderUnits: reorderTableUnits,
   freeUnitClickable: false,
   pulseKind: "preparing",
 };
@@ -82,6 +107,7 @@ export const flexBillConfig: SpatialGridConfig = {
   unitLabel: "Mesa",
   pluralLabel: "Mesas",
   fetchUnits: fetchTableUnits,
+  reorderUnits: reorderTableUnits,
   freeUnitClickable: true,
   pulseKind: "preparing",
 };
@@ -91,6 +117,7 @@ export const roomServiceConfig: SpatialGridConfig = {
   unitLabel: "Habitación",
   pluralLabel: "Habitaciones",
   fetchUnits: fetchRoomUnits,
+  reorderUnits: reorderRoomUnits,
   freeUnitClickable: false,
   pulseKind: "preparing",
 };

@@ -314,6 +314,10 @@ export interface CreateManualTransactionParams {
   id_table_order?: string;
   id_tap_pay_order?: string;
   restaurant_id: number;
+  // Usados por el backend para recalcular la comisión de Flex Bill desde
+  // los dish_order reales — ver commissionCalculator.js/paymentController.js.
+  payment_type?: string;
+  selected_item_ids?: string[];
   base_amount: number;
   tip_amount: number;
   iva_tip: number;
@@ -525,6 +529,10 @@ export async function createManualTransaction(
       ...(params.id_tap_pay_order
         ? { id_tap_pay_order: params.id_tap_pay_order }
         : {}),
+      ...(params.payment_type ? { payment_type: params.payment_type } : {}),
+      ...(params.selected_item_ids
+        ? { selected_item_ids: params.selected_item_ids }
+        : {}),
       base_amount: params.base_amount,
       tip_amount: params.tip_amount,
       iva_tip: params.iva_tip,
@@ -630,6 +638,9 @@ export interface MenuItem {
   id: number;
   name: string;
   price: number;
+  // Precio con la comisión de Flex Bill ya incrustada — ver
+  // commissionCalculator.js en even-backend.
+  display_price?: number;
   discount: number;
   custom_fields: MenuItemCustomField[];
   is_available: boolean;

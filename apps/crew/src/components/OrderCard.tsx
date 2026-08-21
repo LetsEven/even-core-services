@@ -537,7 +537,10 @@ export default function OrderCard({
                     Total
                   </span>
                   <span className="text-sm font-semibold text-even-evergreen">
-                    ${(order.totalAmount ?? 0).toFixed(2)}
+                    $
+                    {(order.totalDisplayAmount ?? order.totalAmount ?? 0).toFixed(
+                      2,
+                    )}
                   </span>
                 </div>
                 <div className="flex flex-col items-center flex-1">
@@ -545,7 +548,10 @@ export default function OrderCard({
                     Pagado
                   </span>
                   <span className="text-sm font-semibold text-even-evergreen">
-                    ${(order.paidAmount ?? 0).toFixed(2)}
+                    $
+                    {(order.paidDisplayAmount ?? order.paidAmount ?? 0).toFixed(
+                      2,
+                    )}
                   </span>
                 </div>
                 <div className="flex flex-col items-center flex-1">
@@ -559,9 +565,15 @@ export default function OrderCard({
                         : "text-even-evergreen"
                     }`}
                   >
-                    ${(order.remainingAmount ?? 0).toFixed(2)}
+                    $
+                    {(
+                      order.remainingDisplayAmount ??
+                      order.remainingAmount ??
+                      0
+                    ).toFixed(2)}
                   </span>
                 </div>
+                {/* Comentado por ahora — ver conversación sobre Pagado + propina
                 <div className="flex flex-col items-center flex-1">
                   <span className="text-[10px] uppercase tracking-widest text-even-evergreen/60">
                     Pagado + propina
@@ -569,7 +581,7 @@ export default function OrderCard({
                   <span className="text-sm font-semibold text-even-evergreen">
                     $
                     {(
-                      (order.totalAmount ?? 0) +
+                      (order.totalDisplayAmount ?? order.totalAmount ?? 0) +
                       (order.payments ?? []).reduce(
                         (sum, p) => sum + (p.tipAmount ?? 0),
                         0,
@@ -577,6 +589,7 @@ export default function OrderCard({
                     ).toFixed(2)}
                   </span>
                 </div>
+                */}
               </div>
             )}
             {(order.payments?.length ?? 0) > 0 && (
@@ -608,7 +621,11 @@ export default function OrderCard({
                       {paymentTypeLabel(p.cardType)}
                     </span>
                     <span className="text-even-evergreen text-xs font-medium text-right py-1.5 border-t border-even-evergreen/10">
-                      ${p.baseAmount.toFixed(2)}
+                      $
+                      {(order.orderType === "flex_bill"
+                        ? p.totalCharged - p.tipAmount
+                        : p.baseAmount
+                      ).toFixed(2)}
                     </span>
                     <span className="text-even-evergreen/30 text-xs text-right py-1.5 border-t border-even-evergreen/10">
                       {p.tipAmount > 0 ? `+$${p.tipAmount.toFixed(2)}` : "—"}

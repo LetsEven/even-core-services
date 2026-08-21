@@ -11,6 +11,7 @@ import type {
 } from "../services/api";
 import { getRestaurantMenu, addDishToFlexBill } from "../services/api";
 import { parseLocationCode } from "../utils/identifier";
+import { getItemDisplayPrice } from "../utils/commissionCalculator";
 
 type CustomSelections = Record<
   string,
@@ -108,6 +109,25 @@ export default function AddDishModal({
     }
     return (base + extra) * quantity;
   }, [selectedItem, customSelections, quantity]);
+
+  // Precio que se le muestra al mesero (comisión de Flex Bill ya
+  // incrustada) — nunca se manda al backend, solo para pantalla.
+  // handleConfirm sigue usando totalPrice (real) para addDishToFlexBill.
+  const displayTotalPrice = useMemo(() => {
+    if (quantity <= 0) return 0;
+    return getItemDisplayPrice(totalPrice / quantity) * quantity;
+  }, [totalPrice, quantity]);
+
+  // La franja de comisión se calcula sobre el precio combinado (base +
+  // extras), no por separado — para que el precio base y cada extra
+  // mostrados sumen exacto contra displayTotalPrice, se reparte la misma
+  // inflación proporcionalmente entre todos los componentes.
+  const priceMultiplier = useMemo(() => {
+    if (quantity <= 0) return 1;
+    const unitPrice = totalPrice / quantity;
+    const displayUnitPrice = displayTotalPrice / quantity;
+    return unitPrice > 0 ? displayUnitPrice / unitPrice : 1;
+  }, [totalPrice, displayTotalPrice, quantity]);
 
   const isFormValid = useMemo(() => {
     if (!selectedItem) return false;
@@ -373,11 +393,11 @@ export default function AddDishModal({
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-sm text-even-offwhite/40">
                           $
-                          {item.discount > 0
-                            ? (item.price * (1 - item.discount / 100)).toFixed(
-                                2,
-                              )
-                            : item.price.toFixed(2)}
+                          {getItemDisplayPrice(
+                            item.discount > 0
+                              ? item.price * (1 - item.discount / 100)
+                              : item.price,
+                          ).toFixed(2)}
                         </span>
                         <ChevronRight className="w-3.5 h-3.5 text-even-offwhite/20" />
                       </div>
@@ -482,7 +502,7 @@ export default function AddDishModal({
                               ) : (
                                 opt.price > 0 && (
                                   <span className="text-xs text-even-grass ml-2">
-                                    +${opt.price.toFixed(2)}
+                                    +${(opt.price * priceMultiplier).toFixed(2)}
                                   </span>
                                 )
                               )}
@@ -542,7 +562,7 @@ export default function AddDishModal({
                               ) : (
                                 opt.price > 0 && (
                                   <span className="text-xs text-even-grass ml-2">
-                                    +${opt.price.toFixed(2)}
+                                    +${(opt.price * priceMultiplier).toFixed(2)}
                                   </span>
                                 )
                               )}
@@ -603,7 +623,7 @@ export default function AddDishModal({
                               ) : (
                                 opt.price > 0 && (
                                   <span className="text-xs text-even-grass ml-2">
-                                    +${opt.price.toFixed(2)}
+                                    +${(opt.price * priceMultiplier).toFixed(2)}
                                   </span>
                                 )
                               )}
@@ -675,7 +695,7 @@ export default function AddDishModal({
                 disabled={!isFormValid}
                 className="w-full py-3 rounded-lg bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer disabled:cursor-default disabled:opacity-40"
               >
-                Continuar · ${totalPrice.toFixed(2)}
+                Continuar · ${displayTotalPrice.toFixed(2)}
               </button>
             </div>
           </div>
@@ -695,7 +715,7 @@ export default function AddDishModal({
                     {selectedItem.name}
                   </p>
                   <p className="text-even-offwhite font-bold text-lg">
-                    ${totalPrice.toFixed(2)}
+                    ${displayTotalPrice.toFixed(2)}
                   </p>
                 </div>
                 {(() => {

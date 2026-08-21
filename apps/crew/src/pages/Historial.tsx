@@ -448,38 +448,58 @@ export default function Historial({
                   {order.orderType === "flex_bill" &&
                     order.totalAmount != null &&
                     (() => {
-                      const tipTotal = (order.payments ?? []).reduce(
-                        (sum, p) => sum + (p.tipAmount ?? 0),
-                        0,
-                      );
+                      // tipTotal solo lo usaba "Pagado + propina", comentado
+                      // por ahora más abajo.
+                      // const tipTotal = (order.payments ?? []).reduce(
+                      //   (sum, p) => sum + (p.tipAmount ?? 0),
+                      //   0,
+                      // );
                       return (
                         <div className="flex items-center gap-4 pt-2 border-t border-even-evergreen/10 text-xs">
                           <span className="text-even-evergreen/60">
                             Total{" "}
                             <span className="text-even-evergreen font-medium">
-                              ${order.totalAmount!.toFixed(2)}
+                              $
+                              {(
+                                order.totalDisplayAmount ?? order.totalAmount!
+                              ).toFixed(2)}
                             </span>
                           </span>
                           <span className="text-even-evergreen/60">
                             Pagado{" "}
                             <span className="text-even-evergreen font-medium">
-                              ${(order.paidAmount ?? 0).toFixed(2)}
+                              $
+                              {(
+                                order.paidDisplayAmount ??
+                                order.paidAmount ??
+                                0
+                              ).toFixed(2)}
                             </span>
                           </span>
                           {(order.remainingAmount ?? 0) > 0 && (
                             <span className="text-even-evergreen/60">
                               Restante{" "}
                               <span className="text-amber-600 font-medium">
-                                ${order.remainingAmount!.toFixed(2)}
+                                $
+                                {(
+                                  order.remainingDisplayAmount ??
+                                  order.remainingAmount!
+                                ).toFixed(2)}
                               </span>
                             </span>
                           )}
+                          {/* Comentado por ahora — ver conversación sobre Pagado + propina
                           <span className="text-even-evergreen/60">
                             Pagado + propina{" "}
                             <span className="text-even-evergreen font-medium">
-                              ${(order.totalAmount! + tipTotal).toFixed(2)}
+                              $
+                              {(
+                                (order.totalDisplayAmount ??
+                                  order.totalAmount!) + tipTotal
+                              ).toFixed(2)}
                             </span>
                           </span>
+                          */}
                         </div>
                       );
                     })()}

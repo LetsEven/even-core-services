@@ -27,7 +27,12 @@ import {
   payTapPayDishOrder,
   createManualTransaction,
 } from "../services/api";
-import { calculateCommissions } from "../utils/commissionCalculator";
+import {
+  calculateCommissions,
+  calculateFlexBillItemCommission,
+  calculateFlexBillProportionalCommission,
+  type FlexBillCommissionLineItem,
+} from "../utils/commissionCalculator";
 import { parseLocationCode } from "../utils/identifier";
 
 interface Props {
@@ -77,7 +82,11 @@ export default function CashPaymentModal({
   const tableNumber = parseLocationCode(order.identifier);
   const cobradoPor = "MESERO";
 
-  // Load table summary when step 0 opens (flex_bill only)
+  // Load table summary + dish orders when step 0 opens (flex_bill only) —
+  // los dish_order reales se necesitan desde el arranque, no solo para
+  // "select-items", porque ahora el cálculo de comisión por ítem también
+  // los usa en "full-bill"/"choose-amount" (franja por precio de cada
+  // platillo, no por el subtotal de la mesa).
   useEffect(() => {
     if (isTapPay) return;
     if (step === 0 && tableNumber != null && !tableSummary) {
@@ -85,13 +94,22 @@ export default function CashPaymentModal({
       getToken().then(async (token) => {
         if (!token) return;
         try {
-          const summary = await getTableSummary(
-            String(branch.restaurant_id),
-            String(branch.branch_number),
-            String(tableNumber),
-            token,
-          );
+          const [summary, dishes] = await Promise.all([
+            getTableSummary(
+              String(branch.restaurant_id),
+              String(branch.branch_number),
+              String(tableNumber),
+              token,
+            ),
+            getDishOrders(
+              String(branch.restaurant_id),
+              String(branch.branch_number),
+              String(tableNumber),
+              token,
+            ),
+          ]);
           setTableSummary(summary);
+          setDishOrders(dishes.filter((d) => d.payment_status === "not_paid"));
         } catch (e: any) {
           console.error("Error loading table data:", e.message);
         } finally {
@@ -101,49 +119,47 @@ export default function CashPaymentModal({
     }
   }, [step]);
 
-  // Load dish orders when select-items is chosen
+  // Tap Pay: la lista de platillos ya viene sincrónica en order.dishes — se
+  // arma solo cuando se elige "select-items", igual que antes (Tap Pay no
+  // se toca, sigue con el modelo de comisión viejo).
   useEffect(() => {
-    if (payType !== "select-items" || dishOrders.length > 0) return;
-
-    if (isTapPay) {
-      const unpaid = order.dishes
-        .filter((d) => d.paymentStatus !== "paid")
-        .map((d) => ({
-          dish_order_id: d.id,
-          item: d.item,
-          quantity: d.quantity,
-          price: d.price ?? 0,
-          total_price: (d.price ?? 0) * d.quantity,
-          payment_status: "not_paid" as const,
-          guest_name: "",
-        }));
-      setDishOrders(unpaid);
+    if (!isTapPay || payType !== "select-items" || dishOrders.length > 0)
       return;
-    }
-
-    if (tableNumber == null) return;
-    setLoadingData(true);
-    getToken().then(async (token) => {
-      if (!token) return;
-      try {
-        const dishes = await getDishOrders(
-          String(branch.restaurant_id),
-          String(branch.branch_number),
-          String(tableNumber),
-          token,
-        );
-        setDishOrders(dishes.filter((d) => d.payment_status === "not_paid"));
-      } catch (e: any) {
-        console.error("Error loading dishes:", e.message);
-      } finally {
-        setLoadingData(false);
-      }
-    });
+    const unpaid = order.dishes
+      .filter((d) => d.paymentStatus !== "paid")
+      .map((d) => ({
+        dish_order_id: d.id,
+        item: d.item,
+        quantity: d.quantity,
+        price: d.price ?? 0,
+        total_price: (d.price ?? 0) * d.quantity,
+        payment_status: "not_paid" as const,
+        guest_name: "",
+      }));
+    setDishOrders(unpaid);
   }, [payType]);
 
   // Derived amounts
   const remaining =
     tableSummary?.remaining_amount ?? order.remainingAmount ?? 0;
+
+  // Precio con la comisión de Flex Bill ya incrustada (viene del backend en
+  // dish_order.total_display_price) — solo aplica a la rama no-Tap-Pay.
+  // Tap Pay sigue con el modelo viejo y usa `remaining` real tal cual.
+  const displayRemaining = isTapPay
+    ? remaining
+    : dishOrders.reduce(
+        (sum, d) => sum + (d.total_display_price ?? d.total_price ?? 0),
+        0,
+      );
+
+  function toCommissionLineItem(d: DishOrderCrew): FlexBillCommissionLineItem {
+    // DishOrderCrew no trae extra_price aparte — total_price ya incluye
+    // cantidad × (price + extras), así que se reconstruye el precio
+    // unitario combinado desde ahí para no perder la franja correcta.
+    const unitPrice = d.quantity > 0 ? d.total_price / d.quantity : d.price;
+    return { price: unitPrice, quantity: d.quantity };
+  }
 
   function getBaseAmount(): number {
     if (payType === "full-bill") return remaining;
@@ -152,7 +168,15 @@ export default function CashPaymentModal({
         .filter((d) => selectedDishes.has(d.dish_order_id))
         .reduce((sum, d) => sum + d.total_price, 0);
     }
-    if (payType === "choose-amount") return parseFloat(customAmount) || 0;
+    if (payType === "choose-amount") {
+      const typed = parseFloat(customAmount) || 0;
+      if (isTapPay) return typed;
+      // El monto que escribe el mesero está en "espacio inflado" (lo que
+      // ve como "Restante" en pantalla) — se convierte a la porción real
+      // equivalente, que es lo que el resto del cálculo necesita.
+      if (!typed || displayRemaining <= 0) return 0;
+      return (typed / displayRemaining) * remaining;
+    }
     return 0;
   }
 
@@ -164,15 +188,45 @@ export default function CashPaymentModal({
 
   const baseAmount = getBaseAmount();
   const tipAmount = getTipAmount();
-  const commissions = calculateCommissions(baseAmount, tipAmount);
+
+  const commissions = (() => {
+    if (isTapPay) return calculateCommissions(baseAmount, tipAmount);
+
+    if (payType === "select-items") {
+      const items = dishOrders
+        .filter((d) => selectedDishes.has(d.dish_order_id))
+        .map(toCommissionLineItem);
+      return calculateFlexBillItemCommission(items, tipAmount);
+    }
+
+    if (payType === "full-bill") {
+      return calculateFlexBillItemCommission(
+        dishOrders.map(toCommissionLineItem),
+        tipAmount,
+      );
+    }
+
+    // choose-amount: fracción del total real pendiente de la mesa.
+    const items = dishOrders.map(toCommissionLineItem);
+    const { baseAmount: realBase } = calculateFlexBillItemCommission(items, 0);
+    const fraction =
+      realBase > 0 ? Math.min(Math.max(baseAmount / realBase, 0), 1) : 0;
+    return calculateFlexBillProportionalCommission(items, fraction, tipAmount);
+  })();
+
+  const displaySubtotal = isTapPay
+    ? baseAmount
+    : commissions.baseAmount + commissions.evenClientCharge;
   const totalAmount = commissions.totalAmountCharged;
 
   // El backend rechaza (500) si el monto base supera el restante. Lo evitamos
   // aquí solo para "Elegir monto", que es entrada libre (las demás opciones
-  // nunca exceden el restante).
+  // nunca exceden el restante). Comparado en el mismo espacio que ve el
+  // mesero: real para Tap Pay, inflado para Flex Bill.
   const overpaying =
     payType === "choose-amount" &&
-    parseFloat(customAmount || "0") > remaining + 0.001;
+    parseFloat(customAmount || "0") >
+      (isTapPay ? remaining : displayRemaining) + 0.001;
 
   function canProceedStep0() {
     if (!payType) return false;
@@ -202,6 +256,13 @@ export default function CashPaymentModal({
           ? { id_tap_pay_order: order.id }
           : { id_table_order: order.id }),
         restaurant_id: branch.restaurant_id,
+        // Para que el backend recalcule la comisión desde los ítems reales
+        // exactos en vez de caer siempre a la rama proporcional — ver
+        // recomputeFlexBillCommission en paymentController.js.
+        ...(!isTapPay && payType ? { payment_type: payType } : {}),
+        ...(!isTapPay && payType === "select-items"
+          ? { selected_item_ids: Array.from(selectedDishes) }
+          : {}),
         base_amount: baseAmount,
         tip_amount: tipAmount,
         iva_tip: commissions.ivaTip,
@@ -338,7 +399,7 @@ export default function CashPaymentModal({
                         {
                           type: "full-bill",
                           label: "Cuenta restante",
-                          desc: `$${remaining.toFixed(2)}`,
+                          desc: `$${displayRemaining.toFixed(2)}`,
                         },
                         {
                           type: "select-items",
@@ -417,7 +478,10 @@ export default function CashPaymentModal({
                                 {dish.quantity}× {dish.item}
                               </span>
                               <span className="text-sm text-even-grass font-medium shrink-0 ml-2">
-                                ${dish.total_price.toFixed(2)}
+                                $
+                                {(
+                                  dish.total_display_price ?? dish.total_price
+                                ).toFixed(2)}
                               </span>
                             </button>
                           ))}
@@ -445,8 +509,8 @@ export default function CashPaymentModal({
                         className={`text-xs ${overpaying ? "text-rose-400" : "text-even-offwhite/40"}`}
                       >
                         {overpaying
-                          ? `El monto excede el restante ($${remaining.toFixed(2)}).`
-                          : `Restante: $${remaining.toFixed(2)}`}
+                          ? `El monto excede el restante ($${(isTapPay ? remaining : displayRemaining).toFixed(2)}).`
+                          : `Restante: $${(isTapPay ? remaining : displayRemaining).toFixed(2)}`}
                       </p>
                     </div>
                   )}
@@ -524,7 +588,7 @@ export default function CashPaymentModal({
                   <div className="flex justify-between text-sm">
                     <span className="text-even-offwhite/50">Subtotal</span>
                     <span className="text-even-offwhite/80">
-                      ${baseAmount.toFixed(2)}
+                      ${displaySubtotal.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -533,12 +597,16 @@ export default function CashPaymentModal({
                       +${tipAmount.toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-even-offwhite/50">Comisión Even</span>
-                    <span className="text-even-offwhite/80">
-                      +${commissions.evenClientCharge.toFixed(2)}
-                    </span>
-                  </div>
+                  {isTapPay && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-even-offwhite/50">
+                        Comisión Even
+                      </span>
+                      <span className="text-even-offwhite/80">
+                        +${commissions.evenClientCharge.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="h-px bg-white/8 my-1" />
                   <div className="flex justify-between text-sm font-semibold">
                     <span className="text-even-offwhite">Total a cobrar</span>

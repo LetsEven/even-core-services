@@ -17,6 +17,7 @@ import type {
   BulkDishItem,
 } from "../services/api";
 import { getRestaurantMenu, addDishesToFlexBillBulk } from "../services/api";
+import { getItemDisplayPrice } from "../utils/commissionCalculator";
 
 // Flujo nuevo para Flex Bill: mesa libre → elegir varios platillos → armar
 // carrito → confirmar. A diferencia de AddDishModal (que agrega UN platillo
@@ -79,10 +80,14 @@ function extraPriceOf(
   return extra;
 }
 
-function entryTotal(entry: CartEntry): number {
-  const base = basePriceOf(entry.menuItem);
-  const extra = extraPriceOf(entry.menuItem, entry.customSelections);
-  return (base + extra) * entry.quantity;
+// Precio que se le muestra al mesero (comisión de Flex Bill ya incrustada)
+// — nunca se manda al backend, solo para pantalla.
+// entryToBulkDishItem sigue usando basePriceOf/extraPriceOf (real).
+function displayEntryTotal(entry: CartEntry): number {
+  const unitPrice =
+    basePriceOf(entry.menuItem) +
+    extraPriceOf(entry.menuItem, entry.customSelections);
+  return getItemDisplayPrice(unitPrice) * entry.quantity;
 }
 
 function entryToBulkDishItem(entry: CartEntry): BulkDishItem {
@@ -204,14 +209,21 @@ export default function OpenTableWithDishesModal({
     );
   }, [sections, selectedSection]);
 
-  const totalPrice = useMemo(() => {
-    if (!selectedItem) return 0;
-    return (
-      (basePriceOf(selectedItem) +
-        extraPriceOf(selectedItem, customSelections)) *
-      quantity
-    );
+  const displayTotalPrice = useMemo(() => {
+    if (!selectedItem || quantity <= 0) return 0;
+    const unitPrice =
+      basePriceOf(selectedItem) + extraPriceOf(selectedItem, customSelections);
+    return getItemDisplayPrice(unitPrice) * quantity;
   }, [selectedItem, customSelections, quantity]);
+
+  const itemPriceMultiplier = useMemo(() => {
+    if (!selectedItem) return 1;
+    const unitPrice =
+      basePriceOf(selectedItem) + extraPriceOf(selectedItem, customSelections);
+    return unitPrice > 0
+      ? getItemDisplayPrice(unitPrice) / unitPrice
+      : 1;
+  }, [selectedItem, customSelections]);
 
   const isFormValid = useMemo(() => {
     if (!selectedItem) return false;
@@ -227,8 +239,8 @@ export default function OpenTableWithDishesModal({
     return true;
   }, [selectedItem, customSelections]);
 
-  const cartTotal = useMemo(
-    () => cart.reduce((sum, e) => sum + entryTotal(e), 0),
+  const displayCartTotal = useMemo(
+    () => cart.reduce((sum, e) => sum + displayEntryTotal(e), 0),
     [cart],
   );
   const cartCount = useMemo(
@@ -435,12 +447,7 @@ export default function OpenTableWithDishesModal({
                       </p>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-sm text-even-offwhite/40">
-                          $
-                          {item.discount > 0
-                            ? (item.price * (1 - item.discount / 100)).toFixed(
-                                2,
-                              )
-                            : item.price.toFixed(2)}
+                          ${getItemDisplayPrice(basePriceOf(item)).toFixed(2)}
                         </span>
                         <ChevronRight className="w-3.5 h-3.5 text-even-offwhite/20" />
                       </div>
@@ -462,7 +469,7 @@ export default function OpenTableWithDishesModal({
                     {cartCount} {cartCount === 1 ? "platillo" : "platillos"}
                   </span>
                   <span className="text-sm font-bold">
-                    ${cartTotal.toFixed(2)}
+                    ${displayCartTotal.toFixed(2)}
                   </span>
                 </button>
               </div>
@@ -560,7 +567,10 @@ export default function OpenTableWithDishesModal({
                               ) : (
                                 opt.price > 0 && (
                                   <span className="text-xs text-even-grass ml-2">
-                                    +${opt.price.toFixed(2)}
+                                    +$
+                                    {(opt.price * itemPriceMultiplier).toFixed(
+                                      2,
+                                    )}
                                   </span>
                                 )
                               )}
@@ -619,7 +629,10 @@ export default function OpenTableWithDishesModal({
                               ) : (
                                 opt.price > 0 && (
                                   <span className="text-xs text-even-grass ml-2">
-                                    +${opt.price.toFixed(2)}
+                                    +$
+                                    {(opt.price * itemPriceMultiplier).toFixed(
+                                      2,
+                                    )}
                                   </span>
                                 )
                               )}
@@ -679,7 +692,10 @@ export default function OpenTableWithDishesModal({
                               ) : (
                                 opt.price > 0 && (
                                   <span className="text-xs text-even-grass ml-2">
-                                    +${opt.price.toFixed(2)}
+                                    +$
+                                    {(opt.price * itemPriceMultiplier).toFixed(
+                                      2,
+                                    )}
                                   </span>
                                 )
                               )}
@@ -749,7 +765,7 @@ export default function OpenTableWithDishesModal({
                 disabled={!isFormValid}
                 className="w-full py-3 rounded-lg bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer disabled:cursor-default disabled:opacity-40"
               >
-                Agregar al carrito · ${totalPrice.toFixed(2)}
+                Agregar al carrito · ${displayTotalPrice.toFixed(2)}
               </button>
             </div>
           </div>
@@ -775,7 +791,7 @@ export default function OpenTableWithDishesModal({
                         {entry.quantity}× {entry.menuItem.name}
                       </p>
                       <p className="text-xs text-even-offwhite/40">
-                        ${entryTotal(entry).toFixed(2)}
+                        ${displayEntryTotal(entry).toFixed(2)}
                       </p>
                     </div>
                     <button
@@ -799,7 +815,7 @@ export default function OpenTableWithDishesModal({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-even-offwhite/60">Total</span>
                 <span className="text-even-offwhite font-bold text-lg">
-                  ${cartTotal.toFixed(2)}
+                  ${displayCartTotal.toFixed(2)}
                 </span>
               </div>
               <div className="flex gap-3">

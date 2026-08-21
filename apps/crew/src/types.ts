@@ -49,10 +49,7 @@ export interface PaymentTransaction {
 
 export type ManualPaymentMethod = "cash" | "terminal";
 export type ManualCardType = "credito" | "debito" | "amex";
-export type ManualPaymentType =
-  | "full-bill"
-  | "select-items"
-  | "choose-amount";
+export type ManualPaymentType = "full-bill" | "select-items" | "choose-amount";
 
 export interface TableSummary {
   table_number: string;
@@ -71,6 +68,11 @@ export interface DishOrderCrew {
   quantity: number;
   price: number;
   total_price: number;
+  // Precio con la comisión de Flex Bill ya incrustada (ver
+  // commissionCalculator.js en el backend) — lo que se le cobra al
+  // cliente, nunca price/total_price directo.
+  display_price?: number;
+  total_display_price?: number;
   payment_status: "not_paid" | "paid";
   guest_name: string;
 }
@@ -88,6 +90,12 @@ export interface Order {
   totalAmount?: number | null;
   paidAmount?: number | null;
   remainingAmount?: number | null;
+  // Exclusivo de orderType "flex_bill" — mismos montos pero con la
+  // comisión de Flex Bill ya incrustada (ver commissionCalculator.js en
+  // even-backend). null/undefined en el resto de los servicios.
+  totalDisplayAmount?: number | null;
+  paidDisplayAmount?: number | null;
+  remainingDisplayAmount?: number | null;
   payments?: PaymentTransaction[];
   dishes: Dish[];
   cookingStatus?: CookingStatus;

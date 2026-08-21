@@ -37,6 +37,10 @@ export interface HomeScreenProps {
     extraMinutes: number,
   ) => Promise<void>;
   availableWaiters: { id: string; name: string }[];
+  waiterSession: { id: string; name: string } | null;
+  requireWaiterLogin: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
 }
 
 async function fetchTableUnits(

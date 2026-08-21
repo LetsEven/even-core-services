@@ -29,6 +29,8 @@ export function PickAndGoHome(props: HomeScreenProps) {
       branchId={props.branchId}
       onBranchChange={props.onBranchChange}
       availableWaiters={props.availableWaiters}
+      waiterSession={props.waiterSession}
+      requireWaiterLogin={props.requireWaiterLogin}
     />
   );
 }
@@ -49,6 +51,8 @@ function SpatialHome(props: HomeScreenProps & { config: typeof tapPayConfig }) {
       onPrepTimeExtraChange={props.updatePrepTimeExtraMinutes}
       onOrdersRefresh={() => props.fetchOrders()}
       availableWaiters={props.availableWaiters}
+      waiterSession={props.waiterSession}
+      requireWaiterLogin={props.requireWaiterLogin}
     />
   );
 }

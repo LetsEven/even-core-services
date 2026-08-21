@@ -17,6 +17,10 @@ interface OrderCarouselProps {
   currentBranch?: Branch | null;
   onOrdersRefresh?: () => void;
   availableWaiters?: { id: string; name: string }[];
+  waiterSession: { id: string; name: string } | null;
+  requireWaiterLogin: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
 }
 
 export default function OrderCarousel({
@@ -27,6 +31,8 @@ export default function OrderCarousel({
   currentBranch,
   onOrdersRefresh,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
+  waiterSession,
+  requireWaiterLogin,
 }: OrderCarouselProps) {
   const [index, setIndex] = useState(0);
   const safeIndex = Math.min(index, Math.max(0, orders.length - 1));
@@ -99,6 +105,8 @@ export default function OrderCarousel({
         currentBranch={currentBranch}
         onPaymentRegistered={onOrdersRefresh}
         availableWaiters={availableWaiters}
+        waiterSession={waiterSession}
+        requireWaiterLogin={requireWaiterLogin}
       />
     </div>
   );

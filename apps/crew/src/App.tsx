@@ -15,6 +15,8 @@ import { getActiveOrderTypes } from "./services/serviceMapping";
 import { SERVICE_REGISTRY } from "./services/registry";
 import NewOrderToasts, { type OrderNotif } from "./components/NewOrderToasts";
 import ServiceSwitcher from "./components/ServiceSwitcher";
+import WaiterLoginModal from "./components/WaiterLoginModal";
+import { useWaiterSession } from "./hooks/useWaiterSession";
 
 type Page = "home" | "printers" | "historial";
 
@@ -106,12 +108,19 @@ export default function App() {
     null,
   );
   // Lista de meseros de la sucursal (Soft Restaurant) — vive a nivel App
-  // para que la compartan Kitchen y SpatialGrid; el picker de mesero por
-  // orden (OrderCard) pide PIN la primera vez que se elige uno no
-  // autenticado en este dispositivo (ver utils/waiterLogin.ts).
+  // para que la compartan Kitchen y SpatialGrid, y para armar la sesión de
+  // mesero por dispositivo (ver useWaiterSession).
   const [availableWaiters, setAvailableWaiters] = useState<
     { id: string; name: string }[]
   >([{ id: "EVEN", name: "EVEN" }]);
+  // Sesión de mesero por dispositivo: quién está "logueado" en este
+  // dispositivo para esta sucursal (persistida en localStorage). El modal
+  // aparece solo o al iniciar la app (si no hay sesión y hay meseros reales,
+  // con opción de seguir como invitado) o cuando una acción puntual la
+  // requiere (agregar platillo, reclamar una orden, abrir mesa — ver
+  // requireWaiterLogin en HomeScreenProps).
+  const { waiterSession, modalOpen, allowGuest, resolveLogin, requireLogin } =
+    useWaiterSession(branchId, availableWaiters);
 
   // Identidad y presencia de dispositivos
   const deviceId = getOrCreateDeviceId();
@@ -510,6 +519,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {modalOpen && branchId && (
+        <WaiterLoginModal
+          branchId={branchId}
+          availableWaiters={availableWaiters}
+          allowGuest={allowGuest}
+          onResolved={resolveLogin}
+        />
+      )}
       <NewOrderToasts
         notifications={newOrderNotifications}
         onDismiss={handleDismissAlert}
@@ -537,6 +554,8 @@ export default function App() {
           updateOrderCookingStatus={updateOrderCookingStatus}
           updatePrepTimeExtraMinutes={updatePrepTimeExtraMinutes}
           availableWaiters={availableWaiters}
+          waiterSession={waiterSession}
+          requireWaiterLogin={requireLogin}
         />
       </div>
     </div>

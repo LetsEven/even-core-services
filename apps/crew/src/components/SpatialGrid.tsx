@@ -75,6 +75,10 @@ interface Props {
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
   onOrdersRefresh: () => void;
   availableWaiters?: { id: string; name: string }[];
+  waiterSession: { id: string; name: string } | null;
+  requireWaiterLogin: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
 }
 
 // Sin transition/active:scale/hover propios — el grid siempre es
@@ -91,7 +95,8 @@ function circleClass(
   if (unit.has_tap_pay_account)
     return "bg-even-evergreen border border-even-evergreen text-even-offwhite shadow-[0_0_18px_rgba(2,56,40,0.25)]";
   if (active) {
-    const base = "bg-even-grass border border-even-grass/60 text-even-evergreen";
+    const base =
+      "bg-even-grass border border-even-grass/60 text-even-evergreen";
     return pulsing
       ? `${base} animate-pulse-ring`
       : `${base} shadow-[0_0_20px_rgba(130,230,87,0.45)]`;
@@ -116,8 +121,14 @@ function SortableCircle({
   isChecking: boolean;
   onClick: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: unit.id, disabled });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: unit.id, disabled });
 
   return (
     <button
@@ -132,11 +143,7 @@ function SortableCircle({
       }}
       className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm cursor-grab active:cursor-grabbing touch-none disabled:cursor-default ${circleClass(unit, active, pulsing)} ${isDragging ? "opacity-75 shadow-lg z-10" : ""}`}
     >
-      {isChecking ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        unit.number
-      )}
+      {isChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : unit.number}
     </button>
   );
 }
@@ -155,6 +162,8 @@ export default function SpatialGrid({
   onPrepTimeExtraChange,
   onOrdersRefresh,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
+  waiterSession,
+  requireWaiterLogin,
 }: Props) {
   const { getToken } = useAuth();
 
@@ -385,7 +394,9 @@ export default function SpatialGrid({
       );
     } catch (err) {
       console.error("[SPATIAL-GRID] handleDragEnd error:", err);
-      setError(`No se pudo guardar el nuevo orden de ${config.pluralLabel.toLowerCase()}.`);
+      setError(
+        `No se pudo guardar el nuevo orden de ${config.pluralLabel.toLowerCase()}.`,
+      );
       fetchData(false);
     }
   }
@@ -516,6 +527,8 @@ export default function SpatialGrid({
                 fetchData(false);
               }}
               availableWaiters={availableWaiters}
+              waiterSession={waiterSession}
+              requireWaiterLogin={requireWaiterLogin}
             />
           </div>
         ) : (
@@ -684,6 +697,7 @@ export default function SpatialGrid({
         <OpenTableWithDishesModal
           branch={branch}
           tableNumber={openDishesUnit.number}
+          requireWaiterLogin={requireWaiterLogin}
           onClose={() => setOpenDishesUnit(null)}
           onSuccess={() => {
             setOpenDishesUnit(null);

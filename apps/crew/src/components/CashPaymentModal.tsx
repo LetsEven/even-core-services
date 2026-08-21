@@ -38,6 +38,7 @@ import { parseLocationCode } from "../utils/identifier";
 interface Props {
   order: Order;
   branch: Branch;
+  waiterSession?: { id: string; name: string } | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -50,6 +51,7 @@ const STEP_LABELS = ["Tipo de cobro", "Propina", "Confirmar"];
 export default function CashPaymentModal({
   order,
   branch,
+  waiterSession = null,
   onClose,
   onSuccess,
 }: Props) {
@@ -80,7 +82,9 @@ export default function CashPaymentModal({
 
   const isTapPay = order.orderType === "tap_pay";
   const tableNumber = parseLocationCode(order.identifier);
-  const cobradoPor = "MESERO";
+  const cobradoPor = waiterSession
+    ? `MESERO - ${waiterSession.name}`
+    : "MESERO";
 
   // Load table summary + dish orders when step 0 opens (flex_bill only) —
   // los dish_order reales se necesitan desde el arranque, no solo para

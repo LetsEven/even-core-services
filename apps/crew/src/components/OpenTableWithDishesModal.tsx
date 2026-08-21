@@ -16,7 +16,11 @@ import type {
   MenuItemCustomField,
   BulkDishItem,
 } from "../services/api";
-import { getRestaurantMenu, addDishesToFlexBillBulk } from "../services/api";
+import {
+  getRestaurantMenu,
+  addDishesToFlexBillBulk,
+  updateOrderWaiter,
+} from "../services/api";
 import { getItemDisplayPrice } from "../utils/commissionCalculator";
 
 // Flujo nuevo para Flex Bill: mesa libre → elegir varios platillos → armar
@@ -41,6 +45,9 @@ interface CartEntry {
 interface Props {
   branch: Branch;
   tableNumber: string;
+  requireWaiterLogin?: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -157,6 +164,7 @@ function entryToBulkDishItem(entry: CartEntry): BulkDishItem {
 export default function OpenTableWithDishesModal({
   branch,
   tableNumber,
+  requireWaiterLogin = (onSuccess) => onSuccess({ id: "EVEN", name: "EVEN" }),
   onClose,
   onSuccess,
 }: Props) {
@@ -220,9 +228,7 @@ export default function OpenTableWithDishesModal({
     if (!selectedItem) return 1;
     const unitPrice =
       basePriceOf(selectedItem) + extraPriceOf(selectedItem, customSelections);
-    return unitPrice > 0
-      ? getItemDisplayPrice(unitPrice) / unitPrice
-      : 1;
+    return unitPrice > 0 ? getItemDisplayPrice(unitPrice) / unitPrice : 1;
   }, [selectedItem, customSelections]);
 
   const isFormValid = useMemo(() => {
@@ -316,24 +322,48 @@ export default function OpenTableWithDishesModal({
     setCart((prev) => prev.filter((e) => e.key !== key));
   }
 
-  async function handleOpenTable() {
+  function handleOpenTable() {
     if (cart.length === 0) return;
+    // Abrir mesa requiere sesión de mesero en este dispositivo — si es
+    // invitado, pide login (mesero + PIN) antes de confirmar.
+    requireWaiterLogin((waiter) => submitOpenTable(waiter));
+  }
+
+  async function submitOpenTable(waiter: { id: string; name: string }) {
     setSubmitting(true);
     setSubmitError(null);
     try {
       const token = await getToken();
       if (!token) throw new Error("No token");
 
-      await addDishesToFlexBillBulk(
+      const result = await addDishesToFlexBillBulk(
         {
           restaurantId: branch.restaurant_id,
           branchNumber: branch.branch_number,
           tableNumber,
-          guestName: "MESERO",
+          guestName:
+            waiter.id === "EVEN" ? "MESERO" : `MESERO - ${waiter.name}`,
           items: cart.map(entryToBulkDishItem),
         },
         token,
       );
+
+      // La mesa nace asignada al mesero de la sesión (si hay uno real) —
+      // mismo endpoint que usa OrderCard para reclamar/deshacer.
+      if (waiter.id !== "EVEN" && result.table_order_id) {
+        try {
+          await updateOrderWaiter(
+            result.table_order_id,
+            "flex_bill",
+            waiter.name,
+            waiter.id,
+            token,
+          );
+        } catch {
+          // No bloquear la apertura de la mesa si esto falla — se puede
+          // reclamar después desde OrderCard.
+        }
+      }
 
       onSuccess();
     } catch {

@@ -82,6 +82,10 @@ interface Props {
   branchId: string | null;
   onBranchChange: (id: string) => void;
   availableWaiters: { id: string; name: string }[];
+  waiterSession: { id: string; name: string } | null;
+  requireWaiterLogin: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
 }
 
 export default function Kitchen({
@@ -99,6 +103,8 @@ export default function Kitchen({
   branchId,
   onBranchChange,
   availableWaiters,
+  waiterSession,
+  requireWaiterLogin,
 }: Props) {
   const [branchOpen, setBranchOpen] = useState(false);
   const branchRef = useRef<HTMLDivElement>(null);
@@ -294,6 +300,8 @@ export default function Kitchen({
             currentBranch={branches.find((b) => b.id === branchId) ?? null}
             onOrdersRefresh={() => fetchOrders()}
             availableWaiters={availableWaiters}
+            waiterSession={waiterSession}
+            requireWaiterLogin={requireWaiterLogin}
           />
         )}
       </div>

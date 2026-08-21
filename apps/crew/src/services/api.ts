@@ -713,11 +713,15 @@ export interface OpenTableWithDishesParams {
   items: BulkDishItem[];
 }
 
+export interface OpenTableResult {
+  table_order_id: string;
+}
+
 export async function addDishesToFlexBillBulk(
   params: OpenTableWithDishesParams,
   token: string,
-): Promise<void> {
-  await authFetch(
+): Promise<OpenTableResult> {
+  const data = await authFetch(
     `/api/restaurants/${params.restaurantId}/branches/${params.branchNumber}/tables/${params.tableNumber}/dishes/bulk`,
     token,
     {
@@ -728,6 +732,7 @@ export async function addDishesToFlexBillBulk(
       }),
     },
   );
+  return data.data;
 }
 
 export async function addDishToFlexBill(

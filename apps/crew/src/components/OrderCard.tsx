@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
-import {
-  Banknote,
-  ChevronDown,
-  Loader2,
-  Plus,
-  Printer,
-  User,
-} from "lucide-react";
+import { Banknote, Loader2, Plus, Printer, User } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import type { Order, DishStatus, CookingStatus } from "../types";
 import type { Branch, QRCodeRow } from "../services/api";
@@ -16,10 +9,8 @@ import CashPaymentModal from "./CashPaymentModal";
 import AddDishModal from "./AddDishModal";
 import PrintTicketModal from "./PrintTicketModal";
 import ContactCustomerModal from "./ContactCustomerModal";
-import WaiterPinModal from "./WaiterPinModal";
 import { formatFolio } from "../utils/folio";
 import { parseLocationCode } from "../utils/identifier";
-import { isWaiterAuthenticated } from "../utils/waiterLogin";
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
   tap: "Tap Order & Pay",
@@ -65,6 +56,10 @@ interface OrderCardProps {
   currentBranch?: Branch | null;
   onPaymentRegistered?: () => void;
   availableWaiters?: { id: string; name: string }[];
+  waiterSession?: { id: string; name: string } | null;
+  requireWaiterLogin?: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
 }
 
 function formatTime(iso: string) {
@@ -105,6 +100,8 @@ export default function OrderCard({
   currentBranch,
   onPaymentRegistered,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
+  waiterSession = null,
+  requireWaiterLogin = (onSuccess) => onSuccess({ id: "EVEN", name: "EVEN" }),
 }: OrderCardProps) {
   const isPickAndGo = order.orderType === "pick_and_go";
   const [now, setNow] = useState(Date.now());
@@ -125,17 +122,6 @@ export default function OrderCard({
   const [localWaiterName, setLocalWaiterName] = useState(
     order.waiterName ?? "EVEN",
   );
-  const [waiterPickerOpen, setWaiterPickerOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
-  const waiterPickerRef = useRef<HTMLDivElement>(null);
-  const waiterBtnRef = useRef<HTMLButtonElement>(null);
-  const [pinWaiter, setPinWaiter] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
 
   const [prepTimePickerOpen, setPrepTimePickerOpen] = useState(false);
   const [prepTimeDropdownPos, setPrepTimeDropdownPos] = useState<{
@@ -150,45 +136,21 @@ export default function OrderCard({
 
   const { getToken } = useAuth();
 
-  const canChangeWaiter = availableWaiters.length > 1;
-
-  const handleToggleWaiterPicker = () => {
-    if (!waiterPickerOpen && waiterBtnRef.current) {
-      const rect = waiterBtnRef.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + 4, left: rect.left });
-    }
-    setWaiterPickerOpen((v) => !v);
-  };
+  // La orden queda "reclamada" (waiter_name distinto de EVEN) una sola vez —
+  // a partir de ahí, solo el mesero de la sesión actual del dispositivo (si
+  // coincide) puede deshacerla. Nadie más la puede tocar.
+  const hasRealWaiters = availableWaiters.some((w) => w.id !== "EVEN");
+  const isEven = order.waiterName == null || order.waiterName === "EVEN";
+  const isMine =
+    !isEven &&
+    waiterSession != null &&
+    (order.waiterId
+      ? order.waiterId === waiterSession.id
+      : order.waiterName === waiterSession.name);
 
   useEffect(() => {
     setLocalWaiterName(order.waiterName ?? "EVEN");
   }, [order.waiterName]);
-
-  useEffect(() => {
-    if (!waiterPickerOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        waiterPickerRef.current &&
-        !waiterPickerRef.current.contains(e.target as Node)
-      ) {
-        setWaiterPickerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [waiterPickerOpen]);
-
-  // El dropdown es fixed con posición calculada al abrirlo (para no quedar
-  // recortado por el panel scrolleable que lo contiene) — si el usuario
-  // scrollea, el botón se mueve pero el dropdown no, así que se desalinea.
-  // Con `capture: true` en window se detecta el scroll de cualquier
-  // contenedor interno, aunque el evento "scroll" no burbujea.
-  useEffect(() => {
-    if (!waiterPickerOpen) return;
-    const handleScroll = () => setWaiterPickerOpen(false);
-    window.addEventListener("scroll", handleScroll, true);
-    return () => window.removeEventListener("scroll", handleScroll, true);
-  }, [waiterPickerOpen]);
 
   useEffect(() => {
     setPrepTimeInputValue(order.waiterExtraMinutes ?? 0);
@@ -227,36 +189,40 @@ export default function OrderCard({
     onPrepTimeExtraChange?.(order.id, prepTimeInputValue);
   };
 
-  const applyWaiterSelection = async (waiter: { id: string; name: string }) => {
-    setLocalWaiterName(waiter.name);
+  const handleClaim = () => {
+    requireWaiterLogin(async (waiter) => {
+      setLocalWaiterName(waiter.name);
+      try {
+        const token = await getToken();
+        if (!token) return;
+        await updateOrderWaiter(
+          order.id,
+          order.orderType,
+          waiter.name,
+          waiter.id,
+          token,
+        );
+      } catch {
+        setLocalWaiterName(order.waiterName ?? "EVEN");
+      }
+    });
+  };
+
+  const handleUndo = async () => {
+    setLocalWaiterName("EVEN");
     try {
       const token = await getToken();
       if (!token) return;
       await updateOrderWaiter(
         order.id,
         order.orderType,
-        waiter.name,
-        waiter.id === "EVEN" ? undefined : waiter.id,
+        "EVEN",
+        undefined,
         token,
       );
     } catch {
       setLocalWaiterName(order.waiterName ?? "EVEN");
     }
-  };
-
-  const handleWaiterSelect = (waiter: { id: string; name: string }) => {
-    setWaiterPickerOpen(false);
-    // Si nunca se validó el PIN de este mesero en este dispositivo, pedirlo
-    // antes de asignarlo — una vez correcto queda recordado (WaiterPinModal).
-    if (
-      waiter.id !== "EVEN" &&
-      currentBranch &&
-      !isWaiterAuthenticated(currentBranch.id, waiter.id)
-    ) {
-      setPinWaiter(waiter);
-      return;
-    }
-    applyWaiterSelection(waiter);
   };
 
   const canAddDish =
@@ -442,47 +408,31 @@ export default function OrderCard({
             Comentarios: {order.orderNotes}
           </p>
         )}
-        <div className="mt-2" ref={waiterPickerRef}>
-          {canChangeWaiter ? (
-            <>
-              <button
-                ref={waiterBtnRef}
-                onClick={handleToggleWaiterPicker}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-even-grass/20 border border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
-              >
-                <User className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">{localWaiterName}</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${waiterPickerOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-              {waiterPickerOpen && dropdownPos && (
-                <ul
-                  className="fixed z-9999 min-w-40 max-h-64 overflow-y-auto bg-white border border-even-evergreen/15 rounded-lg shadow-xl"
-                  style={{ top: dropdownPos.top, left: dropdownPos.left }}
-                >
-                  {availableWaiters.map((w) => (
-                    <li key={w.id}>
-                      <button
-                        onClick={() => handleWaiterSelect(w)}
-                        className={`w-full text-left px-3 py-2.5 text-xs uppercase tracking-wider transition-colors cursor-pointer ${
-                          w.name === localWaiterName
-                            ? "bg-even-grass/20 text-even-evergreen font-medium"
-                            : "text-even-evergreen/70 hover:bg-even-evergreen/5"
-                        }`}
-                      >
-                        {w.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
+        <div className="mt-2 flex items-center gap-2">
+          {isEven && hasRealWaiters ? (
+            <button
+              onClick={handleClaim}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-even-grass/20 border border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">{localWaiterName}</span>
+              <span className="text-[10px] uppercase tracking-wider text-even-evergreen/60">
+                · Asignarme
+              </span>
+            </button>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-even-evergreen/10 border border-even-evergreen/20 text-even-evergreen/70 w-fit">
               <User className="w-3.5 h-3.5" />
               <span className="text-xs font-medium">{localWaiterName}</span>
             </span>
+          )}
+          {isMine && (
+            <button
+              onClick={handleUndo}
+              className="text-[11px] uppercase tracking-wider text-even-evergreen/50 hover:text-even-evergreen underline underline-offset-2 cursor-pointer"
+            >
+              Deshacer
+            </button>
           )}
         </div>
       </div>
@@ -538,9 +488,11 @@ export default function OrderCard({
                   </span>
                   <span className="text-sm font-semibold text-even-evergreen">
                     $
-                    {(order.totalDisplayAmount ?? order.totalAmount ?? 0).toFixed(
-                      2,
-                    )}
+                    {(
+                      order.totalDisplayAmount ??
+                      order.totalAmount ??
+                      0
+                    ).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex flex-col items-center flex-1">
@@ -679,6 +631,7 @@ export default function OrderCard({
         <CashPaymentModal
           order={order}
           branch={currentBranch}
+          waiterSession={waiterSession}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={() => {
             setShowPaymentModal(false);
@@ -690,6 +643,7 @@ export default function OrderCard({
         <AddDishModal
           order={order}
           branch={currentBranch}
+          requireWaiterLogin={requireWaiterLogin}
           onClose={() => setShowAddDish(false)}
           onSuccess={() => {
             setShowAddDish(false);
@@ -710,18 +664,6 @@ export default function OrderCard({
           customerName={order.customerName || order.identifier}
           phone={order.customerPhone}
           onClose={() => setContactModalOpen(false)}
-        />
-      )}
-      {pinWaiter && currentBranch && (
-        <WaiterPinModal
-          branchId={currentBranch.id}
-          waiter={pinWaiter}
-          onConfirmed={() => {
-            const waiter = pinWaiter;
-            setPinWaiter(null);
-            applyWaiterSelection(waiter);
-          }}
-          onCancel={() => setPinWaiter(null)}
         />
       )}
     </div>

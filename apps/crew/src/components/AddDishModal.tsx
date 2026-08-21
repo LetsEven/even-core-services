@@ -21,6 +21,9 @@ type CustomSelections = Record<
 interface Props {
   order: Order;
   branch: Branch;
+  requireWaiterLogin?: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+  ) => void;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -28,6 +31,7 @@ interface Props {
 export default function AddDishModal({
   order,
   branch,
+  requireWaiterLogin = (onSuccess) => onSuccess({ id: "EVEN", name: "EVEN" }),
   onClose,
   onSuccess,
 }: Props) {
@@ -191,8 +195,15 @@ export default function AddDishModal({
     setStep(1);
   }
 
-  async function handleConfirm() {
+  function handleConfirm() {
     if (!selectedItem || !isFormValid) return;
+    // Agregar un platillo requiere sesión de mesero en este dispositivo — si
+    // es invitado, pide login (mesero + PIN) antes de confirmar.
+    requireWaiterLogin((waiter) => submitDish(waiter));
+  }
+
+  async function submitDish(waiter: { id: string; name: string }) {
+    if (!selectedItem) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -273,7 +284,8 @@ export default function AddDishModal({
           extraPrice,
           menuItemId: selectedItem.id,
           specialInstructions: specialInstructions.trim() || null,
-          guestName: "MESERO",
+          guestName:
+            waiter.id === "EVEN" ? "MESERO" : `MESERO - ${waiter.name}`,
           images: selectedItem.image_url ? [selectedItem.image_url] : [],
         },
         token,

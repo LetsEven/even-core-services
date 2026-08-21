@@ -274,6 +274,19 @@ export async function syncTapPayOrderFromPOS(
   });
 }
 
+export async function syncFlexBillTableFromPOS(
+  restaurantId: number,
+  branchNumber: number,
+  tableNumber: string,
+  token: string,
+): Promise<void> {
+  await authFetch(
+    `/api/restaurants/${restaurantId}/branches/${branchNumber}/tables/${tableNumber}/sync-from-pos`,
+    token,
+    { method: "POST" },
+  );
+}
+
 export async function payTapPayDishOrder(
   dishId: string,
   guestName: string,

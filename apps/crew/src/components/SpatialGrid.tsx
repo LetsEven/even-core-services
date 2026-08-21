@@ -20,6 +20,7 @@ import { ChevronDown, Check, Loader2, ArrowLeft } from "lucide-react";
 import {
   peekTablePOS,
   openTableAccount,
+  syncFlexBillTableFromPOS,
   type Branch,
   type ReorderUnit,
 } from "../services/api";
@@ -218,7 +219,13 @@ export default function SpatialGrid({
         const data = await config.fetchUnits(branchId, token);
         setUnits(data);
 
-        if (config.pulseKind === "pos_pending") {
+        // Tap & Pay y Flex Bill pueden nacer directo en el POS (Soft
+        // Restaurant) sin pasar por Even primero — se revisan las mesas
+        // libres para detectar esos tickets y ofrecer traerlos.
+        if (
+          config.orderType === "tap_pay" ||
+          config.orderType === "flex_bill"
+        ) {
           const freeUnits = data.filter(
             (u) => !u.has_open_account && u.status !== "maintenance",
           );
@@ -255,6 +262,39 @@ export default function SpatialGrid({
     fetchData();
   }, [fetchData]);
 
+  // Igual que Kitchen.tsx con Tap & Pay: antes de refrescar, sincroniza
+  // platillos agregados directamente en el POS (best-effort) para las
+  // órdenes Flex Bill activas — el resto de servicios no lo necesita.
+  const handleActualizar = useCallback(
+    async (showSpinner = true) => {
+      if (config.orderType === "flex_bill" && branch) {
+        const flexBillOrders = orders.filter(
+          (o) => o.orderType === "flex_bill",
+        );
+        if (flexBillOrders.length > 0) {
+          const token = await getToken();
+          if (token) {
+            await Promise.allSettled(
+              flexBillOrders.map((o) => {
+                const tableNumber = parseLocationCode(o.identifier);
+                if (!tableNumber) return Promise.resolve();
+                return syncFlexBillTableFromPOS(
+                  branch.restaurant_id,
+                  branch.branch_number,
+                  tableNumber,
+                  token,
+                ).catch(() => {});
+              }),
+            );
+          }
+        }
+      }
+      fetchData(showSpinner);
+      onOrdersRefresh();
+    },
+    [config.orderType, branch, orders, getToken, fetchData, onOrdersRefresh],
+  );
+
   // Refresco periódico — mismo patrón que Kitchen.tsx (handleActualizar).
   // No depender solo del socket: si el evento no llega (reconexión, o una
   // orden creada desde otro backend que comparte la misma DB pero no el
@@ -262,12 +302,11 @@ export default function SpatialGrid({
   useEffect(() => {
     const id = setInterval(() => {
       if (document.visibilityState === "visible" && !loading && !isReordering) {
-        fetchData(false);
-        onOrdersRefresh();
+        handleActualizar(false);
       }
     }, 30_000);
     return () => clearInterval(id);
-  }, [fetchData, loading, isReordering, onOrdersRefresh]);
+  }, [handleActualizar, loading, isReordering]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -296,8 +335,14 @@ export default function SpatialGrid({
   }
 
   function isPulsing(unit: SpatialUnit, active: boolean): boolean {
-    if (config.pulseKind === "pos_pending") {
-      return !active && posUnits.has(unit.number);
+    // Mesa libre con ticket pendiente en el POS — aplica a Tap & Pay y Flex
+    // Bill por igual, sin importar el pulso de "preparing" de más abajo.
+    if (
+      !active &&
+      (config.orderType === "tap_pay" || config.orderType === "flex_bill") &&
+      posUnits.has(unit.number)
+    ) {
+      return true;
     }
     if (config.pulseKind === "preparing" && active) {
       const order = findOrderForUnit(unit.number);
@@ -317,23 +362,27 @@ export default function SpatialGrid({
       return;
     }
 
-    if (config.orderType === "tap_pay") {
+    // Igual que Tap & Pay: si la mesa ya tiene un ticket abierto directo en
+    // el POS, se ofrece traerlo a Even antes de dejar abrir una cuenta desde
+    // cero — `openTableAccount` decide sola si hace falta preguntar el
+    // servicio (needsServiceChoice) según lo que tenga contratado la sucursal.
+    if (config.orderType === "tap_pay" || config.orderType === "flex_bill") {
       setCheckingUnitId(unit.id);
       try {
         const token = await getToken();
         if (!token) return;
-        if (posUnits.has(unit.number)) {
+        const hasPOS =
+          posUnits.has(unit.number) ||
+          (await peekTablePOS(branchId!, unit.number, token));
+        if (hasPOS) {
           setConfirmUnit(unit);
-        } else {
-          const hasPOS = await peekTablePOS(branchId!, unit.number, token);
-          if (hasPOS) setConfirmUnit(unit);
+          return;
         }
       } catch {
         // silently fail
       } finally {
         setCheckingUnitId(null);
       }
-      return;
     }
 
     if (config.orderType === "flex_bill" && config.freeUnitClickable) {
@@ -422,7 +471,7 @@ export default function SpatialGrid({
       <AppHeader
         onOpenPrinters={onOpenPrinters}
         onOpenHistorial={onOpenHistorial}
-        onRefresh={() => fetchData(true)}
+        onRefresh={() => handleActualizar(true)}
         refreshing={loading}
       />
 
@@ -594,7 +643,8 @@ export default function SpatialGrid({
         )}
       </div>
 
-      {/* Confirmación abrir cuenta (Tap & Pay — ticket en POS por liquidar) */}
+      {/* Confirmación traer cuenta — hay un ticket abierto directo en el POS
+          que Even todavía no conoce (Tap & Pay o Flex Bill). */}
       {confirmUnit && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
@@ -612,7 +662,9 @@ export default function SpatialGrid({
                 {config.unitLabel} {confirmUnit.number}
               </p>
               <h2 className="text-even-offwhite font-bold text-xl">
-                ¿Liquidar cuenta?
+                {config.orderType === "tap_pay"
+                  ? "¿Liquidar cuenta?"
+                  : "¿Traer cuenta a Even?"}
               </h2>
               <p className="text-even-offwhite/50 text-sm mt-1">
                 Hay una orden activa en el POS para esta mesa.
@@ -632,7 +684,9 @@ export default function SpatialGrid({
                 className="flex-1 py-3 rounded-md bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs font-medium uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-default cursor-pointer flex items-center justify-center gap-2"
               >
                 {openingAccount && <Loader2 className="w-4 h-4 animate-spin" />}
-                Liquidar cuenta
+                {config.orderType === "tap_pay"
+                  ? "Liquidar cuenta"
+                  : "Traer cuenta"}
               </button>
             </div>
           </div>

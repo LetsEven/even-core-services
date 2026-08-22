@@ -647,14 +647,14 @@ export default function SpatialGrid({
           que Even todavía no conoce (Tap & Pay o Flex Bill). */}
       {confirmUnit && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center"
           style={{
             background: "rgba(0,0,0,0.65)",
             backdropFilter: "blur(6px)",
           }}
         >
           <div
-            className="w-full max-w-sm rounded-t-lg sm:rounded-lg border border-white/10 shadow-2xl px-6 py-6 flex flex-col gap-5"
+            className="w-full max-w-sm rounded-lg border border-white/10 shadow-2xl px-6 py-6 flex flex-col gap-5"
             style={{ background: "#023828" }}
           >
             <div>
@@ -696,14 +696,14 @@ export default function SpatialGrid({
       {/* Elegir servicio (cliente tiene Tap & Pay y Flex Bill contratados) */}
       {serviceChoiceUnit && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center"
           style={{
             background: "rgba(0,0,0,0.65)",
             backdropFilter: "blur(6px)",
           }}
         >
           <div
-            className="w-full max-w-sm rounded-t-lg sm:rounded-lg border border-white/10 shadow-2xl px-6 py-6 flex flex-col gap-5"
+            className="w-full max-w-sm rounded-lg border border-white/10 shadow-2xl px-6 py-6 flex flex-col gap-5"
             style={{ background: "#023828" }}
           >
             <div>

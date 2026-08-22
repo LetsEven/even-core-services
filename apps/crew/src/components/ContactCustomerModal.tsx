@@ -33,14 +33,14 @@ export default function ContactCustomerModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="w-full max-w-sm rounded-t-lg sm:rounded-lg overflow-hidden flex flex-col border border-white/10 shadow-2xl"
+        className="w-full max-w-sm rounded-lg overflow-hidden flex flex-col border border-white/10 shadow-2xl"
         style={{ background: "#023828", maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >

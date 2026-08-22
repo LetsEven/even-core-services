@@ -31,7 +31,11 @@ import {
   calculateCommissions,
   calculateFlexBillItemCommission,
   calculateFlexBillProportionalCommission,
+  resolveTipAmountForTargetDisplay,
+  getDisplaySubtotal,
+  getDisplaySubtotalForFraction,
   type FlexBillCommissionLineItem,
+  type CommissionBreakdown,
 } from "../utils/commissionCalculator";
 import { parseLocationCode } from "../utils/identifier";
 
@@ -184,44 +188,96 @@ export default function CashPaymentModal({
     return 0;
   }
 
-  function getTipAmount(): number {
+  // Modelo viejo (% o monto libre directo sobre el consumo real) — sigue
+  // siendo la fuente de la propina para Tap Pay tal cual, sin cambios.
+  function getRawTipAmount(): number {
     const base = getBaseAmount();
     if (showCustomTip) return parseFloat(customTip) || 0;
     return parseFloat(((base * tipPct) / 100).toFixed(2));
   }
 
   const baseAmount = getBaseAmount();
-  const tipAmount = getTipAmount();
 
-  const commissions = (() => {
-    if (isTapPay) return calculateCommissions(baseAmount, tipAmount);
+  // Ítems reales de "select-items" (subset elegido) y de la mesa completa
+  // (full-bill/choose-amount usan todos los pendientes) — se reutilizan
+  // para el cálculo de comisión y para el subtotal redondeado por ítem.
+  const selectedCommissionItems = dishOrders
+    .filter((d) => selectedDishes.has(d.dish_order_id))
+    .map(toCommissionLineItem);
+  const allTableCommissionItems = dishOrders.map(toCommissionLineItem);
 
-    if (payType === "select-items") {
-      const items = dishOrders
-        .filter((d) => selectedDishes.has(d.dish_order_id))
-        .map(toCommissionLineItem);
-      return calculateFlexBillItemCommission(items, tipAmount);
+  // Fracción de la mesa que representa este cobro — 1 para full-bill/
+  // select-items (se conocen los ítems exactos), <1 para choose-amount (no
+  // hay ítems propios, se toma una porción del total real pendiente).
+  const paymentFraction = (() => {
+    if (isTapPay || payType === "select-items" || payType === "full-bill") {
+      return 1;
     }
-
-    if (payType === "full-bill") {
-      return calculateFlexBillItemCommission(
-        dishOrders.map(toCommissionLineItem),
-        tipAmount,
-      );
-    }
-
-    // choose-amount: fracción del total real pendiente de la mesa.
-    const items = dishOrders.map(toCommissionLineItem);
-    const { baseAmount: realBase } = calculateFlexBillItemCommission(items, 0);
-    const fraction =
-      realBase > 0 ? Math.min(Math.max(baseAmount / realBase, 0), 1) : 0;
-    return calculateFlexBillProportionalCommission(items, fraction, tipAmount);
+    const { baseAmount: realBase } = calculateFlexBillItemCommission(
+      allTableCommissionItems,
+      0,
+    );
+    return realBase > 0 ? Math.min(Math.max(baseAmount / realBase, 0), 1) : 0;
   })();
 
+  // Arma el breakdown real de comisión para una propina dada, según el
+  // tipo de cobro — se reutiliza para resolver la propina real y para el
+  // breakdown final.
+  function computeCommissionsForTip(tip: number): CommissionBreakdown {
+    if (isTapPay) return calculateCommissions(baseAmount, tip);
+    if (payType === "select-items") {
+      return calculateFlexBillItemCommission(selectedCommissionItems, tip);
+    }
+    if (payType === "full-bill") {
+      return calculateFlexBillItemCommission(allTableCommissionItems, tip);
+    }
+    // choose-amount: fracción del total real pendiente de la mesa.
+    return calculateFlexBillProportionalCommission(
+      allTableCommissionItems,
+      paymentFraction,
+      tip,
+    );
+  }
+
+  // Subtotal fijo — para Tap Pay sigue siendo el consumo real solo (modelo
+  // viejo, sin cambios); para Flex Bill es consumo + su propia comisión,
+  // redondeado por ítem (mismo método que OrderCard/kitchenService.js), así
+  // que no se mueve con la propina ni difiere en un centavo de lo que ya
+  // se ve en la tarjeta de la orden.
   const displaySubtotal = isTapPay
     ? baseAmount
-    : commissions.baseAmount + commissions.evenClientCharge;
+    : payType === "select-items"
+      ? getDisplaySubtotal(selectedCommissionItems)
+      : payType === "full-bill"
+        ? getDisplaySubtotal(allTableCommissionItems)
+        : getDisplaySubtotalForFraction(
+            allTableCommissionItems,
+            paymentFraction,
+          );
+
+  // Propina real que hay que mandar al cálculo — para Tap Pay es la de
+  // siempre; para Flex Bill se resuelve hacia atrás para que el residuo
+  // (Total - Subtotal fijo) cierre exacto contra lo que el mesero eligió
+  // ver (% del subtotal fijo, o el monto libre tecleado tal cual).
+  const tipAmount = isTapPay
+    ? getRawTipAmount()
+    : resolveTipAmountForTargetDisplay(
+        computeCommissionsForTip,
+        displaySubtotal,
+        showCustomTip
+          ? parseFloat(customTip) || 0
+          : Math.round(((displaySubtotal * tipPct) / 100) * 100) / 100,
+      );
+
+  const commissions = computeCommissionsForTip(tipAmount);
   const totalAmount = commissions.totalAmountCharged;
+
+  // Lo que se muestra como "Propina" — para Tap Pay es tal cual (modelo
+  // viejo); para Flex Bill es el residuo real (Total - Subtotal fijo), que
+  // por construcción coincide con lo que el mesero eligió ver.
+  const displayPropina = isTapPay
+    ? tipAmount
+    : Math.round((totalAmount - displaySubtotal) * 100) / 100;
 
   // El backend rechaza (500) si el monto base supera el restante. Lo evitamos
   // aquí solo para "Elegir monto", que es entrada libre (las demás opciones
@@ -598,7 +654,7 @@ export default function CashPaymentModal({
                   <div className="flex justify-between text-sm">
                     <span className="text-even-offwhite/50">Propina</span>
                     <span className="text-even-offwhite/80">
-                      +${tipAmount.toFixed(2)}
+                      +${displayPropina.toFixed(2)}
                     </span>
                   </div>
                   {isTapPay && (

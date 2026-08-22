@@ -226,3 +226,67 @@ export function calculateFlexBillProportionalCommission(
     tipAmount,
   );
 }
+
+// Subtotal fijo a mostrar: consumo + su propia comisión, redondeando POR
+// ÍTEM (precio × cantidad, cada línea redondeada) y sumando — el mismo
+// método que ya usa el backend para total_display_price/totalDisplayAmount
+// (ver flexBillService.js/kitchenService.js, que es lo que muestra
+// OrderCard). Sumar dos totales ya redondeados por separado (base +
+// comisión) puede dar un centavo distinto a ese método.
+export function getDisplaySubtotal(items: FlexBillCommissionLineItem[]): number {
+  let total = 0;
+  for (const item of items) {
+    const unitPrice = item.price + (item.extraPrice || 0);
+    const displayPrice = getItemDisplayPrice(unitPrice);
+    total += Math.round(displayPrice * (item.quantity || 1) * 100) / 100;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+// Igual que getDisplaySubtotal, pero para cobros que representan una
+// fracción de la mesa (choose-amount) — no hay ítems propios que redondear
+// uno por uno, así que se aplica la fracción sobre el subtotal ya
+// correctamente redondeado de TODOS los ítems pendientes de la mesa.
+export function getDisplaySubtotalForFraction(
+  allTableItems: FlexBillCommissionLineItem[],
+  fraction: number,
+): number {
+  return Math.round(getDisplaySubtotal(allTableItems) * fraction * 100) / 100;
+}
+
+// Dado un monto que se quiere ver como "Propina" (ya con su propia comisión
+// incrustada — ej. el mesero tecleó $50 y quiere ver exactamente $50, o
+// eligió 10% del subtotal), resuelve qué propina real hay que mandar al
+// cálculo de comisión para que Total - Subtotal fijo cierre exacto contra
+// ese monto. `computeBreakdown` es la misma función que ya arma el
+// breakdown real según el tipo de cobro — se reutiliza tal cual.
+export function resolveTipAmountForTargetDisplay(
+  computeBreakdown: (tipAmount: number) => CommissionBreakdown,
+  displaySubtotal: number,
+  targetDisplayPropina: number,
+): number {
+  if (targetDisplayPropina <= 0) return 0;
+
+  const zeroTip = computeBreakdown(0);
+  const blendedClientRate =
+    zeroTip.baseAmount > 0
+      ? zeroTip.evenCommissionClient / zeroTip.baseAmount
+      : 0;
+  const factor = 1 + blendedClientRate * 1.16;
+
+  let tipAmount = factor > 0 ? targetDisplayPropina / factor : targetDisplayPropina;
+  tipAmount = Math.max(Math.round(tipAmount * 100) / 100, 0);
+
+  for (let i = 0; i < 3; i++) {
+    const breakdown = computeBreakdown(tipAmount);
+    const displayPropina =
+      Math.round((breakdown.totalAmountCharged - displaySubtotal) * 100) /
+      100;
+    const diff =
+      Math.round((targetDisplayPropina - displayPropina) * 100) / 100;
+    if (diff === 0) break;
+    tipAmount = Math.max(Math.round((tipAmount + diff) * 100) / 100, 0);
+  }
+
+  return tipAmount;
+}

@@ -16,7 +16,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, Check, Loader2, ArrowLeft } from "lucide-react";
+import { ChevronDown, Check, Loader2, ArrowLeft, Move } from "lucide-react";
 import {
   peekTablePOS,
   openTableAccount,
@@ -82,10 +82,6 @@ interface Props {
   ) => void;
 }
 
-// Sin transition/active:scale/hover propios — el grid siempre es
-// arrastrable (@dnd-kit necesita ser el único dueño de `transform` en el
-// elemento, aplicado vía inline style desde useSortable). Pulsing usa
-// animate-pulse-ring (solo box-shadow, no pisa el transform del drag).
 function circleClass(
   unit: SpatialUnit,
   active: boolean,
@@ -204,6 +200,7 @@ export default function SpatialGrid({
   // Evita que el refresco periódico pise un drag en curso — no es un "modo",
   // solo se activa mientras el usuario tiene el dedo/mouse abajo arrastrando.
   const [isReordering, setIsReordering] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
 
@@ -352,7 +349,7 @@ export default function SpatialGrid({
   }
 
   async function handleUnitClick(unit: SpatialUnit) {
-    if (unit.status === "maintenance" || checkingUnitId) return;
+    if (reorderMode || unit.status === "maintenance" || checkingUnitId) return;
 
     if (isUnitActive(unit)) {
       const order = findOrderForUnit(unit.number);
@@ -481,38 +478,55 @@ export default function SpatialGrid({
           <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
             {config.pluralLabel}
           </h1>
-          {branches.length > 0 && (
-            <div className="relative" ref={branchRef}>
-              <button
-                onClick={() => setBranchOpen((v) => !v)}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
-              >
-                <span>{branch?.name ?? "Seleccionar sucursal"}</span>
-                {branches.length > 1 && (
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
-                  />
-                )}
-              </button>
-              {branchOpen && branches.length > 1 && (
-                <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
-                  {branches.map((b) => (
-                    <li key={b.id}>
-                      <button
-                        onClick={() => {
-                          onBranchChange(b.id);
-                          setBranchOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-                      >
-                        <span>{b.name}</span>
-                        {b.id === branchId && (
-                          <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+          {(branches.length > 0 || (units.length > 0 && !loading)) && (
+            <div className="flex items-center gap-2">
+              {branches.length > 0 && (
+                <div className="relative" ref={branchRef}>
+                  <button
+                    onClick={() => setBranchOpen((v) => !v)}
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
+                  >
+                    <span>{branch?.name ?? "Seleccionar sucursal"}</span>
+                    {branches.length > 1 && (
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
+                      />
+                    )}
+                  </button>
+                  {branchOpen && branches.length > 1 && (
+                    <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
+                      {branches.map((b) => (
+                        <li key={b.id}>
+                          <button
+                            onClick={() => {
+                              onBranchChange(b.id);
+                              setBranchOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
+                          >
+                            <span>{b.name}</span>
+                            {b.id === branchId && (
+                              <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              {units.length > 0 && !loading && (
+                <button
+                  onClick={() => setReorderMode((v) => !v)}
+                  title={reorderMode ? "Listo" : "Mover"}
+                  className={`p-1.5 rounded-md border transition-colors cursor-pointer ${
+                    reorderMode
+                      ? "bg-even-grass text-even-evergreen border-even-grass"
+                      : "bg-white/10 hover:bg-white/15 text-even-offwhite/80 border-white/15"
+                  }`}
+                >
+                  <Move className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
           )}
@@ -628,7 +642,9 @@ export default function SpatialGrid({
                           active={active}
                           pulsing={isPulsing(unit, active)}
                           disabled={
-                            unit.status === "maintenance" || !!checkingUnitId
+                            !reorderMode ||
+                            unit.status === "maintenance" ||
+                            !!checkingUnitId
                           }
                           isChecking={checkingUnitId === unit.id}
                           onClick={() => handleUnitClick(unit)}

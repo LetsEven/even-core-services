@@ -108,6 +108,7 @@ function SortableCircle({
   active,
   pulsing,
   disabled,
+  dragDisabled,
   isChecking,
   onClick,
 }: {
@@ -115,6 +116,7 @@ function SortableCircle({
   active: boolean;
   pulsing: boolean;
   disabled: boolean;
+  dragDisabled: boolean;
   isChecking: boolean;
   onClick: () => void;
 }) {
@@ -125,7 +127,7 @@ function SortableCircle({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: unit.id, disabled });
+  } = useSortable({ id: unit.id, disabled: dragDisabled });
 
   return (
     <button
@@ -641,8 +643,9 @@ export default function SpatialGrid({
                           unit={unit}
                           active={active}
                           pulsing={isPulsing(unit, active)}
+                          dragDisabled={!reorderMode}
                           disabled={
-                            !reorderMode ||
+                            reorderMode ||
                             unit.status === "maintenance" ||
                             !!checkingUnitId
                           }

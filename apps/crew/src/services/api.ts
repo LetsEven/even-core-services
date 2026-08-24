@@ -771,3 +771,17 @@ export async function addDishToFlexBill(
     },
   );
 }
+
+// Reducir cantidad o eliminar por completo un platillo ya ordenado en Flex
+// Bill. quantity=0 significa eliminación completa.
+export async function updateFlexBillDishQuantity(
+  dishId: string,
+  quantity: number,
+  token: string,
+): Promise<{ quantity: number; removed: boolean }> {
+  const data = await authFetch(`/api/dishes/${dishId}/quantity`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ quantity }),
+  });
+  return data.data;
+}

@@ -28,6 +28,11 @@ export interface HomeScreenProps {
     dishId: string,
     status: DishStatus,
   ) => Promise<void>;
+  updateDishQuantity: (
+    orderId: string,
+    dishId: string,
+    quantity: number,
+  ) => Promise<void>;
   updateOrderCookingStatus: (
     orderId: string,
     status: CookingStatus,
@@ -40,6 +45,7 @@ export interface HomeScreenProps {
   waiterSession: { id: string; name: string } | null;
   requireWaiterLogin: (
     onSuccess: (waiter: { id: string; name: string }) => void,
+    options?: { forcePicker?: boolean },
   ) => void;
 }
 

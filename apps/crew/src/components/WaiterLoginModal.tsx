@@ -10,18 +10,28 @@ interface Props {
   availableWaiters: WaiterSession[];
   allowGuest: boolean;
   onResolved: (waiter: WaiterSession | null) => void;
+  // Mesero cuya sesión ya está guardada en este dispositivo (si hay). Elegir
+  // a esa misma persona de la lista resuelve directo sin pedir contraseña —
+  // ya se verificó antes en este dispositivo. Elegir a cualquier otro sí la
+  // pide (o intenta vacía primero, ver handleSelectWaiter).
+  currentWaiterId?: string;
 }
 
 // Modal de login de mesero por dispositivo — adaptado de WaiterLoginScreen.tsx
 // (pantalla completa, commit bede8c0, eliminado en fe17dfa) pero como overlay,
 // no bloqueando el resto de la app. `allowGuest=false` lo usa
 // useWaiterSession().requireLogin cuando una acción puntual necesita
-// identidad sí o sí (no se puede cerrar sin elegir mesero + PIN).
+// identidad sí o sí — ahí no se puede "seguir como invitado" (la acción no
+// se ejecuta como EVEN), pero sí se puede cancelar y no hacer nada: el botón
+// de abajo cambia a "Cancelar" (mismo onResolved(null), el caller nunca ve
+// su callback de éxito disparado) y no se cierra solo al tocar fuera, para
+// que no se cancele sin querer por un mal click.
 export default function WaiterLoginModal({
   branchId,
   availableWaiters,
   allowGuest,
   onResolved,
+  currentWaiterId,
 }: Props) {
   const { getToken } = useAuth();
   // Filtra tanto el "EVEN" sintético (id) como cualquier mesero real
@@ -35,9 +45,42 @@ export default function WaiterLoginModal({
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
+
+  // Al tocar un mesero, intenta entrar directo con contraseña vacía antes de
+  // mostrar el campo — varios meseros no tienen contraseña en Soft
+  // Restaurant, y para esos no tiene sentido hacerlos ver/confirmar un campo
+  // vacío. Si el intento silencioso falla (sí tiene contraseña), recién ahí
+  // se muestra la pantalla normal para que la escriba.
+  async function handleSelectWaiter(w: WaiterSession) {
+    if (checkingId) return;
+    if (w.id === currentWaiterId) {
+      onResolved(w);
+      return;
+    }
+    setCheckingId(w.id);
+    try {
+      const token = await getToken();
+      if (token) {
+        const ok = await verifyWaiterPassword(branchId, w.id, "", token);
+        if (ok) {
+          onResolved(w);
+          return;
+        }
+      }
+    } catch {
+      // si falla el intento silencioso (ej. sin conexión), sigue al campo
+      // de contraseña normal en vez de quedarse atorado
+    } finally {
+      setCheckingId(null);
+    }
+    setSelected(w);
+  }
 
   // No requerimos password.length > 0: algunos meseros tienen contraseña
-  // vacía en Soft Restaurant, así que un campo vacío es un intento válido.
+  // vacía en Soft Restaurant, así que un campo vacío es un intento válido
+  // (cubre el caso en que el intento silencioso de arriba falló por otra
+  // razón, ej. sin conexión, no porque la contraseña esté mal).
   async function handleConfirm() {
     if (!selected || submitting) return;
     setSubmitting(true);
@@ -105,8 +148,9 @@ export default function WaiterLoginModal({
               {realWaiters.map((w, idx) => (
                 <button
                   key={w.id}
-                  onClick={() => setSelected(w)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors cursor-pointer ${
+                  onClick={() => handleSelectWaiter(w)}
+                  disabled={!!checkingId}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors cursor-pointer disabled:cursor-default ${
                     idx > 0 ? "border-t border-white/8" : ""
                   } hover:bg-white/5`}
                 >
@@ -114,18 +158,19 @@ export default function WaiterLoginModal({
                   <span className="text-sm font-medium text-even-offwhite/80">
                     {w.name}
                   </span>
+                  {checkingId === w.id && (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-even-offwhite/40 ml-auto" />
+                  )}
                 </button>
               ))}
             </div>
 
-            {allowGuest && (
-              <button
-                onClick={() => onResolved(null)}
-                className="w-full py-3 rounded-md border border-white/15 text-even-offwhite/60 text-xs font-medium uppercase tracking-wider hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                Continuar como invitado
-              </button>
-            )}
+            <button
+              onClick={() => onResolved(null)}
+              className="w-full py-3 rounded-md border border-white/15 text-even-offwhite/60 text-xs font-medium uppercase tracking-wider hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              {allowGuest ? "Continuar como invitado" : "Cancelar"}
+            </button>
           </div>
         ) : (
           <div className="w-full flex flex-col gap-3">
@@ -175,15 +220,13 @@ export default function WaiterLoginModal({
               Elegir otro mesero
             </button>
 
-            {allowGuest && (
-              <button
-                onClick={() => onResolved(null)}
-                disabled={submitting}
-                className="w-full py-2.5 rounded-md border border-white/15 text-even-offwhite/60 text-xs font-medium uppercase tracking-wider hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40"
-              >
-                Continuar como invitado
-              </button>
-            )}
+            <button
+              onClick={() => onResolved(null)}
+              disabled={submitting}
+              className="w-full py-2.5 rounded-md border border-white/15 text-even-offwhite/60 text-xs font-medium uppercase tracking-wider hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40"
+            >
+              {allowGuest ? "Continuar como invitado" : "Cancelar"}
+            </button>
           </div>
         )}
       </div>

@@ -85,6 +85,7 @@ interface Props {
   waiterSession: { id: string; name: string } | null;
   requireWaiterLogin: (
     onSuccess: (waiter: { id: string; name: string }) => void,
+    options?: { forcePicker?: boolean },
   ) => void;
 }
 

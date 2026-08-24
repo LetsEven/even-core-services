@@ -74,11 +74,17 @@ interface Props {
   ) => void;
   onOrderCookingStatusChange: (orderId: string, status: CookingStatus) => void;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
+  onDishQuantityChange?: (
+    orderId: string,
+    dishId: string,
+    quantity: number,
+  ) => Promise<void>;
   onOrdersRefresh: () => void;
   availableWaiters?: { id: string; name: string }[];
   waiterSession: { id: string; name: string } | null;
   requireWaiterLogin: (
     onSuccess: (waiter: { id: string; name: string }) => void,
+    options?: { forcePicker?: boolean },
   ) => void;
 }
 
@@ -159,6 +165,7 @@ export default function SpatialGrid({
   onDishStatusChange,
   onOrderCookingStatusChange,
   onPrepTimeExtraChange,
+  onDishQuantityChange,
   onOrdersRefresh,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
   waiterSession,
@@ -266,6 +273,12 @@ export default function SpatialGrid({
   // órdenes Flex Bill activas — el resto de servicios no lo necesita.
   const handleActualizar = useCallback(
     async (showSpinner = true) => {
+      // Mostrar feedback (botón deshabilitado + ícono girando) desde el
+      // toque, no hasta que fetchData arranca — si no, la sincronización con
+      // POS de abajo (que puede tardar varios segundos si el agente de SR
+      // está lento/desconectado) deja el botón sin ningún indicio de que ya
+      // se presionó, y se siente como que "no funciona".
+      if (showSpinner) setLoading(true);
       if (config.orderType === "flex_bill" && branch) {
         const flexBillOrders = orders.filter(
           (o) => o.orderType === "flex_bill",
@@ -586,6 +599,7 @@ export default function SpatialGrid({
                 if (status === "delivered") fetchData(false);
               }}
               onPrepTimeExtraChange={onPrepTimeExtraChange}
+              onDishQuantityChange={onDishQuantityChange}
               currentBranch={branch}
               onPaymentRegistered={() => {
                 onOrdersRefresh();

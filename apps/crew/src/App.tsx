@@ -235,6 +235,7 @@ export default function App() {
     error: ordersError,
     fetchOrders,
     updateDish,
+    updateDishQuantity,
     updateOrderCookingStatus,
     updatePrepTimeExtraMinutes,
     removeOrder,
@@ -525,6 +526,7 @@ export default function App() {
           availableWaiters={availableWaiters}
           allowGuest={allowGuest}
           onResolved={resolveLogin}
+          currentWaiterId={waiterSession?.id}
         />
       )}
       <NewOrderToasts
@@ -551,6 +553,7 @@ export default function App() {
           ordersError={ordersError}
           fetchOrders={fetchOrders}
           updateDish={updateDish}
+          updateDishQuantity={updateDishQuantity}
           updateOrderCookingStatus={updateOrderCookingStatus}
           updatePrepTimeExtraMinutes={updatePrepTimeExtraMinutes}
           availableWaiters={availableWaiters}

@@ -69,8 +69,15 @@ export function useWaiterSession(
   );
 
   const requireLogin = useCallback(
-    (onSuccess: (w: WaiterSession) => void) => {
-      if (waiterSession) {
+    (
+      onSuccess: (w: WaiterSession) => void,
+      options?: { forcePicker?: boolean },
+    ) => {
+      // forcePicker: usado por "Asignarme" — no asume que quien reclama la
+      // orden es necesariamente quien dejó su sesión guardada en este
+      // dispositivo (puede estar compartido entre meseros), así que siempre
+      // muestra la lista en vez de auto-resolver con waiterSession.
+      if (waiterSession && !options?.forcePicker) {
         onSuccess(waiterSession);
         return;
       }

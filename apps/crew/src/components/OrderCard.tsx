@@ -51,6 +51,11 @@ const COOKING_STATUSES: CookingStatus[] = ["preparing", "ready", "delivered"];
 interface OrderCardProps {
   order: Order;
   onDishStatusChange: (dishId: string, status: DishStatus) => void;
+  onDishQuantityChange?: (
+    orderId: string,
+    dishId: string,
+    quantity: number,
+  ) => Promise<void>;
   onOrderCookingStatusChange?: (orderId: string, status: CookingStatus) => void;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
   currentBranch?: Branch | null;
@@ -59,6 +64,7 @@ interface OrderCardProps {
   waiterSession?: { id: string; name: string } | null;
   requireWaiterLogin?: (
     onSuccess: (waiter: { id: string; name: string }) => void,
+    options?: { forcePicker?: boolean },
   ) => void;
 }
 
@@ -95,6 +101,7 @@ function paymentTypeLabel(cardType: string | null): string {
 export default function OrderCard({
   order,
   onDishStatusChange,
+  onDishQuantityChange,
   onOrderCookingStatusChange,
   onPrepTimeExtraChange,
   currentBranch,
@@ -122,6 +129,7 @@ export default function OrderCard({
   const [localWaiterName, setLocalWaiterName] = useState(
     order.waiterName ?? "EVEN",
   );
+  const [localWaiterId, setLocalWaiterId] = useState(order.waiterId);
 
   const [prepTimePickerOpen, setPrepTimePickerOpen] = useState(false);
   const [prepTimeDropdownPos, setPrepTimeDropdownPos] = useState<{
@@ -140,17 +148,18 @@ export default function OrderCard({
   // a partir de ahí, solo el mesero de la sesión actual del dispositivo (si
   // coincide) puede deshacerla. Nadie más la puede tocar.
   const hasRealWaiters = availableWaiters.some((w) => w.id !== "EVEN");
-  const isEven = order.waiterName == null || order.waiterName === "EVEN";
+  const isEven = localWaiterName == null || localWaiterName === "EVEN";
   const isMine =
     !isEven &&
     waiterSession != null &&
-    (order.waiterId
-      ? order.waiterId === waiterSession.id
-      : order.waiterName === waiterSession.name);
+    (localWaiterId
+      ? localWaiterId === waiterSession.id
+      : localWaiterName === waiterSession.name);
 
   useEffect(() => {
     setLocalWaiterName(order.waiterName ?? "EVEN");
-  }, [order.waiterName]);
+    setLocalWaiterId(order.waiterId);
+  }, [order.waiterName, order.waiterId]);
 
   useEffect(() => {
     setPrepTimeInputValue(order.waiterExtraMinutes ?? 0);
@@ -190,26 +199,35 @@ export default function OrderCard({
   };
 
   const handleClaim = () => {
-    requireWaiterLogin(async (waiter) => {
-      setLocalWaiterName(waiter.name);
-      try {
-        const token = await getToken();
-        if (!token) return;
-        await updateOrderWaiter(
-          order.id,
-          order.orderType,
-          waiter.name,
-          waiter.id,
-          token,
-        );
-      } catch {
-        setLocalWaiterName(order.waiterName ?? "EVEN");
-      }
-    });
+    requireWaiterLogin(
+      async (waiter) => {
+        setLocalWaiterName(waiter.name);
+        setLocalWaiterId(waiter.id);
+        try {
+          const token = await getToken();
+          if (!token) return;
+          await updateOrderWaiter(
+            order.id,
+            order.orderType,
+            waiter.name,
+            waiter.id,
+            token,
+          );
+        } catch {
+          setLocalWaiterName(order.waiterName ?? "EVEN");
+          setLocalWaiterId(order.waiterId);
+        }
+      },
+      // Siempre muestra la lista de meseros al reclamar, en vez de asumir
+      // que es quien esté logueado en el dispositivo — puede estar
+      // compartido entre varios meseros.
+      { forcePicker: true },
+    );
   };
 
   const handleUndo = async () => {
     setLocalWaiterName("EVEN");
+    setLocalWaiterId(undefined);
     try {
       const token = await getToken();
       if (!token) return;
@@ -222,6 +240,7 @@ export default function OrderCard({
       );
     } catch {
       setLocalWaiterName(order.waiterName ?? "EVEN");
+      setLocalWaiterId(order.waiterId);
     }
   };
 
@@ -445,6 +464,13 @@ export default function OrderCard({
             dish={dish}
             onStatusChange={onDishStatusChange}
             hideStatusButtons={isPickAndGo || order.orderType === "tap_pay"}
+            hideStatusBadge={order.orderType === "flex_bill"}
+            onQuantityChange={
+              canAddDish && onDishQuantityChange
+                ? (dishId, quantity) =>
+                    onDishQuantityChange(order.id, dishId, quantity)
+                : undefined
+            }
           />
         ))}
       </div>

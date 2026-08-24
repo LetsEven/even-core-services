@@ -4,6 +4,7 @@ import type { Order, DishStatus, CookingStatus } from "../types";
 import {
   getActiveOrders,
   updateDishStatus,
+  updateFlexBillDishQuantity,
   updatePickAndGoOrderCookingStatus,
   updatePrepTimeExtra,
 } from "../services/api";
@@ -141,6 +142,47 @@ export function useKitchenOrders(branchId: string | null) {
     [getToken, fetchOrders],
   );
 
+  // Reducir cantidad o eliminar un platillo ya ordenado (Flex Bill).
+  // quantity=0 significa eliminación completa.
+  const updateDishQuantity = useCallback(
+    async (orderId: string, dishId: string, quantity: number) => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const result = await updateFlexBillDishQuantity(
+          dishId,
+          quantity,
+          token,
+        );
+
+        // Actualiza la lista de platillos al toque (sin esperar red), pero
+        // total/pagado/restante (incluyendo el monto con comisión de Flex
+        // Bill, calculado server-side en kitchenService._computeFlexBillDisplayAmounts)
+        // solo se conocen bien vía un refetch — mismo mecanismo que ya usa
+        // "Agregar platillo" (onPaymentRegistered → onOrdersRefresh) en vez
+        // de reimplementar esa aritmética aquí.
+        setOrders((prev) =>
+          prev.map((order) => {
+            if (order.id !== orderId) return order;
+            return {
+              ...order,
+              dishes: result.removed
+                ? order.dishes.filter((d) => d.id !== dishId)
+                : order.dishes.map((d) =>
+                    d.id === dishId ? { ...d, quantity: result.quantity } : d,
+                  ),
+            };
+          }),
+        );
+        fetchOrders();
+      } catch (e) {
+        // Revertir en caso de error
+        fetchOrders();
+      }
+    },
+    [getToken, fetchOrders],
+  );
+
   const updateOrderCookingStatus = useCallback(
     async (orderId: string, status: CookingStatus) => {
       // Optimistic update
@@ -243,6 +285,7 @@ export function useKitchenOrders(branchId: string | null) {
     error,
     fetchOrders,
     updateDish,
+    updateDishQuantity,
     updateOrderCookingStatus,
     updatePrepTimeExtraMinutes,
     addOrder,

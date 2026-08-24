@@ -49,6 +49,7 @@ function SpatialHome(props: HomeScreenProps & { config: typeof tapPayConfig }) {
       onDishStatusChange={props.updateDish}
       onOrderCookingStatusChange={props.updateOrderCookingStatus}
       onPrepTimeExtraChange={props.updatePrepTimeExtraMinutes}
+      onDishQuantityChange={props.updateDishQuantity}
       onOrdersRefresh={() => props.fetchOrders()}
       availableWaiters={props.availableWaiters}
       waiterSession={props.waiterSession}

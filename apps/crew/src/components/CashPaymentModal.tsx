@@ -151,15 +151,35 @@ export default function CashPaymentModal({
   const remaining =
     tableSummary?.remaining_amount ?? order.remainingAmount ?? 0;
 
+  // Un pago genérico previo (choose-amount/"Dividir cuenta"/full-bill
+  // parcial) no marca ningún dish_order como paid — solo se resta de
+  // table_order.remaining_amount — así que `dishOrders` (los "not_paid")
+  // sigue trayendo TODOS los platillos como si nada se hubiera pagado.
+  // rawUnpaidTotal/remainingFraction escalan el consumo real pendiente a
+  // lo que de verdad falta, igual que hace el backend en
+  // computeFlexBillAmountDue (unpaidDishesTotal - genericPaid).
+  const rawUnpaidTotal = dishOrders.reduce(
+    (sum, d) => sum + (d.total_price ?? 0),
+    0,
+  );
+  const remainingFraction =
+    !isTapPay && rawUnpaidTotal > 0
+      ? Math.min(Math.max(remaining / rawUnpaidTotal, 0), 1)
+      : 1;
+
   // Precio con la comisión de Flex Bill ya incrustada (viene del backend en
   // dish_order.total_display_price) — solo aplica a la rama no-Tap-Pay.
   // Tap Pay sigue con el modelo viejo y usa `remaining` real tal cual.
   const displayRemaining = isTapPay
     ? remaining
-    : dishOrders.reduce(
-        (sum, d) => sum + (d.total_display_price ?? d.total_price ?? 0),
-        0,
-      );
+    : Math.round(
+        dishOrders.reduce(
+          (sum, d) => sum + (d.total_display_price ?? d.total_price ?? 0),
+          0,
+        ) *
+          remainingFraction *
+          100,
+      ) / 100;
 
   function toCommissionLineItem(d: DishOrderCrew): FlexBillCommissionLineItem {
     // DishOrderCrew no trae extra_price aparte — total_price ya incluye
@@ -206,13 +226,14 @@ export default function CashPaymentModal({
     .map(toCommissionLineItem);
   const allTableCommissionItems = dishOrders.map(toCommissionLineItem);
 
-  // Fracción de la mesa que representa este cobro — 1 para full-bill/
-  // select-items (se conocen los ítems exactos), <1 para choose-amount (no
-  // hay ítems propios, se toma una porción del total real pendiente).
+  // Fracción de la mesa que representa este cobro — 1 para select-items (se
+  // conocen los ítems exactos); para full-bill es remainingFraction (lo que
+  // de verdad falta, ya descontando pagos genéricos previos); para
+  // choose-amount es la porción del total real pendiente que representa el
+  // monto tecleado.
   const paymentFraction = (() => {
-    if (isTapPay || payType === "select-items" || payType === "full-bill") {
-      return 1;
-    }
+    if (isTapPay || payType === "select-items") return 1;
+    if (payType === "full-bill") return remainingFraction;
     const { baseAmount: realBase } = calculateFlexBillItemCommission(
       allTableCommissionItems,
       0,
@@ -228,10 +249,8 @@ export default function CashPaymentModal({
     if (payType === "select-items") {
       return calculateFlexBillItemCommission(selectedCommissionItems, tip);
     }
-    if (payType === "full-bill") {
-      return calculateFlexBillItemCommission(allTableCommissionItems, tip);
-    }
-    // choose-amount: fracción del total real pendiente de la mesa.
+    // full-bill y choose-amount: fracción del total real pendiente de la
+    // mesa (ya descuenta pagos genéricos previos vía paymentFraction).
     return calculateFlexBillProportionalCommission(
       allTableCommissionItems,
       paymentFraction,
@@ -248,12 +267,7 @@ export default function CashPaymentModal({
     ? baseAmount
     : payType === "select-items"
       ? getDisplaySubtotal(selectedCommissionItems)
-      : payType === "full-bill"
-        ? getDisplaySubtotal(allTableCommissionItems)
-        : getDisplaySubtotalForFraction(
-            allTableCommissionItems,
-            paymentFraction,
-          );
+      : getDisplaySubtotalForFraction(allTableCommissionItems, paymentFraction);
 
   // Propina real que hay que mandar al cálculo — para Tap Pay es la de
   // siempre; para Flex Bill se resuelve hacia atrás para que el residuo

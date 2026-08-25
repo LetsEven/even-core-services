@@ -99,10 +99,12 @@ export interface ItemCommissionRate {
   restaurantPays: number;
 }
 
-export function getItemCommissionRate(unitPrice: number): ItemCommissionRate {
-  if (unitPrice <= 40) {
-    return { clientPays: 2.2, restaurantPays: 2.0 };
-  }
+// Tarifa fija — antes había un tramo de 2.2% para ítems <=$40 (unitPrice se
+// mantiene como parámetro por compatibilidad con los callers, aunque ya no
+// se use).
+export function getItemCommissionRate(
+  _unitPrice: number,
+): ItemCommissionRate {
   return { clientPays: 2.0, restaurantPays: 2.0 };
 }
 

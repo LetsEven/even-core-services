@@ -153,7 +153,11 @@ export default function OrderCard({
     !isEven &&
     waiterSession != null &&
     (localWaiterId
-      ? localWaiterId === waiterSession.id
+      ? // waiter_id en la orden viene de la DB (varchar(50), siempre
+        // string); waiterSession.id viene tal cual del listado de meseros
+        // de Soft Restaurant, que puede traer el id como número — sin
+        // String() acá, "5" === 5 da false y "Desasignar" nunca aparece.
+        String(localWaiterId) === String(waiterSession.id)
       : localWaiterName === waiterSession.name);
 
   useEffect(() => {
@@ -248,6 +252,10 @@ export default function OrderCard({
     order.orderType === "flex_bill" &&
     currentBranch != null &&
     order.status !== "paid";
+  // Eliminar/reducir un platillo solo lo puede hacer el mesero asignado a
+  // la mesa (isMine) — si nadie la reclamó todavía (isEven), cualquiera
+  // puede, igual que con "Desasignar" arriba.
+  const canEditDishes = canAddDish && (isEven || isMine);
   const canRegisterPayment =
     (order.orderType === "flex_bill" || order.orderType === "tap_pay") &&
     (order.remainingAmount ?? 0) > 0 &&
@@ -450,7 +458,7 @@ export default function OrderCard({
               onClick={handleUndo}
               className="text-[11px] uppercase tracking-wider text-even-evergreen/50 hover:text-even-evergreen underline underline-offset-2 cursor-pointer"
             >
-              Deshacer
+              Desasignar
             </button>
           )}
         </div>
@@ -466,7 +474,7 @@ export default function OrderCard({
             hideStatusButtons={isPickAndGo || order.orderType === "tap_pay"}
             hideStatusBadge={order.orderType === "flex_bill"}
             onQuantityChange={
-              canAddDish && onDishQuantityChange
+              canEditDishes && onDishQuantityChange
                 ? (dishId, quantity) =>
                     onDishQuantityChange(order.id, dishId, quantity)
                 : undefined
@@ -587,29 +595,45 @@ export default function OrderCard({
                 <span className="text-[10px] uppercase tracking-wider text-even-evergreen/50 font-medium text-right pb-1">
                   Prop
                 </span>
-                {order.payments!.map((p) => (
-                  <Fragment key={p.id}>
-                    <span className="text-even-evergreen/40 text-xs py-1.5 border-t border-even-evergreen/10">
-                      {formatTimeOnly(p.createdAt)}
-                    </span>
-                    <span className="text-even-evergreen/60 text-xs truncate py-1.5 border-t border-even-evergreen/10">
-                      {p.guestName ?? "—"}
-                    </span>
-                    <span className="text-even-evergreen/50 text-xs py-1.5 border-t border-even-evergreen/10">
-                      {paymentTypeLabel(p.cardType)}
-                    </span>
-                    <span className="text-even-evergreen text-xs font-medium text-right py-1.5 border-t border-even-evergreen/10">
-                      $
-                      {(order.orderType === "flex_bill"
-                        ? p.totalCharged - p.tipAmount
-                        : p.baseAmount
-                      ).toFixed(2)}
-                    </span>
-                    <span className="text-even-evergreen/30 text-xs text-right py-1.5 border-t border-even-evergreen/10">
-                      {p.tipAmount > 0 ? `+$${p.tipAmount.toFixed(2)}` : "—"}
-                    </span>
-                  </Fragment>
-                ))}
+                {order.payments!.map((p) => {
+                  // Para flex_bill, tip_amount es el valor "crudo" que se
+                  // resuelve hacia atrás (resolveTipAmountForTargetDisplay)
+                  // para que la propina mostrada al mesero cierre exacta —
+                  // no es la propina que el cliente ve. La comisión se
+                  // cobra con una tasa combinada sobre base+tip, así que se
+                  // reparte proporcional entre ambos para desglosar Monto/Prop.
+                  const flexMonto =
+                    p.baseAmount + p.tipAmount > 0
+                      ? (p.totalCharged * p.baseAmount) /
+                        (p.baseAmount + p.tipAmount)
+                      : p.totalCharged;
+                  const monto =
+                    order.orderType === "flex_bill" ? flexMonto : p.baseAmount;
+                  const prop =
+                    order.orderType === "flex_bill"
+                      ? p.totalCharged - flexMonto
+                      : p.tipAmount;
+
+                  return (
+                    <Fragment key={p.id}>
+                      <span className="text-even-evergreen/40 text-xs py-1.5 border-t border-even-evergreen/10">
+                        {formatTimeOnly(p.createdAt)}
+                      </span>
+                      <span className="text-even-evergreen/60 text-xs truncate py-1.5 border-t border-even-evergreen/10">
+                        {p.guestName ?? "—"}
+                      </span>
+                      <span className="text-even-evergreen/50 text-xs py-1.5 border-t border-even-evergreen/10">
+                        {paymentTypeLabel(p.cardType)}
+                      </span>
+                      <span className="text-even-evergreen text-xs font-medium text-right py-1.5 border-t border-even-evergreen/10">
+                        ${monto.toFixed(2)}
+                      </span>
+                      <span className="text-even-evergreen/30 text-xs text-right py-1.5 border-t border-even-evergreen/10">
+                        {prop > 0 ? `+$${prop.toFixed(2)}` : "—"}
+                      </span>
+                    </Fragment>
+                  );
+                })}
               </div>
             )}
 

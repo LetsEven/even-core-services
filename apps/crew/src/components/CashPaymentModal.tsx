@@ -363,6 +363,17 @@ export default function CashPaymentModal({
         manual_card_type: method === "terminal" ? manualCardType : null,
       };
 
+      // createManualTransaction va ANTES de aplicar el pago a propósito: para
+      // Flex Bill (full-bill/select-items), el backend recalcula la comisión
+      // server-side comparando contra lo que sigue "sin pagar" en ese momento
+      // (ver recomputeFlexBillCommission → computeFlexBillAmountDue). Si el
+      // pago ya se hubiera aplicado (marcando el dish_order/generic_paid_amount
+      // como pagado), esa comparación da 0 — "ya no queda nada por cobrar" — y
+      // truena con "base_amount debe ser mayor a 0", aunque el pago real sí se
+      // haya aplicado. Por eso primero se registra la transacción (con el
+      // estado real, sin pagar todavía) y hasta después se marca como pagado.
+      await createManualTransaction(txParams, token);
+
       if (isTapPay && payType === "select-items") {
         const dishArray = Array.from(selectedDishes);
         for (let i = 0; i < dishArray.length; i++) {
@@ -407,8 +418,6 @@ export default function CashPaymentModal({
           token,
         );
       }
-
-      await createManualTransaction(txParams, token);
 
       onSuccess();
     } catch (e: any) {

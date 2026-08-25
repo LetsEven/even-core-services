@@ -161,18 +161,29 @@ export function useKitchenOrders(branchId: string | null) {
         // solo se conocen bien vía un refetch — mismo mecanismo que ya usa
         // "Agregar platillo" (onPaymentRegistered → onOrdersRefresh) en vez
         // de reimplementar esa aritmética aquí.
+        //
+        // Si el platillo eliminado era el último de la mesa, el backend ya
+        // borró table_order/user_order del todo (recompute_table_order_totals
+        // los libera cuando quedan en 0 sin nada pagado) — quitar la orden
+        // completa de la lista aquí mismo, no solo el platillo, para que no
+        // se quede una tarjeta viva apuntando a una cuenta que ya no existe
+        // (ej. "Registrar pago" fallando con "no hay cuenta activa").
         setOrders((prev) =>
-          prev.map((order) => {
-            if (order.id !== orderId) return order;
-            return {
-              ...order,
-              dishes: result.removed
-                ? order.dishes.filter((d) => d.id !== dishId)
-                : order.dishes.map((d) =>
-                    d.id === dishId ? { ...d, quantity: result.quantity } : d,
-                  ),
-            };
-          }),
+          prev
+            .map((order) => {
+              if (order.id !== orderId) return order;
+              return {
+                ...order,
+                dishes: result.removed
+                  ? order.dishes.filter((d) => d.id !== dishId)
+                  : order.dishes.map((d) =>
+                      d.id === dishId
+                        ? { ...d, quantity: result.quantity }
+                        : d,
+                    ),
+              };
+            })
+            .filter((order) => order.id !== orderId || order.dishes.length > 0),
         );
         fetchOrders();
       } catch (e) {

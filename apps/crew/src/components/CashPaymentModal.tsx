@@ -269,7 +269,28 @@ export default function CashPaymentModal({
           : Math.round(((displaySubtotal * tipPct) / 100) * 100) / 100,
       );
 
-  const commissions = computeCommissionsForTip(tipAmount);
+  // Sin propina, Total debe ser exactamente el Subtotal fijo — pero
+  // computeCommissionsForTip(0) puede diferir de displaySubtotal por un
+  // centavo: usa una tasa combinada sobre el crudo sin redondear y redondea
+  // una sola vez al final, mientras displaySubtotal redondea por ítem (ver
+  // comentario arriba de getDisplaySubtotal). Se corrige aquí ajustando
+  // evenClientCharge por esa misma diferencia, para que
+  // baseAmount + tipAmount + evenClientCharge siga sumando exacto contra
+  // totalAmountCharged (el backend valida esa consistencia al insertar el pago).
+  const rawCommissions = computeCommissionsForTip(tipAmount);
+  const commissions =
+    !isTapPay && tipAmount === 0 && rawCommissions.totalAmountCharged !== displaySubtotal
+      ? {
+          ...rawCommissions,
+          evenClientCharge:
+            Math.round(
+              (rawCommissions.evenClientCharge -
+                (rawCommissions.totalAmountCharged - displaySubtotal)) *
+                100,
+            ) / 100,
+          totalAmountCharged: displaySubtotal,
+        }
+      : rawCommissions;
   const totalAmount = commissions.totalAmountCharged;
 
   // Lo que se muestra como "Propina" — para Tap Pay es tal cual (modelo

@@ -90,6 +90,8 @@ export function useKitchenOrders(branchId: string | null) {
       orderType: string,
       dishId: string,
       status: DishStatus,
+      waiterName?: string | null,
+      waiterId?: string | null,
     ) => {
       // Optimistic update
       setOrders((prev) =>
@@ -107,7 +109,14 @@ export function useKitchenOrders(branchId: string | null) {
       try {
         const token = await getToken();
         if (!token) return;
-        await updateDishStatus(dishId, orderType, status, token);
+        await updateDishStatus(
+          dishId,
+          orderType,
+          status,
+          token,
+          waiterName,
+          waiterId,
+        );
       } catch (e) {
         // Revertir en caso de error
         fetchOrders();
@@ -145,7 +154,13 @@ export function useKitchenOrders(branchId: string | null) {
   // Reducir cantidad o eliminar un platillo ya ordenado (Flex Bill).
   // quantity=0 significa eliminación completa.
   const updateDishQuantity = useCallback(
-    async (orderId: string, dishId: string, quantity: number) => {
+    async (
+      orderId: string,
+      dishId: string,
+      quantity: number,
+      waiterName?: string | null,
+      waiterId?: string | null,
+    ) => {
       try {
         const token = await getToken();
         if (!token) return;
@@ -153,6 +168,8 @@ export function useKitchenOrders(branchId: string | null) {
           dishId,
           quantity,
           token,
+          waiterName,
+          waiterId,
         );
 
         // Actualiza la lista de platillos al toque (sin esperar red), pero
@@ -177,9 +194,7 @@ export function useKitchenOrders(branchId: string | null) {
                 dishes: result.removed
                   ? order.dishes.filter((d) => d.id !== dishId)
                   : order.dishes.map((d) =>
-                      d.id === dishId
-                        ? { ...d, quantity: result.quantity }
-                        : d,
+                      d.id === dishId ? { ...d, quantity: result.quantity } : d,
                     ),
               };
             })

@@ -3,6 +3,7 @@ import type {
   TableSummary,
   DishOrderCrew,
   ManualCardType,
+  Movement,
 } from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -72,6 +73,8 @@ export async function updateDishStatus(
   orderType: string,
   status: string,
   token: string,
+  waiterName?: string | null,
+  waiterId?: string | null,
 ) {
   if (orderType === "tap_pay") {
     return authFetch(`/api/tap-pay/dishes/${dishId}/status`, token, {
@@ -88,7 +91,7 @@ export async function updateDishStatus(
   // tap, room, flex_bill → dish-orders endpoint
   return authFetch(`/api/dish-orders/${dishId}/status`, token, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, waiterName, waiterId }),
   });
 }
 
@@ -778,10 +781,23 @@ export async function updateFlexBillDishQuantity(
   dishId: string,
   quantity: number,
   token: string,
+  waiterName?: string | null,
+  waiterId?: string | null,
 ): Promise<{ quantity: number; removed: boolean }> {
   const data = await authFetch(`/api/dishes/${dishId}/quantity`, token, {
     method: "PATCH",
-    body: JSON.stringify({ quantity }),
+    body: JSON.stringify({ quantity, waiterName, waiterId }),
   });
   return data.data;
+}
+
+export async function getOrderMovements(
+  orderId: string,
+  token: string,
+): Promise<Movement[]> {
+  const data = await authFetch(
+    `/api/kitchen/orders/flex_bill/${orderId}/movements`,
+    token,
+  );
+  return data.movements ?? [];
 }

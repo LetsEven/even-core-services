@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, Fragment } from "react";
-import { Banknote, Loader2, Plus, Printer, User } from "lucide-react";
+import { Banknote, Loader2, Plus, Printer, User, History } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import type { Order, DishStatus, CookingStatus } from "../types";
 import type { Branch, QRCodeRow } from "../services/api";
 import { getQRCodesForBranch, updateOrderWaiter } from "../services/api";
 import DishItem from "./DishItem";
 import CashPaymentModal from "./CashPaymentModal";
+import OrderMovementsModal from "./OrderMovementsModal";
 import AddDishModal from "./AddDishModal";
 import PrintTicketModal from "./PrintTicketModal";
 import ContactCustomerModal from "./ContactCustomerModal";
@@ -50,11 +51,18 @@ const COOKING_STATUSES: CookingStatus[] = ["preparing", "ready", "delivered"];
 
 interface OrderCardProps {
   order: Order;
-  onDishStatusChange: (dishId: string, status: DishStatus) => void;
+  onDishStatusChange: (
+    dishId: string,
+    status: DishStatus,
+    waiterName?: string | null,
+    waiterId?: string | null,
+  ) => void;
   onDishQuantityChange?: (
     orderId: string,
     dishId: string,
     quantity: number,
+    waiterName?: string | null,
+    waiterId?: string | null,
   ) => Promise<void>;
   onOrderCookingStatusChange?: (orderId: string, status: CookingStatus) => void;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
@@ -122,6 +130,7 @@ export default function OrderCard({
   const currentCookingStatus = order.cookingStatus ?? "preparing";
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAddDish, setShowAddDish] = useState(false);
+  const [showMovementsModal, setShowMovementsModal] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [ticketQR, setTicketQR] = useState<QRCodeRow | null>(null);
@@ -470,13 +479,26 @@ export default function OrderCard({
           <DishItem
             key={dish.id}
             dish={dish}
-            onStatusChange={onDishStatusChange}
+            onStatusChange={(dishId, status) =>
+              onDishStatusChange(
+                dishId,
+                status,
+                waiterSession?.name,
+                waiterSession?.id,
+              )
+            }
             hideStatusButtons={isPickAndGo || order.orderType === "tap_pay"}
             hideStatusBadge={order.orderType === "flex_bill"}
             onQuantityChange={
               canEditDishes && onDishQuantityChange
                 ? (dishId, quantity) =>
-                    onDishQuantityChange(order.id, dishId, quantity)
+                    onDishQuantityChange(
+                      order.id,
+                      dishId,
+                      quantity,
+                      waiterSession?.name,
+                      waiterSession?.id,
+                    )
                 : undefined
             }
           />
@@ -674,8 +696,24 @@ export default function OrderCard({
                 )}
               </button>
             )}
+            {order.orderType === "flex_bill" && (
+              <button
+                onClick={() => setShowMovementsModal(true)}
+                className="mt-1 flex items-center justify-center gap-2 w-full py-2.5 rounded-md bg-even-evergreen/10 hover:bg-even-evergreen/15 text-even-evergreen/80 text-xs font-medium uppercase tracking-wider transition-colors active:scale-[0.98] cursor-pointer"
+              >
+                <History className="w-4 h-4" />
+                Ver historial
+              </button>
+            )}
           </div>
         )}
+
+      {showMovementsModal && (
+        <OrderMovementsModal
+          order={order}
+          onClose={() => setShowMovementsModal(false)}
+        />
+      )}
 
       {showPaymentModal && currentBranch && (
         <CashPaymentModal

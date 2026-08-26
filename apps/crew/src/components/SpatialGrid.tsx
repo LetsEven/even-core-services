@@ -71,6 +71,8 @@ interface Props {
     orderType: string,
     dishId: string,
     status: DishStatus,
+    waiterName?: string | null,
+    waiterId?: string | null,
   ) => void;
   onOrderCookingStatusChange: (orderId: string, status: CookingStatus) => void;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
@@ -78,6 +80,8 @@ interface Props {
     orderId: string,
     dishId: string,
     quantity: number,
+    waiterName?: string | null,
+    waiterId?: string | null,
   ) => Promise<void>;
   onOrdersRefresh: () => void;
   availableWaiters?: { id: string; name: string }[];
@@ -582,12 +586,14 @@ export default function SpatialGrid({
             </button>
             <OrderCard
               order={selectedOrder}
-              onDishStatusChange={(dishId, status) => {
+              onDishStatusChange={(dishId, status, waiterName, waiterId) => {
                 onDishStatusChange(
                   selectedOrder.id,
                   selectedOrder.orderType,
                   dishId,
                   status,
+                  waiterName,
+                  waiterId,
                 );
                 // Entregar el último platillo puede cerrar la cuenta —
                 // refresca `units` para que el círculo del croquis deje de

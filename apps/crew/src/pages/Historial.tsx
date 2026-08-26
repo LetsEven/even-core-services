@@ -7,12 +7,14 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  History,
 } from "lucide-react";
 import { getOrderHistory, getAvailableMonths } from "../services/api";
 import type { Branch } from "../services/api";
 import type { Order, OrderType } from "../types";
 import { formatFolio } from "../utils/folio";
 import { getOptions } from "../components/DishItem";
+import OrderMovementsModal from "../components/OrderMovementsModal";
 
 const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   tap: "Tap Order & Pay",
@@ -114,6 +116,7 @@ export default function Historial({
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("today");
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [movementsOrder, setMovementsOrder] = useState<Order | null>(null);
   const branchRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -503,12 +506,29 @@ export default function Historial({
                         </div>
                       );
                     })()}
+
+                  {order.orderType === "flex_bill" && (
+                    <button
+                      onClick={() => setMovementsOrder(order)}
+                      className="flex items-center justify-center gap-2 w-full py-2 rounded-md bg-even-evergreen/10 hover:bg-even-evergreen/15 text-even-evergreen/80 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      <History className="w-3.5 h-3.5" />
+                      Ver historial
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {movementsOrder && (
+        <OrderMovementsModal
+          order={movementsOrder}
+          onClose={() => setMovementsOrder(null)}
+        />
+      )}
     </div>
   );
 }

@@ -27,11 +27,15 @@ export interface HomeScreenProps {
     orderType: string,
     dishId: string,
     status: DishStatus,
+    waiterName?: string | null,
+    waiterId?: string | null,
   ) => Promise<void>;
   updateDishQuantity: (
     orderId: string,
     dishId: string,
     quantity: number,
+    waiterName?: string | null,
+    waiterId?: string | null,
   ) => Promise<void>;
   updateOrderCookingStatus: (
     orderId: string,

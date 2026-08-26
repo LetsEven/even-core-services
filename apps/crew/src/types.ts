@@ -48,6 +48,23 @@ export interface PaymentTransaction {
 }
 
 export type ManualPaymentMethod = "cash" | "terminal";
+
+export type MovementType =
+  | "table_opened"
+  | "dish_added"
+  | "dish_removed"
+  | "dish_status_changed"
+  | "waiter_changed"
+  | "payment_registered"
+  | "table_closed";
+
+export interface Movement {
+  id: string;
+  type: MovementType;
+  actorLabel?: string | null;
+  details: Record<string, any>;
+  createdAt: string;
+}
 export type ManualCardType = "credito" | "debito" | "amex";
 export type ManualPaymentType = "full-bill" | "select-items" | "choose-amount";
 

@@ -59,6 +59,7 @@ const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
 interface Props {
   onOpenPrinters: () => void;
   onOpenHistorial: () => void;
+  onOpenComprobantes: () => void;
   orders: Order[];
   loading: boolean;
   error: string | null;
@@ -92,6 +93,7 @@ interface Props {
 export default function Kitchen({
   onOpenPrinters,
   onOpenHistorial,
+  onOpenComprobantes,
   orders,
   loading,
   error,
@@ -207,6 +209,7 @@ export default function Kitchen({
       <AppHeader
         onOpenPrinters={onOpenPrinters}
         onOpenHistorial={onOpenHistorial}
+        onOpenComprobantes={onOpenComprobantes}
         onRefresh={() => handleActualizar(true)}
         refreshing={loading}
       />

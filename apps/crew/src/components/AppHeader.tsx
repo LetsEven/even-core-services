@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, useClerk } from "@clerk/clerk-react";
-import { Menu, PrinterIcon, History, LogOut, RefreshCw } from "lucide-react";
+import {
+  Menu,
+  PrinterIcon,
+  History,
+  Receipt,
+  LogOut,
+  RefreshCw,
+} from "lucide-react";
 import { deleteFcmToken } from "../services/api";
 
 interface Props {
   onOpenPrinters: () => void;
   onOpenHistorial: () => void;
+  onOpenComprobantes: () => void;
   onRefresh: () => void;
   refreshing: boolean;
 }
@@ -17,6 +25,7 @@ interface Props {
 export default function AppHeader({
   onOpenPrinters,
   onOpenHistorial,
+  onOpenComprobantes,
   onRefresh,
   refreshing,
 }: Props) {
@@ -84,6 +93,17 @@ export default function AppHeader({
             >
               <History className="w-4 h-4 shrink-0" />
               Historial
+            </button>
+
+            <button
+              onClick={() => {
+                onOpenComprobantes();
+                setMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <Receipt className="w-4 h-4 shrink-0" />
+              Comprobantes
             </button>
 
             <div className="h-px bg-white/10 mx-3" />

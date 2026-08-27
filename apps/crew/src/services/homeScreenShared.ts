@@ -14,6 +14,7 @@ import type { Order, DishStatus, CookingStatus } from "../types";
 export interface HomeScreenProps {
   onOpenPrinters: () => void;
   onOpenHistorial: () => void;
+  onOpenComprobantes: () => void;
   branchId: string | null;
   branches: Branch[];
   branchesLoading: boolean;

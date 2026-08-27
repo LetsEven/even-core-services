@@ -3,6 +3,7 @@ import { useAuth, useSignIn } from "@clerk/clerk-react";
 import { Mail, KeyRound, Loader2, Eye, EyeOff } from "lucide-react";
 import Printers from "./pages/Printers";
 import Historial from "./pages/Historial";
+import Comprobantes from "./pages/Comprobantes";
 import { useSocket } from "./hooks/useSocket";
 import type { CrewDevice } from "./hooks/useSocket";
 import { usePrinting } from "./hooks/usePrinting";
@@ -18,7 +19,7 @@ import ServiceSwitcher from "./components/ServiceSwitcher";
 import WaiterLoginModal from "./components/WaiterLoginModal";
 import { useWaiterSession } from "./hooks/useWaiterSession";
 
-type Page = "home" | "printers" | "historial";
+type Page = "home" | "printers" | "historial" | "comprobantes";
 
 const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
 
@@ -504,6 +505,18 @@ export default function App() {
     );
   }
 
+  if (page === "comprobantes") {
+    return (
+      <Comprobantes
+        onBack={() => setPage("home")}
+        branches={branches}
+        branchesLoading={branchesLoading}
+        branchId={branchId}
+        onBranchChange={handleBranchChange}
+      />
+    );
+  }
+
   // Pantalla principal — resuelta por servicio contratado (clients.services,
   // ver serviceMapping.ts). Fallback a Pick & Go si no hay servicio mapeable
   // (branch/cliente sin `services` bien cargado) — es la pantalla más
@@ -544,6 +557,7 @@ export default function App() {
         <HomeScreen
           onOpenPrinters={() => setPage("printers")}
           onOpenHistorial={() => setPage("historial")}
+          onOpenComprobantes={() => setPage("comprobantes")}
           branchId={branchId}
           branches={branches}
           branchesLoading={branchesLoading}

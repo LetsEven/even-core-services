@@ -61,6 +61,7 @@ interface Props {
   config: SpatialGridConfig;
   onOpenPrinters: () => void;
   onOpenHistorial: () => void;
+  onOpenComprobantes: () => void;
   branchId: string | null;
   branches: Branch[];
   branchesLoading: boolean;
@@ -161,6 +162,7 @@ export default function SpatialGrid({
   config,
   onOpenPrinters,
   onOpenHistorial,
+  onOpenComprobantes,
   branchId,
   branches,
   branchesLoading,
@@ -487,6 +489,7 @@ export default function SpatialGrid({
       <AppHeader
         onOpenPrinters={onOpenPrinters}
         onOpenHistorial={onOpenHistorial}
+        onOpenComprobantes={onOpenComprobantes}
         onRefresh={() => handleActualizar(true)}
         refreshing={loading}
       />

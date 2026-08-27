@@ -801,3 +801,42 @@ export async function getOrderMovements(
   );
   return data.movements ?? [];
 }
+
+export interface Voucher {
+  id: string;
+  created_at: string;
+  base_amount: number;
+  tip_amount: number;
+  total_amount_charged: number;
+  service: string;
+  paymentMethod: string;
+  branchName: string | null;
+  locationLabel: string | null;
+}
+
+export interface VouchersPage {
+  data: Voucher[];
+  total_pages: number;
+  total_results: number;
+  page: number;
+}
+
+export async function getVouchers(
+  token: string,
+  restaurantId: number,
+  branchId: string,
+  since: string,
+  until: string,
+  page = 1,
+): Promise<VouchersPage> {
+  const params = new URLSearchParams({
+    restaurantId: String(restaurantId),
+    branchId,
+    since,
+    until,
+    page: String(page),
+    limit: "15",
+  });
+  const data = await authFetch(`/api/vouchers?${params}`, token);
+  return data.data;
+}

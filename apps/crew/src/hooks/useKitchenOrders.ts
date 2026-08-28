@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import type { Order, DishStatus, CookingStatus } from "../types";
 import {
@@ -27,14 +27,23 @@ export function useKitchenOrders(branchId: string | null) {
   // inicialización de prevOrderIdsRef corra con orders=[] antes del primer fetch.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Varios triggers disparan fetchOrders casi al mismo tiempo (socket de
+  // "nueva transacción" + socket de "platillo/mesa pagada" + poll de 30s) —
+  // sus respuestas pueden llegar fuera de orden por la red. Sin esto, la
+  // respuesta de la petición más vieja (con paid_amount desactualizado)
+  // puede pisar a una más nueva que ya llegó con el monto correcto, dejando
+  // "Pagado" atascado hasta el siguiente refresh.
+  const fetchSeqRef = useRef(0);
 
   const fetchOrders = useCallback(
     async (showSpinner = false): Promise<Order[] | undefined> => {
       if (showSpinner) setLoading(true);
+      const seq = ++fetchSeqRef.current;
       try {
         const token = await getToken();
         if (!token) return undefined;
         const data = await getActiveOrders(token, branchId);
+        if (seq !== fetchSeqRef.current) return data;
         setOrders((prev) => {
           // Merge to preserve dish order: existing dishes keep their position,
           // only status/fields update. New dishes append at the end.

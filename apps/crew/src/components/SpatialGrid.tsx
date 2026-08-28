@@ -74,8 +74,11 @@ interface Props {
     status: DishStatus,
     waiterName?: string | null,
     waiterId?: string | null,
-  ) => void;
-  onOrderCookingStatusChange: (orderId: string, status: CookingStatus) => void;
+  ) => void | Promise<void>;
+  onOrderCookingStatusChange: (
+    orderId: string,
+    status: CookingStatus,
+  ) => void | Promise<void>;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
   onDishQuantityChange?: (
     orderId: string,
@@ -589,8 +592,12 @@ export default function SpatialGrid({
             </button>
             <OrderCard
               order={selectedOrder}
-              onDishStatusChange={(dishId, status, waiterName, waiterId) => {
-                onDishStatusChange(
+              onDishStatusChange={async (dishId, status, waiterName, waiterId) => {
+                // Esperar a que el PATCH se confirme en el backend antes de
+                // refrescar `units` — si no, el GET de mesas puede llegar
+                // antes de que el estado del platillo se haya guardado y
+                // seguir mostrando la mesa ocupada hasta un refresh manual.
+                await onDishStatusChange(
                   selectedOrder.id,
                   selectedOrder.orderType,
                   dishId,
@@ -603,8 +610,8 @@ export default function SpatialGrid({
                 // mostrarse ocupado/verde sin necesitar un refresh manual.
                 if (status === "delivered") fetchData(false);
               }}
-              onOrderCookingStatusChange={(orderId, status) => {
-                onOrderCookingStatusChange?.(orderId, status);
+              onOrderCookingStatusChange={async (orderId, status) => {
+                await onOrderCookingStatusChange?.(orderId, status);
                 if (status === "delivered") fetchData(false);
               }}
               onPrepTimeExtraChange={onPrepTimeExtraChange}

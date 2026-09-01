@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { usePrinters } from "../hooks/usePrinters";
 import {
-  getBranches,
   getPrinters,
   syncPrinters,
   updatePrinter,
@@ -67,6 +66,9 @@ interface Props {
   connectedDevices: CrewDevice[];
   masterDeviceId: string | null;
   setMaster: (deviceId: string) => void;
+  branches: Branch[];
+  branchesLoading: boolean;
+  branchId: string | null;
   onBranchChange: (id: string) => void;
 }
 
@@ -81,6 +83,9 @@ export default function Printers({
   connectedDevices,
   masterDeviceId,
   setMaster,
+  branches,
+  branchesLoading,
+  branchId,
   onBranchChange,
 }: Props) {
   const { getToken } = useAuth();
@@ -96,9 +101,6 @@ export default function Printers({
     printTestUsb,
   } = usePrinters();
 
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [branchesLoading, setBranchesLoading] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [branchOpen, setBranchOpen] = useState(false);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -128,35 +130,6 @@ export default function Printers({
   const [savingUsbDevice, setSavingUsbDevice] = useState<string | null>(null);
   const [usbError, setUsbError] = useState<string | null>(null);
 
-  // Load branches on mount
-  useEffect(() => {
-    setBranchesLoading(true);
-    (async () => {
-      try {
-        const token = await getToken();
-        if (!token) return;
-        const list = await getBranches(token);
-        setBranches(list);
-        const saved = localStorage.getItem("crew_branch_id");
-        const match = list.find((b) => b.id === saved);
-        if (match) {
-          setLoading(true);
-          setSelectedBranch(match.id);
-          onBranchChange(match.id);
-        } else if (list.length === 1) {
-          setLoading(true);
-          setSelectedBranch(list[0].id);
-          localStorage.setItem("crew_branch_id", list[0].id);
-          onBranchChange(list[0].id);
-        }
-      } catch (e: any) {
-        setError(e?.message || "Error al cargar sucursales");
-      } finally {
-        setBranchesLoading(false);
-      }
-    })();
-  }, [getToken]);
-
   // Load printers when branch changes
   const loadPrinters = useCallback(
     async (branchId: string) => {
@@ -177,23 +150,23 @@ export default function Printers({
   );
 
   useEffect(() => {
-    if (selectedBranch) loadPrinters(selectedBranch);
-  }, [selectedBranch, loadPrinters]);
+    if (branchId) loadPrinters(branchId);
+  }, [branchId, loadPrinters]);
 
   // WiFi scan
   const handleScan = useCallback(async () => {
-    if (!selectedBranch) return;
+    if (!branchId) return;
     const found = await scan();
     if (found.length === 0) return;
     const token = await getToken();
     if (!token) return;
     try {
-      const updated = await syncPrinters(token, selectedBranch, found);
+      const updated = await syncPrinters(token, branchId, found);
       setPrinters(updated);
     } catch (e: any) {
       setError(e?.message || "Error al sincronizar impresoras");
     }
-  }, [scan, getToken, selectedBranch]);
+  }, [scan, getToken, branchId]);
 
   // USB scan — solo detecta localmente, NO guarda en DB todavía
   const handleScanUsb = useCallback(async () => {
@@ -297,11 +270,11 @@ export default function Printers({
       return;
     }
     const token = await getToken();
-    if (!token || !selectedBranch) return;
+    if (!token || !branchId) return;
     setSavingNewUsb(deviceName);
     setUsbError(null);
     try {
-      const updated = await syncPrinters(token, selectedBranch, [
+      const updated = await syncPrinters(token, branchId, [
         {
           usb_device_name: deviceName,
           connection_type: "usb",
@@ -349,8 +322,7 @@ export default function Printers({
   );
 
   const selectedBranchName =
-    branches.find((b) => b.id === selectedBranch)?.name ??
-    "Seleccionar sucursal";
+    branches.find((b) => b.id === branchId)?.name ?? "Seleccionar sucursal";
 
   // Always include the current device so "Este dispositivo" never disappears
   // during socket reconnects or when the server list arrives late.
@@ -384,7 +356,7 @@ export default function Printers({
         </h1>
         <button
           onClick={handleScan}
-          disabled={scanning || !selectedBranch}
+          disabled={scanning || !branchId}
           className="p-2 rounded-lg text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {scanning ? (
@@ -417,13 +389,11 @@ export default function Printers({
                 <li key={b.id}>
                   <button
                     onClick={() => {
-                      setSelectedBranch(b.id);
-                      localStorage.setItem("crew_branch_id", b.id);
                       onBranchChange(b.id);
                       setBranchOpen(false);
                     }}
                     className={`w-full text-left px-4 py-3 text-sm transition-colors cursor-pointer ${
-                      selectedBranch === b.id
+                      branchId === b.id
                         ? "text-even-evergreen bg-even-evergreen/15"
                         : "text-even-evergreen/70 hover:bg-even-evergreen/10"
                     }`}
@@ -503,7 +473,7 @@ export default function Printers({
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-even-evergreen/50" />
           </div>
-        ) : !selectedBranch ? (
+        ) : !branchId ? (
           <div className="flex-1 flex items-center justify-center text-even-evergreen/40 text-sm">
             Selecciona una sucursal para ver sus impresoras
           </div>
@@ -515,7 +485,7 @@ export default function Printers({
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-even-evergreen/70">
             <p className="text-sm text-center">{error}</p>
             <button
-              onClick={() => loadPrinters(selectedBranch)}
+              onClick={() => loadPrinters(branchId)}
               className="px-4 py-2 bg-even-evergreen/20 text-even-evergreen rounded-md text-xs uppercase tracking-wider font-medium hover:bg-even-evergreen/30 cursor-pointer"
             >
               Reintentar

@@ -158,19 +158,26 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
-  // Cargar sucursales al estar autenticado
+  // Cargar sucursales al estar autenticado. Justo tras un primer login el
+  // token de Clerk o el registro de sucursal en el backend pueden no estar
+  // listos todavía, así que se reintenta una vez antes de darse por vencido
+  // (antes fallaba en silencio y dejaba el selector de sucursal roto hasta
+  // que la página de Impresoras, que hacía su propio fetch, lo "arreglaba").
   useEffect(() => {
     if (!isSignedIn) return;
-    setBranchesLoading(true);
-    (async () => {
+    let cancelled = false;
+
+    const loadBranches = async (retriesLeft: number) => {
+      setBranchesLoading(true);
       try {
         const token = await getToken();
-        if (!token) return;
+        if (!token) throw new Error("Token no disponible todavía");
         const list = await getBranches(token);
+        if (cancelled) return;
         setBranches(list);
-        // Auto-seleccionar sucursal por defecto en el primer login (igual que
-        // Printers): conserva la guardada si sigue siendo válida, si no usa la
-        // primera. Evita que Kitchen quede sin sucursal activa al iniciar.
+        // Auto-seleccionar sucursal por defecto en el primer login: conserva
+        // la guardada si sigue siendo válida, si no usa la primera. Evita que
+        // Kitchen quede sin sucursal activa al iniciar.
         setBranchId((prev) => {
           if (prev && list.some((b) => b.id === prev)) return prev;
           const saved = localStorage.getItem("crew_branch_id");
@@ -181,11 +188,22 @@ export default function App() {
           if (chosen) localStorage.setItem("crew_branch_id", chosen);
           return chosen;
         });
-      } catch {
-      } finally {
         setBranchesLoading(false);
+      } catch (err) {
+        console.error("[CREW] Error al cargar sucursales:", err);
+        if (cancelled) return;
+        if (retriesLeft > 0) {
+          setTimeout(() => loadBranches(retriesLeft - 1), 1500);
+        } else {
+          setBranchesLoading(false);
+        }
       }
-    })();
+    };
+
+    loadBranches(1);
+    return () => {
+      cancelled = true;
+    };
   }, [isSignedIn, getToken]);
 
   useEffect(() => {
@@ -479,14 +497,14 @@ export default function App() {
   if (page === "printers") {
     return (
       <Printers
-        onBack={() => {
-          setBranchId(localStorage.getItem("crew_branch_id"));
-          setPage("home");
-        }}
+        onBack={() => setPage("home")}
         deviceId={deviceId}
         connectedDevices={connectedDevices}
         masterDeviceId={masterDeviceId}
         setMaster={setMaster}
+        branches={branches}
+        branchesLoading={branchesLoading}
+        branchId={branchId}
         onBranchChange={handleBranchChange}
       />
     );

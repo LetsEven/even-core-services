@@ -197,7 +197,7 @@ export default function Kitchen({
       if (document.visibilityState === "visible" && !loading) {
         handleActualizar(false);
       }
-    }, 30_000);
+    }, 45_000);
     return () => clearInterval(id);
   }, [handleActualizar, loading]);
 

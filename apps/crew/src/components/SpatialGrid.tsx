@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, Check, Loader2, ArrowLeft, Move } from "lucide-react";
 import {
   peekTablePOS,
+  peekTablePOSBatch,
   openTableAccount,
   syncFlexBillTableFromPOS,
   type Branch,
@@ -244,21 +245,22 @@ export default function SpatialGrid({
           const freeUnits = data.filter(
             (u) => !u.has_open_account && u.status !== "maintenance",
           );
-          Promise.allSettled(
-            freeUnits.map((u) =>
-              peekTablePOS(branchId, u.number, token).then((has) => ({
-                number: u.number,
-                has,
-              })),
-            ),
-          ).then((results) => {
-            const posSet = new Set<string>();
-            for (const r of results) {
-              if (r.status === "fulfilled" && r.value.has)
-                posSet.add(r.value.number);
-            }
-            setPosUnits(posSet);
-          });
+          if (freeUnits.length > 0) {
+            const freeNumbers = new Set(freeUnits.map((u) => u.number));
+            peekTablePOSBatch(branchId, token)
+              .then((results) => {
+                const posSet = new Set<string>();
+                for (const r of results) {
+                  if (r.hasPOSOrder && freeNumbers.has(r.table_number)) {
+                    posSet.add(r.table_number);
+                  }
+                }
+                setPosUnits(posSet);
+              })
+              .catch(() => {
+                // best-effort, igual que antes con Promise.allSettled
+              });
+          }
         }
       } catch (e: unknown) {
         setError(
@@ -325,7 +327,7 @@ export default function SpatialGrid({
       if (document.visibilityState === "visible" && !loading && !isReordering) {
         handleActualizar(false);
       }
-    }, 30_000);
+    }, 45_000);
     return () => clearInterval(id);
   }, [handleActualizar, loading, isReordering]);
 

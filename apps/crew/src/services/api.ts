@@ -490,6 +490,24 @@ export async function peekTablePOS(
   return data.hasPOSOrder === true;
 }
 
+export interface PosPeekBatchResult {
+  table_number: string;
+  hasPOSOrder: boolean;
+}
+
+// Igual que peekTablePOS pero para TODAS las mesas de la sucursal en una
+// sola llamada — evita 1 request por mesa libre en cada tick del polling.
+export async function peekTablePOSBatch(
+  branchId: string,
+  token: string,
+): Promise<PosPeekBatchResult[]> {
+  const data = await authFetch(
+    `/api/kitchen/tables/pos-peek-batch?branchId=${branchId}`,
+    token,
+  );
+  return data.tables ?? [];
+}
+
 export interface OpenTableAccountResult {
   order: TableActiveSummary | null;
   needsServiceChoice?: boolean;

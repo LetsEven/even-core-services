@@ -2,7 +2,11 @@ import { useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getPrinters, type PrinterRecord } from "../services/api";
 import { formatFolio } from "../utils/folio";
-import { getLocationKind, parseLocationCode, padLocationCode } from "../utils/identifier";
+import {
+  getLocationKind,
+  parseLocationCode,
+  padLocationCode,
+} from "../utils/identifier";
 
 const DEVICE_ID_KEY = "crew_device_id";
 
@@ -298,6 +302,27 @@ export function usePrinting(branchId: string | null) {
   const branchIdRef = useRef<string | null>(null);
   const masterDeviceIdRef = useRef<string | null>(null);
 
+  // Recarga la lista de impresoras de la sucursal activa. Se expone para que
+  // la página de Impresoras la llame tras agregar/editar/borrar una — si no,
+  // printersRef se queda con la lista vieja hasta que alguien reinicie la app
+  // (#confirmado: pedido perdido en Sainte Marianne por esto mismo).
+  const refreshPrinters = useCallback(async () => {
+    const currentBranchId = branchIdRef.current;
+    if (!currentBranchId) {
+      printersRef.current = [];
+      return;
+    }
+    try {
+      const list = await getPrinters(currentBranchId);
+      printersRef.current = list.filter((p) => p.is_active !== false && p.role);
+      console.log(
+        `[PRINT] ${printersRef.current.length} impresora(s) cargadas para branch ${currentBranchId}`,
+      );
+    } catch (e) {
+      console.warn("[PRINT] No se pudieron cargar impresoras:", e);
+    }
+  }, []);
+
   // Mantener la branch e impresoras sincronizadas con la sucursal activa.
   // Debe reaccionar a cambios de branchId (igual que el socket), de lo
   useEffect(() => {
@@ -306,22 +331,15 @@ export function usePrinting(branchId: string | null) {
       printersRef.current = [];
       return;
     }
+    refreshPrinters();
+  }, [branchId, refreshPrinters]);
 
-    getPrinters(branchId)
-      .then((list) => {
-        printersRef.current = list.filter(
-          (p) => p.is_active !== false && p.role,
-        );
-        console.log(
-          `[PRINT] ${printersRef.current.length} impresora(s) cargadas para branch ${branchId}`,
-        );
-      })
-      .catch((e) => {
-        console.warn("[PRINT] No se pudieron cargar impresoras:", e);
-      });
-  }, [branchId]);
-
-  const printJob = useCallback(async (data: PrintJobData) => {
+  // Devuelve true solo si este dispositivo de verdad intentó imprimir (es
+  // Master, la branch coincide y había impresoras cargadas). El caller (el
+  // socket) solo debe mandar el ACK cuando esto es true — antes se ackeaba
+  // aunque printJob se saltara todo en silencio, y el backend/nosotros
+  // creíamos que se había impreso cuando en realidad no se intentó nada.
+  const printJob = useCallback(async (data: PrintJobData): Promise<boolean> => {
     const myDeviceId = localStorage.getItem(DEVICE_ID_KEY);
     const masterDeviceId = masterDeviceIdRef.current;
     console.log(
@@ -330,18 +348,23 @@ export function usePrinting(branchId: string | null) {
 
     if (!myDeviceId || myDeviceId !== masterDeviceId) {
       console.log("[PRINT] Omitido — este dispositivo no es Master");
-      return;
+      return false;
     }
     if (data.branchId !== branchIdRef.current) {
       console.log(
         `[PRINT] Omitido — branchId no coincide (data=${data.branchId} vs local=${branchIdRef.current})`,
       );
-      return;
+      return false;
     }
 
     const printers = printersRef.current;
     console.log(`[PRINT] Impresoras disponibles: ${printers.length}`);
-    if (printers.length === 0) return;
+    if (printers.length === 0) {
+      console.warn(
+        "[PRINT] Sin impresoras cargadas — si acabas de agregar una, reinicia la app o revisa que refreshPrinters se haya llamado",
+      );
+      return false;
+    }
 
     const failures: string[] = [];
 
@@ -399,11 +422,12 @@ export function usePrinting(branchId: string | null) {
     if (failures.length > 0) {
       throw new Error(`Fallo en impresoras: ${failures.join(", ")}`);
     }
+    return true;
   }, []);
 
   const setMasterDeviceId = useCallback((id: string | null) => {
     masterDeviceIdRef.current = id;
   }, []);
 
-  return { printJob, setMasterDeviceId };
+  return { printJob, setMasterDeviceId, refreshPrinters };
 }

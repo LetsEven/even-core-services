@@ -21,7 +21,7 @@ interface UseSocketProps {
   onDishStatusChanged: (dishId: string, status: DishStatus) => void;
   onRefetch: () => void;
   onSilentRefetch?: () => void;
-  onPrintJob?: (data: PrintJobData) => void;
+  onPrintJob?: (data: PrintJobData) => Promise<boolean>;
   onDevicesUpdated?: (
     devices: CrewDevice[],
     masterDeviceId: string | null,
@@ -221,8 +221,12 @@ export function useSocket({
         `[CREW:SOCKET] (PRINT) kitchen:print_job recibido — branchId=${data.branchId} identifier=${data.orderInfo?.identifier} items=${data.items?.length} jobId=${data.jobId}`,
       );
       try {
-        await onPrintJobRef.current?.(data);
-        if (data.jobId) {
+        // Solo ackear si este dispositivo de verdad intentó imprimir — antes
+        // se mandaba el ack aunque printJob se saltara todo en silencio (no
+        // era Master, branch no coincidía, o no había impresoras cargadas),
+        // y el backend quedaba creyendo que el pedido se había impreso.
+        const printed = await onPrintJobRef.current?.(data);
+        if (data.jobId && printed) {
           socket.emit("print_job_ack", { jobId: data.jobId });
           console.log(
             `[CREW:SOCKET] print_job_ack enviado — jobId=${data.jobId}`,

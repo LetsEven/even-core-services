@@ -70,6 +70,7 @@ interface Props {
   branchesLoading: boolean;
   branchId: string | null;
   onBranchChange: (id: string) => void;
+  onPrintersChanged?: () => void;
 }
 
 interface EditState {
@@ -87,6 +88,7 @@ export default function Printers({
   branchesLoading,
   branchId,
   onBranchChange,
+  onPrintersChanged,
 }: Props) {
   const { getToken } = useAuth();
   const {
@@ -163,10 +165,11 @@ export default function Printers({
     try {
       const updated = await syncPrinters(token, branchId, found);
       setPrinters(updated);
+      onPrintersChanged?.();
     } catch (e: any) {
       setError(e?.message || "Error al sincronizar impresoras");
     }
-  }, [scan, getToken, branchId]);
+  }, [scan, getToken, branchId, onPrintersChanged]);
 
   // USB scan — solo detecta localmente, NO guarda en DB todavía
   const handleScanUsb = useCallback(async () => {
@@ -200,6 +203,7 @@ export default function Printers({
         prev.map((p) => (p.id === updated.id ? updated : p)),
       );
       setEditingId(null);
+      onPrintersChanged?.();
     } catch (e: any) {
       setError(e?.message || "Error al guardar");
     } finally {
@@ -229,6 +233,7 @@ export default function Printers({
         prev.map((p) => (p.id === updated.id ? updated : p)),
       );
       setEditingUsbDevice(null);
+      onPrintersChanged?.();
     } catch (e: any) {
       setUsbError(e?.message || "Error al guardar");
     } finally {
@@ -249,6 +254,7 @@ export default function Printers({
       setEditingId(null);
       setEditingUsbDevice(null);
       setConfirmDeleteId(null);
+      onPrintersChanged?.();
     } catch (e: any) {
       setError(e?.message || "Error al eliminar");
     } finally {
@@ -295,6 +301,7 @@ export default function Printers({
         });
       }
       setEditingNewUsb(null);
+      onPrintersChanged?.();
     } catch (e: any) {
       setUsbError(e?.message || "Error al guardar");
     } finally {

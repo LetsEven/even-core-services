@@ -231,8 +231,11 @@ export default function App() {
   }, []);
 
   // Hooks que deben vivir toda la sesión (independiente de la página activa)
-  const { printJob, setMasterDeviceId: setPrintingMaster } =
-    usePrinting(branchId);
+  const {
+    printJob,
+    setMasterDeviceId: setPrintingMaster,
+    refreshPrinters,
+  } = usePrinting(branchId);
 
   const handleDevicesUpdated = useCallback(
     (devices: CrewDevice[], master: string | null) => {
@@ -506,6 +509,7 @@ export default function App() {
         branchesLoading={branchesLoading}
         branchId={branchId}
         onBranchChange={handleBranchChange}
+        onPrintersChanged={refreshPrinters}
       />
     );
   }

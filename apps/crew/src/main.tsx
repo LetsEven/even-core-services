@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { ClerkProvider } from "@clerk/clerk-react";
 import "./index.css";
 import App from "./App.tsx";
-import { createNativeClerk } from "./lib/clerkNative";
+import { createNativeClerk, isTauri } from "./lib/clerkNative";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -13,7 +13,7 @@ if (!PUBLISHABLE_KEY) {
 const clerk = createNativeClerk(PUBLISHABLE_KEY);
 
 createRoot(document.getElementById("root")!).render(
-  <ClerkProvider Clerk={clerk} publishableKey={PUBLISHABLE_KEY} standardBrowser={false}>
+  <ClerkProvider Clerk={clerk} publishableKey={PUBLISHABLE_KEY} standardBrowser={!isTauri()}>
     <App />
   </ClerkProvider>
 );

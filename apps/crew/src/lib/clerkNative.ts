@@ -19,8 +19,14 @@ const saveJwt = (jwt: string) => {
   }
 };
 
+// En un navegador normal el Origin lo manda el browser y Clerk rechaza (400) las
+// peticiones que además traen Authorization: ahí se usa la sesión estándar (cookies).
+export const isTauri = () =>
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
 export const createNativeClerk = (publishableKey: string) => {
   const clerk = new Clerk(publishableKey);
+  if (!isTauri()) return clerk;
 
   clerk.__unstable__onBeforeRequest(async (request) => {
     request.credentials = "omit";

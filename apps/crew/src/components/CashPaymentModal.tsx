@@ -377,39 +377,54 @@ export default function CashPaymentModal({
         manual_card_type: method === "terminal" ? manualCardType : null,
       };
 
-      // createManualTransaction va ANTES de aplicar el pago a propósito: para
-      // Flex Bill (full-bill/select-items), el backend recalcula la comisión
-      // server-side comparando contra lo que sigue "sin pagar" en ese momento
-      // (ver recomputeFlexBillCommission → computeFlexBillAmountDue). Si el
-      // pago ya se hubiera aplicado (marcando el dish_order/generic_paid_amount
-      // como pagado), esa comparación da 0 — "ya no queda nada por cobrar" — y
-      // truena con "base_amount debe ser mayor a 0", aunque el pago real sí se
-      // haya aplicado. Por eso primero se registra la transacción (con el
-      // estado real, sin pagar todavía) y hasta después se marca como pagado.
-      await createManualTransaction(txParams, token);
-
-      if (isTapPay && payType === "select-items") {
-        const dishArray = Array.from(selectedDishes);
-        for (let i = 0; i < dishArray.length; i++) {
-          const isLast = i === dishArray.length - 1;
-          await payTapPayDishOrder(
-            dishArray[i],
+      if (isTapPay) {
+        // Tap-pay: primero se aplica el pago y solo si tiene éxito se registra
+        // la transacción, para no dejar movimientos huérfanos en el ledger si
+        // el pago falla. (Este flujo no manda payment_type, así que el backend
+        // no recalcula la comisión contra lo pendiente.)
+        if (payType === "select-items") {
+          const dishArray = Array.from(selectedDishes);
+          for (let i = 0; i < dishArray.length; i++) {
+            const isLast = i === dishArray.length - 1;
+            await payTapPayDishOrder(
+              dishArray[i],
+              cobradoPor,
+              token,
+              isLast ? tipAmount : 0,
+              method,
+            );
+          }
+        } else {
+          await payTapPayOrderAmount(
+            order.id,
+            baseAmount,
             cobradoPor,
             token,
-            isLast ? tipAmount : 0,
+            tipAmount,
             method,
           );
         }
-      } else if (isTapPay) {
-        await payTapPayOrderAmount(
-          order.id,
-          baseAmount,
-          cobradoPor,
-          token,
-          tipAmount,
-          method,
-        );
-      } else if (payType === "select-items") {
+        try {
+          await createManualTransaction(txParams, token);
+        } catch (e: any) {
+          throw new Error(
+            "El pago se aplicó pero no se pudo registrar el movimiento: " +
+              (e.message ?? "error desconocido"),
+          );
+        }
+        onSuccess();
+        return;
+      }
+
+      // Mesas (Flex Bill): createManualTransaction va ANTES de aplicar el pago
+      // a propósito: el backend recalcula la comisión server-side comparando
+      // contra lo que sigue "sin pagar" en ese momento (ver
+      // recomputeFlexBillCommission → computeFlexBillAmountDue). Si el pago ya
+      // se aplicó, esa comparación da 0 y truena con "base_amount debe ser
+      // mayor a 0".
+      await createManualTransaction(txParams, token);
+
+      if (payType === "select-items") {
         for (const dishId of selectedDishes) {
           await payDishOrderManual(
             dishId,

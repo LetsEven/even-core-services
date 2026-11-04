@@ -12,6 +12,7 @@ import type {
 import { getRestaurantMenu, addDishToFlexBill } from "../services/api";
 import { parseLocationCode } from "../utils/identifier";
 import { getItemDisplayPrice } from "../utils/commissionCalculator";
+import { minSelectionsOf, selectionHint } from "../utils/customFields";
 
 type CustomSelections = Record<
   string,
@@ -136,12 +137,10 @@ export default function AddDishModal({
   const isFormValid = useMemo(() => {
     if (!selectedItem) return false;
     for (const field of selectedItem.custom_fields ?? []) {
-      if (
-        (field.type === "dropdown" || field.type === "checkboxes") &&
-        field.required
-      ) {
+      const min = minSelectionsOf(field);
+      if (min > 0) {
         const sel = customSelections[field.id] as string[] | undefined;
-        if (!sel || sel.length === 0) return false;
+        if (!sel || sel.length < min) return false;
       }
     }
     return true;
@@ -462,16 +461,14 @@ export default function AddDishModal({
                     <span className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
                       {field.name}
                     </span>
-                    {(field.type === "dropdown" ||
-                      field.type === "checkboxes") &&
-                      field.required && (
+                    {minSelectionsOf(field) > 0 && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/25 text-amber-300 uppercase tracking-wider">
                           Requerido
                         </span>
                       )}
                     {field.type === "checkboxes" && (
                       <span className="text-[10px] text-even-offwhite/30">
-                        Hasta {field.maxSelections ?? 1}
+                        {selectionHint(field)}
                       </span>
                     )}
                   </div>

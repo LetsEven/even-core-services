@@ -666,6 +666,8 @@ export interface MenuItemCustomField {
   options?: MenuItemOption[];
   required?: boolean;
   maxSelections?: number;
+  // Solo checkboxes: mínimo a elegir; igual a maxSelections = número exacto
+  minSelections?: number;
 }
 
 export interface MenuItem {

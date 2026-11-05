@@ -22,9 +22,10 @@ export interface CommissionBreakdown {
   rates: CommissionRates;
 }
 
-// Tarifa plana 2% cliente / 2% restaurante para cualquier monto.
+// Tap & Pay (único caller): el cliente no paga comisión y el restaurante paga
+// el 4% (SERVICE_COMMISSION_RATES en even-backend/src/utils/commissionCalculator.js).
 export function getCommissionRates(_amount: number): CommissionRates {
-  return { evenTotal: 4.0, clientPays: 2.0, restaurantPays: 2.0 };
+  return { evenTotal: 4.0, clientPays: 0, restaurantPays: 4.0 };
 }
 
 export function calculateCommissions(
@@ -88,17 +89,16 @@ export interface ItemCommissionRate {
   restaurantPays: number;
 }
 
-// Tarifa fija — antes había un tramo de 2.2% para ítems <=$40 (unitPrice se
-// mantiene como parámetro por compatibilidad con los callers, aunque ya no
-// se use).
+// FlexBill: el cliente no paga comisión y el restaurante paga el 4% (unitPrice
+// se mantiene como parámetro por compatibilidad con los callers).
 export function getItemCommissionRate(
   _unitPrice: number,
 ): ItemCommissionRate {
-  return { clientPays: 2.0, restaurantPays: 2.0 };
+  return { clientPays: 0, restaurantPays: 4.0 };
 }
 
-// Precio que ve el cliente: precio real + comisión del cliente + IVA sobre
-// esa comisión, ya incrustados.
+// Precio que ve el cliente: precio real + comisión del cliente + su IVA. Con
+// 0% cliente es el precio real (sin inflar).
 export function getItemDisplayPrice(unitPrice: number): number {
   const rate = getItemCommissionRate(unitPrice);
   const commission = unitPrice * (rate.clientPays / 100);
@@ -148,7 +148,7 @@ function finalizeItemCommission(
   const blendedClientRate =
     baseAmount > 0 ? evenCommissionClient / baseAmount : 0;
   const blendedRestaurantRate =
-    baseAmount > 0 ? evenCommissionRestaurant / baseAmount : 0.02;
+    baseAmount > 0 ? evenCommissionRestaurant / baseAmount : 0.04;
 
   const subtotalForCommission = baseAmount + tipAmount;
   const finalCommissionClient = subtotalForCommission * blendedClientRate;

@@ -716,7 +716,7 @@ export default function CashPaymentModal({
                       +${displayPropina.toFixed(2)}
                     </span>
                   </div>
-                  {isTapPay && (
+                  {isTapPay && commissions.evenClientCharge > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-even-offwhite/50">
                         Comisión Even

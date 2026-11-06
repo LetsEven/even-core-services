@@ -106,16 +106,19 @@ export default function AppHeader({
         </button>
         {menuOpen && (
           <div className="absolute top-full left-0 mt-1 w-48 bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl z-50">
-            <button
-              onClick={() => {
-                onOpenPrinters();
-                setMenuOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <PrinterIcon className="w-4 h-4 shrink-0" />
-              Impresoras
-            </button>
+            {/* En web no se imprime: la configuración vive en el dispositivo Master */}
+            {isTauri() && (
+              <button
+                onClick={() => {
+                  onOpenPrinters();
+                  setMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <PrinterIcon className="w-4 h-4 shrink-0" />
+                Impresoras
+              </button>
+            )}
 
             <button
               onClick={() => {

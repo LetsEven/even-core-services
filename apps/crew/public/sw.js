@@ -12,14 +12,26 @@ self.addEventListener("push", (event) => {
   }
   const n = payload.notification || {};
   event.waitUntil(
-    self.registration.showNotification(n.title || "Even Crew", {
-      body: n.body || "Ha llegado una nueva orden",
-      icon: "/pwa/icon-192.png",
-      badge: "/pwa/icon-192.png",
-      data: { url: "/" },
-    }),
+    self.registration
+      .showNotification(n.title || "Even Crew", {
+        body: n.body || "Ha llegado una nueva orden",
+        icon: "/pwa/icon-192.png",
+        badge: "/pwa/icon-192.png",
+        data: { url: "/" },
+      })
+      .then(updateBadge),
   );
 });
+
+// Contador del ícono = notificaciones sin abrir (el SW no guarda estado entre pushes)
+async function updateBadge() {
+  try {
+    const pending = await self.registration.getNotifications();
+    if ("setAppBadge" in self.navigator) await self.navigator.setAppBadge(pending.length);
+  } catch {
+    /* Badging API no soportada */
+  }
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

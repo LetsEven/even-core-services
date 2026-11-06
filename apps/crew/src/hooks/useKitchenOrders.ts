@@ -93,6 +93,16 @@ export function useKitchenOrders(branchId: string | null) {
     fetchOrders();
   }, [fetchOrders]);
 
+  // Al volver al frente (PWA minimizada, otra app) el socket pudo perder eventos: refresca en todas las pantallas
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchOrders();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchOrders]);
+
   const updateDish = useCallback(
     async (
       orderId: string,

@@ -20,6 +20,7 @@ import WaiterLoginModal from "./components/WaiterLoginModal";
 import { useWaiterSession } from "./hooks/useWaiterSession";
 import { useWakeLock } from "./hooks/useWakeLock";
 import { useAudioUnlock } from "./hooks/useAudioUnlock";
+import { useClearAppBadge } from "./hooks/useClearAppBadge";
 import { isTauri } from "./lib/platform";
 import { playNotificationSound } from "./lib/sound";
 import { syncWebPushToken } from "./lib/webPush";
@@ -141,6 +142,7 @@ export default function App() {
 
   useWakeLock(!!isSignedIn && !isTauri());
   useAudioUnlock(!isTauri());
+  useClearAppBadge(!!isSignedIn && !isTauri());
 
   useEffect(() => {
     if (!isSignedIn || isTauri()) return;

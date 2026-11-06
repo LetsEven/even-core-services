@@ -149,16 +149,6 @@ export default function Kitchen({
     syncHasOrders(orders.length > 0);
   }, [orders.length]);
 
-  // Refetch al volver al frente
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") fetchOrders();
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
-  }, [fetchOrders]);
-
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     import("@tauri-apps/api/window")

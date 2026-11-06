@@ -331,6 +331,16 @@ export default function SpatialGrid({
     return () => clearInterval(id);
   }, [handleActualizar, loading, isReordering]);
 
+  // Al volver al frente refresca el croquis; las órdenes las refresca useKitchenOrders
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchData(false);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchData]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (branchRef.current && !branchRef.current.contains(e.target as Node)) {

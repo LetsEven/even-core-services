@@ -24,6 +24,7 @@ import {
   type PrinterRecord,
 } from "../services/api";
 import type { CrewDevice } from "../hooks/useSocket";
+import { isTauri } from "../lib/platform";
 
 const ROLES = [
   {
@@ -53,7 +54,7 @@ function RoleBadge({ role }: { role: string }) {
   if (!r) return null;
   return (
     <span
-      className={`mt-1 self-start inline-flex items-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 ${r.color}`}
+      className={`mt-1 self-start inline-flex items-center px-2 py-0.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 ${r.color}`}
     >
       {r.label}
     </span>
@@ -91,6 +92,7 @@ export default function Printers({
   onPrintersChanged,
 }: Props) {
   const { getToken } = useAuth();
+  const canPrint = isTauri();
   const {
     scanning,
     testingIp,
@@ -361,17 +363,21 @@ export default function Printers({
         <h1 className="text-even-offwhite font-medium text-base uppercase tracking-widest">
           Impresoras
         </h1>
-        <button
-          onClick={handleScan}
-          disabled={scanning || !branchId}
-          className="p-2 rounded-lg text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {scanning ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Wifi className="w-4 h-4" />
-          )}
-        </button>
+        {canPrint ? (
+          <button
+            onClick={handleScan}
+            disabled={scanning || !branchId}
+            className="p-2 rounded-lg text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {scanning ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Wifi className="w-4 h-4" />
+            )}
+          </button>
+        ) : (
+          <div className="w-8" />
+        )}
       </header>
 
       {/* Panel */}
@@ -413,6 +419,20 @@ export default function Printers({
           )}
         </div>
 
+        {!canPrint && (
+          <div
+            className={`px-4 py-3 rounded-lg ring-1 text-xs leading-relaxed ${
+              masterDeviceId === deviceId
+                ? "bg-amber-500/15 ring-amber-500/30 text-amber-800"
+                : "bg-even-evergreen/5 ring-even-evergreen/15 text-even-evergreen/70"
+            }`}
+          >
+            {masterDeviceId === deviceId
+              ? "Este dispositivo es el Master, pero la versión web no puede imprimir. Elige como Master un dispositivo con la app de Windows o Android."
+              : "Versión web: este dispositivo no imprime. Los tickets salen desde el dispositivo Master (app de Windows o Android)."}
+          </div>
+        )}
+
         {/* Dispositivos conectados */}
         <div>
           <p className="text-even-evergreen/50 text-xs uppercase tracking-wide px-1 mb-2">
@@ -423,6 +443,8 @@ export default function Printers({
               const isMe = d.deviceId === deviceId;
               const isMaster = d.deviceId === masterDeviceId;
               const isOffline = !d.online;
+              const isWebDevice =
+                d.platform === "web" || (isMe && !canPrint);
               return (
                 <li
                   key={d.deviceId}
@@ -453,6 +475,7 @@ export default function Printers({
                         }`}
                       >
                         {isMe ? "Este dispositivo" : "Dispositivo"}
+                        {isWebDevice && " · Web"}
                         {isMaster && !isOffline && " · Master"}
                         {isMaster && isOffline && " · Master (offline)"}
                       </p>
@@ -461,7 +484,7 @@ export default function Printers({
                       </p>
                     </div>
                   </div>
-                  {!isMaster && (
+                  {!isMaster && !isWebDevice && (
                     <button
                       onClick={() => setMaster(d.deviceId)}
                       className="ml-3 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen/70 hover:text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer shrink-0"
@@ -506,25 +529,29 @@ export default function Printers({
                 <p className="text-even-evergreen/50 text-xs uppercase tracking-wide px-1">
                   WiFi · {wifiPrinters.length} impresora(s)
                 </p>
-                <button
-                  onClick={handleScan}
-                  disabled={scanning}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {scanning ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Wifi className="w-3 h-3" />
-                  )}
-                  Escanear
-                </button>
+                {canPrint && (
+                  <button
+                    onClick={handleScan}
+                    disabled={scanning}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {scanning ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Wifi className="w-3 h-3" />
+                    )}
+                    Escanear
+                  </button>
+                )}
               </div>
 
               {wifiPrinters.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-4 text-even-evergreen/40">
                   <PrinterIcon className="w-8 h-8 opacity-30" />
                   <p className="text-xs">
-                    No hay impresoras WiFi. Toca Escanear.
+                    {canPrint
+                      ? "No hay impresoras WiFi. Toca Escanear."
+                      : "No hay impresoras WiFi."}
                   </p>
                 </div>
               ) : (
@@ -556,7 +583,7 @@ export default function Printers({
                               onClick={() =>
                                 setEditState((s) => ({ ...s, role: r.value }))
                               }
-                              className={`px-3 py-1.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
+                              className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
                                 editState.role === r.value
                                   ? r.color
                                   : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
@@ -644,18 +671,20 @@ export default function Printers({
                           </span>
                           {p.role && <RoleBadge role={p.role} />}
                         </button>
-                        <button
-                          onClick={() => printTest(p.ip!, p.port!)}
-                          disabled={testingIp === p.ip}
-                          className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        >
-                          {testingIp === p.ip ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Play className="w-3 h-3" />
-                          )}
-                          Test
-                        </button>
+                        {canPrint && (
+                          <button
+                            onClick={() => printTest(p.ip!, p.port!)}
+                            disabled={testingIp === p.ip}
+                            className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                          >
+                            {testingIp === p.ip ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Play className="w-3 h-3" />
+                            )}
+                            Test
+                          </button>
+                        )}
                       </li>
                     ),
                   )}
@@ -669,18 +698,20 @@ export default function Printers({
                 <p className="text-even-evergreen/50 text-xs uppercase tracking-wide px-1">
                   USB · {usbPrinters.length} impresora(s)
                 </p>
-                <button
-                  onClick={handleScanUsb}
-                  disabled={scanningUsb}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {scanningUsb ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Cable className="w-3 h-3" />
-                  )}
-                  Detectar USB
-                </button>
+                {canPrint && (
+                  <button
+                    onClick={handleScanUsb}
+                    disabled={scanningUsb}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {scanningUsb ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Cable className="w-3 h-3" />
+                    )}
+                    Detectar USB
+                  </button>
+                )}
               </div>
 
               {usbError && (
@@ -720,7 +751,7 @@ export default function Printers({
                                   role: r.value,
                                 }))
                               }
-                              className={`px-3 py-1.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
+                              className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
                                 editUsbState.role === r.value
                                   ? r.color
                                   : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
@@ -808,18 +839,20 @@ export default function Printers({
                           </span>
                           {p.role && <RoleBadge role={p.role} />}
                         </button>
-                        <button
-                          onClick={() => handleTestUsb(p.usb_device_name!)}
-                          disabled={testingUsbDevice === p.usb_device_name}
-                          className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        >
-                          {testingUsbDevice === p.usb_device_name ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Play className="w-3 h-3" />
-                          )}
-                          Test
-                        </button>
+                        {canPrint && (
+                          <button
+                            onClick={() => handleTestUsb(p.usb_device_name!)}
+                            disabled={testingUsbDevice === p.usb_device_name}
+                            className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                          >
+                            {testingUsbDevice === p.usb_device_name ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Play className="w-3 h-3" />
+                            )}
+                            Test
+                          </button>
+                        )}
                       </li>
                     ),
                   )}
@@ -835,6 +868,13 @@ export default function Printers({
                   (d) => !savedDeviceNames.has(d.device_name),
                 );
                 if (newDevices.length === 0 && usbPrinters.length === 0) {
+                  if (!canPrint) {
+                    return (
+                      <p className="text-xs text-center py-4 text-even-evergreen/40">
+                        No hay impresoras USB.
+                      </p>
+                    );
+                  }
                   return (
                     <div className="flex flex-col items-center justify-center gap-2 py-4 text-even-evergreen/40">
                       <Cable className="w-8 h-8 opacity-30" />
@@ -883,7 +923,7 @@ export default function Printers({
                                       role: r.value,
                                     }))
                                   }
-                                  className={`px-3 py-1.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
+                                  className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
                                     editNewUsbState.role === r.value
                                       ? r.color
                                       : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"

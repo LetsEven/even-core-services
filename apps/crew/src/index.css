@@ -46,6 +46,13 @@ body {
   min-height: 100svh;
 }
 
+/* Tablets táctiles (iPad, tablets Android): todo está en rem, así que escala completo. Desktop con mouse no cambia */
+@media (pointer: coarse) and (min-width: 768px) {
+  html {
+    font-size: 125%;
+  }
+}
+
 @keyframes fadeSlideDown {
   from {
     opacity: 0;

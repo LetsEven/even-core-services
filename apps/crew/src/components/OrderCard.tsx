@@ -302,7 +302,7 @@ export default function OrderCard({
       <div className="px-5 pt-5 pb-4 border-b border-even-evergreen/10">
         <div className="flex items-center justify-between mb-2">
           <span
-            className={`text-[11px] px-2 py-0.5 rounded font-medium uppercase tracking-wider ${ORDER_TYPE_COLORS[order.orderType] ?? "bg-even-evergreen/10 text-even-evergreen/70"}`}
+            className={`text-[0.6875rem] px-2 py-0.5 rounded font-medium uppercase tracking-wider ${ORDER_TYPE_COLORS[order.orderType] ?? "bg-even-evergreen/10 text-even-evergreen/70"}`}
           >
             {ORDER_TYPE_LABELS[order.orderType] ?? order.orderType}
           </span>
@@ -330,7 +330,7 @@ export default function OrderCard({
             {order.customerPhone && (
               <button
                 onClick={() => setContactModalOpen(true)}
-                className="flex items-center gap-1 text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-even-grass/20 border border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wider px-2 py-0.5 rounded-full bg-even-grass/20 border border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
               >
                 Contactar
               </button>
@@ -340,7 +340,7 @@ export default function OrderCard({
         {isPickAndGo ? (
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span
-              className={`text-[11px] px-2 py-0.5 rounded border font-medium uppercase tracking-wider ${COOKING_STATUS_BADGE[currentCookingStatus]}`}
+              className={`text-[0.6875rem] px-2 py-0.5 rounded border font-medium uppercase tracking-wider ${COOKING_STATUS_BADGE[currentCookingStatus]}`}
             >
               {COOKING_STATUS_LABELS[currentCookingStatus]}
             </span>
@@ -362,7 +362,7 @@ export default function OrderCard({
                 const m = String(deadline.getMinutes()).padStart(2, "0");
                 return (
                   <>
-                    <span className="text-[11px] px-2 py-0.5 rounded border bg-even-grass/20 border-even-grass/45 text-even-evergreen uppercase tracking-wider">
+                    <span className="text-[0.6875rem] px-2 py-0.5 rounded border bg-even-grass/20 border-even-grass/45 text-even-evergreen uppercase tracking-wider">
                       Hora estimada {h}:{m}
                     </span>
                     <button
@@ -383,7 +383,7 @@ export default function OrderCard({
                           left: prepTimeDropdownPos.left,
                         }}
                       >
-                        <p className="text-[11px] uppercase tracking-wider text-even-evergreen/60 mb-2">
+                        <p className="text-[0.6875rem] uppercase tracking-wider text-even-evergreen/60 mb-2">
                           Minutos extra
                         </p>
                         <input
@@ -411,13 +411,13 @@ export default function OrderCard({
                                   Math.min(60, v + mins),
                                 )
                               }
-                              className="flex-1 text-[11px] font-medium px-2 py-1 rounded-md bg-even-evergreen/5 hover:bg-even-evergreen/10 text-even-evergreen/70 transition-colors cursor-pointer"
+                              className="flex-1 text-[0.6875rem] font-medium px-2 py-1 rounded-md bg-even-evergreen/5 hover:bg-even-evergreen/10 text-even-evergreen/70 transition-colors cursor-pointer"
                             >
                               +{mins}
                             </button>
                           ))}
                         </div>
-                        <p className="text-[11px] text-even-evergreen/60 text-center mb-3">
+                        <p className="text-[0.6875rem] text-even-evergreen/60 text-center mb-3">
                           {order.prepTimeMinutes} + {prepTimeInputValue} ={" "}
                           {order.prepTimeMinutes! + prepTimeInputValue} min
                         </p>
@@ -452,7 +452,7 @@ export default function OrderCard({
             >
               <User className="w-3.5 h-3.5" />
               <span className="text-xs font-medium">{localWaiterName}</span>
-              <span className="text-[10px] uppercase tracking-wider text-even-evergreen/60">
+              <span className="text-[0.625rem] uppercase tracking-wider text-even-evergreen/60">
                 · Asignarme
               </span>
             </button>
@@ -465,7 +465,7 @@ export default function OrderCard({
           {isMine && (
             <button
               onClick={handleUndo}
-              className="text-[11px] uppercase tracking-wider text-even-evergreen/50 hover:text-even-evergreen underline underline-offset-2 cursor-pointer"
+              className="text-[0.6875rem] uppercase tracking-wider text-even-evergreen/50 hover:text-even-evergreen underline underline-offset-2 cursor-pointer"
             >
               Desasignar
             </button>
@@ -539,7 +539,7 @@ export default function OrderCard({
             {(order.totalAmount != null || order.paidAmount != null) && (
               <div className="flex gap-3">
                 <div className="flex flex-col items-center flex-1">
-                  <span className="text-[10px] uppercase tracking-widest text-even-evergreen/60">
+                  <span className="text-[0.625rem] uppercase tracking-widest text-even-evergreen/60">
                     Total
                   </span>
                   <span className="text-sm font-semibold text-even-evergreen">
@@ -552,7 +552,7 @@ export default function OrderCard({
                   </span>
                 </div>
                 <div className="flex flex-col items-center flex-1">
-                  <span className="text-[10px] uppercase tracking-widest text-even-evergreen/60">
+                  <span className="text-[0.625rem] uppercase tracking-widest text-even-evergreen/60">
                     Pagado
                   </span>
                   <span className="text-sm font-semibold text-even-evergreen">
@@ -563,7 +563,7 @@ export default function OrderCard({
                   </span>
                 </div>
                 <div className="flex flex-col items-center flex-1">
-                  <span className="text-[10px] uppercase tracking-widest text-even-evergreen/60">
+                  <span className="text-[0.625rem] uppercase tracking-widest text-even-evergreen/60">
                     Restante
                   </span>
                   <span
@@ -583,7 +583,7 @@ export default function OrderCard({
                 </div>
                 {/* Comentado por ahora — ver conversación sobre Pagado + propina
                 <div className="flex flex-col items-center flex-1">
-                  <span className="text-[10px] uppercase tracking-widest text-even-evergreen/60">
+                  <span className="text-[0.625rem] uppercase tracking-widest text-even-evergreen/60">
                     Pagado + propina
                   </span>
                   <span className="text-sm font-semibold text-even-evergreen">
@@ -602,19 +602,19 @@ export default function OrderCard({
             )}
             {(order.payments?.length ?? 0) > 0 && (
               <div className="border-t border-even-evergreen/10 pt-2 grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center">
-                <span className="text-[10px] uppercase tracking-wider text-even-evergreen/50 font-medium pb-1">
+                <span className="text-[0.625rem] uppercase tracking-wider text-even-evergreen/50 font-medium pb-1">
                   Hora
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-even-evergreen/50 font-medium pb-1">
+                <span className="text-[0.625rem] uppercase tracking-wider text-even-evergreen/50 font-medium pb-1">
                   Quién
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-even-evergreen/50 font-medium pb-1">
+                <span className="text-[0.625rem] uppercase tracking-wider text-even-evergreen/50 font-medium pb-1">
                   Tipo
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-even-evergreen/50 font-medium text-right pb-1">
+                <span className="text-[0.625rem] uppercase tracking-wider text-even-evergreen/50 font-medium text-right pb-1">
                   Monto
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-even-evergreen/50 font-medium text-right pb-1">
+                <span className="text-[0.625rem] uppercase tracking-wider text-even-evergreen/50 font-medium text-right pb-1">
                   Prop
                 </span>
                 {order.payments!.map((p) => {

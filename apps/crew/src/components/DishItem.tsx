@@ -127,7 +127,7 @@ export default function DishItem({
         <div className="flex items-center gap-2 shrink-0">
           {!hideStatusButtons && !hideStatusBadge && (
             <span
-              className={`text-[11px] px-2 py-0.5 rounded border font-medium uppercase tracking-wider shrink-0 ${STATUS_BADGE[dish.status]}`}
+              className={`text-[0.6875rem] px-2 py-0.5 rounded border font-medium uppercase tracking-wider shrink-0 ${STATUS_BADGE[dish.status]}`}
             >
               {STATUS_LABELS[dish.status]}
             </span>

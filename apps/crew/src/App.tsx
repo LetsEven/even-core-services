@@ -18,6 +18,11 @@ import NewOrderToasts, { type OrderNotif } from "./components/NewOrderToasts";
 import ServiceSwitcher from "./components/ServiceSwitcher";
 import WaiterLoginModal from "./components/WaiterLoginModal";
 import { useWaiterSession } from "./hooks/useWaiterSession";
+import { useWakeLock } from "./hooks/useWakeLock";
+import SoundUnlockBanner from "./components/SoundUnlockBanner";
+import { isTauri } from "./lib/platform";
+import { playNotificationSound } from "./lib/sound";
+import { syncWebPushToken } from "./lib/webPush";
 
 type Page = "home" | "printers" | "historial" | "comprobantes";
 
@@ -39,23 +44,10 @@ async function flashTaskbarIcon() {
   } catch {}
 }
 
-function playNotificationSound() {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.6);
-  } catch {}
-}
-
 // Inicializar permisos de notificación al arrancar (no en cada orden)
 async function initNotifications() {
+  // En web el permiso solo se puede pedir tras un toque (llega con las push de la PWA)
+  if (!isTauri()) return;
   try {
     const { isPermissionGranted, requestPermission } = await import(
       "@tauri-apps/plugin-notification"
@@ -71,6 +63,8 @@ async function initNotifications() {
 }
 
 async function sendDesktopNotification(title: string, body: string) {
+  // En web avisan el toast y el sonido; new Notification() truena en iOS
+  if (!isTauri()) return;
   console.log(`[CREW:NOTIF] Enviando notificación: ${title} — ${body}`);
   try {
     // Usar comando Rust con PowerShell toast — más confiable en .exe portable Windows
@@ -144,6 +138,15 @@ export default function App() {
   useEffect(() => {
     initNotifications();
   }, []);
+
+  useWakeLock(!!isSignedIn && !isTauri());
+
+  useEffect(() => {
+    if (!isSignedIn || isTauri()) return;
+    getToken().then((t) => {
+      if (t) syncWebPushToken(t);
+    });
+  }, [isSignedIn, getToken]);
 
   // F12 abre DevTools
   useEffect(() => {
@@ -568,6 +571,7 @@ export default function App() {
         notifications={newOrderNotifications}
         onDismiss={handleDismissAlert}
       />
+      {!isTauri() && <SoundUnlockBanner />}
       <ServiceSwitcher
         activeOrderTypes={activeOrderTypes}
         selected={resolvedOrderType}

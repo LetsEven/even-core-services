@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "even-crew"
-version = "1.20.0"
+version = "1.21.0"
 dependencies = [
  "local-ip-address",
  "serde",

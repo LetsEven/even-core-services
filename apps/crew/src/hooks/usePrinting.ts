@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getPrinters, type PrinterRecord } from "../services/api";
 import { formatFolio } from "../utils/folio";
+import { isTauri } from "../lib/platform";
 import {
   getLocationKind,
   parseLocationCode,
@@ -275,6 +276,9 @@ export async function printTapPayTicket(
   identifier: string,
   qrUrl: string | null,
 ): Promise<void> {
+  if (!isTauri()) {
+    throw new Error("La impresión no está disponible en la versión web");
+  }
   const allPrinters = await getPrinters(branchId);
   const active = allPrinters.filter((p) => p.is_active !== false && p.role);
   if (active.length === 0) throw new Error("No hay impresoras configuradas");
@@ -348,6 +352,12 @@ export function usePrinting(branchId: string | null) {
 
     if (!myDeviceId || myDeviceId !== masterDeviceId) {
       console.log("[PRINT] Omitido — este dispositivo no es Master");
+      return false;
+    }
+    if (!isTauri()) {
+      console.warn(
+        "[PRINT] Omitido — este dispositivo es Master pero la versión web no puede imprimir",
+      );
       return false;
     }
     if (data.branchId !== branchIdRef.current) {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import type { DishStatus, Order } from "../types";
 import type { PrintJobData } from "./usePrinting";
+import { isTauri } from "../lib/platform";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CREW_SECRET =
@@ -12,6 +13,8 @@ export interface CrewDevice {
   socketId: string | null;
   connectedAt: string | null;
   online: boolean;
+  // "web" = PWA/navegador (no imprime); ausente en backends viejos
+  platform?: "web" | "native";
 }
 
 interface UseSocketProps {
@@ -100,7 +103,13 @@ export function useSocket({
 
     console.log(`[CREW:SOCKET] Conectando a ${BASE_URL}`);
     const socket = io(BASE_URL, {
-      auth: { branchId, secret: CREW_SECRET, clientType: "crew", deviceId },
+      auth: {
+        branchId,
+        secret: CREW_SECRET,
+        clientType: "crew",
+        deviceId,
+        platform: isTauri() ? "native" : "web",
+      },
       transports: ["websocket"],
       reconnection: true,
       reconnectionDelay: 1000,

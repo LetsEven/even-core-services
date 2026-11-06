@@ -23,7 +23,7 @@ export default function NewOrderToasts({ notifications, onDismiss }: Props) {
   return (
     <div
       className="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
-      style={{ width: "300px" }}
+      style={{ width: "18.75rem" }}
     >
       {notifications.map((n, depth) => {
         if (depth > 2) return null;

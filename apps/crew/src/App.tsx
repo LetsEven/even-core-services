@@ -19,7 +19,7 @@ import ServiceSwitcher from "./components/ServiceSwitcher";
 import WaiterLoginModal from "./components/WaiterLoginModal";
 import { useWaiterSession } from "./hooks/useWaiterSession";
 import { useWakeLock } from "./hooks/useWakeLock";
-import SoundUnlockBanner from "./components/SoundUnlockBanner";
+import { useAudioUnlock } from "./hooks/useAudioUnlock";
 import { isTauri } from "./lib/platform";
 import { playNotificationSound } from "./lib/sound";
 import { syncWebPushToken } from "./lib/webPush";
@@ -140,6 +140,7 @@ export default function App() {
   }, []);
 
   useWakeLock(!!isSignedIn && !isTauri());
+  useAudioUnlock(!isTauri());
 
   useEffect(() => {
     if (!isSignedIn || isTauri()) return;
@@ -570,9 +571,7 @@ export default function App() {
       <NewOrderToasts
         notifications={newOrderNotifications}
         onDismiss={handleDismissAlert}
-      />
-      {!isTauri() && <SoundUnlockBanner />}
-      <ServiceSwitcher
+      />      <ServiceSwitcher
         activeOrderTypes={activeOrderTypes}
         selected={resolvedOrderType}
         onSelect={setSelectedOrderType}

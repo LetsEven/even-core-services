@@ -1,6 +1,5 @@
 // AudioContext compartido: iOS solo lo deja sonar si se reanudó dentro de un toque del usuario
 let ctx: AudioContext | null = null;
-const listeners = new Set<() => void>();
 
 function getCtx(): AudioContext {
   if (!ctx) {
@@ -9,18 +8,8 @@ function getCtx(): AudioContext {
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext;
     ctx = new AC();
-    ctx.onstatechange = () => listeners.forEach((fn) => fn());
   }
   return ctx;
-}
-
-export function isAudioUnlocked(): boolean {
-  return ctx?.state === "running";
-}
-
-export function onAudioStateChange(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
 }
 
 export async function unlockAudio(): Promise<void> {
@@ -30,7 +19,6 @@ export async function unlockAudio(): Promise<void> {
   } catch {
     /* sin audio disponible */
   }
-  listeners.forEach((fn) => fn());
 }
 
 export function playNotificationSound(): void {

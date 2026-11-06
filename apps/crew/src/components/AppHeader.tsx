@@ -7,8 +7,16 @@ import {
   Receipt,
   LogOut,
   RefreshCw,
+  Bell,
 } from "lucide-react";
 import { deleteFcmToken } from "../services/api";
+import { isTauri } from "../lib/platform";
+import {
+  enableWebPush,
+  getWebPushStatus,
+  removeWebPushToken,
+  type WebPushStatus,
+} from "../lib/webPush";
 
 interface Props {
   onOpenPrinters: () => void;
@@ -44,7 +52,32 @@ export default function AppHeader({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
+  const [pushStatus, setPushStatus] = useState<WebPushStatus>("unsupported");
+  useEffect(() => {
+    if (menuOpen) getWebPushStatus().then(setPushStatus);
+  }, [menuOpen]);
+
+  const handleEnablePush = useCallback(async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      setPushStatus(await enableWebPush(token));
+    } catch (err) {
+      console.warn("[PUSH] No se pudieron activar las notificaciones:", err);
+    }
+  }, [getToken]);
+
   const handleSignOut = useCallback(async () => {
+    if (!isTauri()) {
+      try {
+        const token = await getToken();
+        if (token) await removeWebPushToken(token);
+      } catch {
+        // silently fail
+      }
+      signOut();
+      return;
+    }
     try {
       const token = await getToken();
       const fcmToken = await (async () => {
@@ -105,6 +138,25 @@ export default function AppHeader({
               <Receipt className="w-4 h-4 shrink-0" />
               Comprobantes
             </button>
+
+            {pushStatus === "default" && (
+              <button
+                onClick={() => {
+                  handleEnablePush();
+                  setMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider text-even-grass hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Bell className="w-4 h-4 shrink-0" />
+                Activar notificaciones
+              </button>
+            )}
+            {pushStatus === "denied" && (
+              <p className="flex items-start gap-3 px-4 py-3 text-[11px] leading-snug text-even-offwhite/50">
+                <Bell className="w-4 h-4 shrink-0" />
+                Notificaciones bloqueadas: actívalas en Ajustes del iPad
+              </p>
+            )}
 
             <div className="h-px bg-white/10 mx-3" />
             <button

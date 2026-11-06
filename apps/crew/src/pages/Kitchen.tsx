@@ -6,6 +6,7 @@ import AppHeader from "../components/AppHeader";
 import { syncTapPayOrderFromPOS, saveFcmToken } from "../services/api";
 import type { Branch } from "../services/api";
 import type { DishStatus, CookingStatus, Order } from "../types";
+import { isTauri } from "../lib/platform";
 
 async function showWindow() {
   try {
@@ -124,6 +125,7 @@ export default function Kitchen({
   }, [branchOpen]);
 
   useEffect(() => {
+    if (!isTauri()) return;
     requestNotificationPermission();
     getToken().then((t) => {
       if (t) registerFcmToken(t);

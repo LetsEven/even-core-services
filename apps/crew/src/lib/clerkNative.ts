@@ -1,4 +1,5 @@
 import { Clerk } from "@clerk/clerk-js/headless";
+import { isTauri } from "./platform";
 
 // Sesión de Clerk por header en vez de cookies (la webview de Tauri bloquea la cookie de clerk.letseven.io)
 const CLIENT_JWT_KEY = "__clerk_client_jwt";
@@ -21,9 +22,6 @@ const saveJwt = (jwt: string) => {
 
 // En un navegador normal el Origin lo manda el browser y Clerk rechaza (400) las
 // peticiones que además traen Authorization: ahí se usa la sesión estándar (cookies).
-export const isTauri = () =>
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
 export const createNativeClerk = (publishableKey: string) => {
   const clerk = new Clerk(publishableKey);
   if (!isTauri()) return clerk;

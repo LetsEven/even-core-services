@@ -560,17 +560,17 @@ export default function SpatialGrid({
           {units.length > 0 && !loading && (
             <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
               {tapPayCount > 0 && (
-                <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
+                <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
                   {tapPayCount} en cobro
                 </span>
               )}
               {activeCount > 0 && (
-                <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
+                <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
                   {activeCount}{" "}
                   {activeCount === 1 ? "cuenta activa" : "cuentas activas"}
                 </span>
               )}
-              <span className="text-[11px] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
+              <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
                 {availableCount} {availableCount === 1 ? "libre" : "libres"}
               </span>
             </div>

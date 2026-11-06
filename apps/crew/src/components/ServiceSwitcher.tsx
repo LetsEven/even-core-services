@@ -27,7 +27,7 @@ export default function ServiceSwitcher({
         <button
           key={type}
           onClick={() => onSelect(type)}
-          className={`shrink-0 text-[11px] px-3 py-1.5 rounded-md font-medium uppercase tracking-wider transition-colors cursor-pointer border ${
+          className={`shrink-0 text-[0.6875rem] px-3 py-1.5 rounded-md font-medium uppercase tracking-wider transition-colors cursor-pointer border ${
             type === selected
               ? "bg-even-grass border-even-grass text-even-evergreen"
               : "bg-white/5 border-white/10 text-even-offwhite/50 hover:bg-white/10 hover:text-even-offwhite/70"

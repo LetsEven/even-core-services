@@ -54,7 +54,7 @@ function RoleBadge({ role }: { role: string }) {
   if (!r) return null;
   return (
     <span
-      className={`mt-1 self-start inline-flex items-center px-2 py-0.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 ${r.color}`}
+      className={`mt-1 self-start inline-flex items-center px-2 py-0.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 ${r.color}`}
     >
       {r.label}
     </span>
@@ -583,7 +583,7 @@ export default function Printers({
                               onClick={() =>
                                 setEditState((s) => ({ ...s, role: r.value }))
                               }
-                              className={`px-3 py-1.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
+                              className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
                                 editState.role === r.value
                                   ? r.color
                                   : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
@@ -751,7 +751,7 @@ export default function Printers({
                                   role: r.value,
                                 }))
                               }
-                              className={`px-3 py-1.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
+                              className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
                                 editUsbState.role === r.value
                                   ? r.color
                                   : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
@@ -923,7 +923,7 @@ export default function Printers({
                                       role: r.value,
                                     }))
                                   }
-                                  className={`px-3 py-1.5 rounded text-[11px] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
+                                  className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
                                     editNewUsbState.role === r.value
                                       ? r.color
                                       : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"

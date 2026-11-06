@@ -434,7 +434,7 @@ export default function OpenTableWithDishesModal({
                   <button
                     key={sec.id}
                     onClick={() => setSelectedSection(sec.id)}
-                    className={`shrink-0 text-[11px] px-3 py-1 rounded font-medium uppercase tracking-wider transition-colors cursor-pointer border ${
+                    className={`shrink-0 text-[0.6875rem] px-3 py-1 rounded font-medium uppercase tracking-wider transition-colors cursor-pointer border ${
                       selectedSection === sec.id
                         ? "bg-even-grass border-even-grass text-even-evergreen"
                         : "bg-white/5 border-white/10 text-even-offwhite/50 hover:bg-white/10 hover:text-even-offwhite/70"
@@ -546,12 +546,12 @@ export default function OpenTableWithDishesModal({
                       {field.name}
                     </span>
                     {minSelectionsOf(field) > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/25 text-amber-300 uppercase tracking-wider">
+                        <span className="text-[0.625rem] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/25 text-amber-300 uppercase tracking-wider">
                           Requerido
                         </span>
                       )}
                     {field.type === "checkboxes" && (
-                      <span className="text-[10px] text-even-offwhite/30">
+                      <span className="text-[0.625rem] text-even-offwhite/30">
                         {selectionHint(field)}
                       </span>
                     )}
@@ -588,7 +588,7 @@ export default function OpenTableWithDishesModal({
                                 {opt.name}
                               </span>
                               {opt.agotado ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
+                                <span className="text-[0.625rem] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
                                   Agotado
                                 </span>
                               ) : (
@@ -650,7 +650,7 @@ export default function OpenTableWithDishesModal({
                                 {opt.name}
                               </span>
                               {opt.agotado ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
+                                <span className="text-[0.625rem] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
                                   Agotado
                                 </span>
                               ) : (
@@ -713,7 +713,7 @@ export default function OpenTableWithDishesModal({
                                 {opt.name}
                               </span>
                               {opt.agotado ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
+                                <span className="text-[0.625rem] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-400/25 text-red-300 uppercase tracking-wider ml-2">
                                   Agotado
                                 </span>
                               ) : (
@@ -780,7 +780,7 @@ export default function OpenTableWithDishesModal({
                   className="w-full rounded-lg border border-white/8 px-4 py-3 text-sm text-even-offwhite/80 placeholder-white/20 resize-none focus:outline-none focus:border-white/20"
                   style={{ background: "rgba(255,255,255,0.04)" }}
                 />
-                <p className="text-right text-[10px] text-even-offwhite/20">
+                <p className="text-right text-[0.625rem] text-even-offwhite/20">
                   {specialInstructions.length}/60
                 </p>
               </div>

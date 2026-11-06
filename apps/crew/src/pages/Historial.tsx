@@ -373,7 +373,7 @@ export default function Historial({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded uppercase tracking-wider ${ORDER_TYPE_COLORS[order.orderType]}`}
+                        className={`text-[0.6875rem] font-medium px-2 py-0.5 rounded uppercase tracking-wider ${ORDER_TYPE_COLORS[order.orderType]}`}
                       >
                         {ORDER_TYPE_LABELS[order.orderType]}
                       </span>

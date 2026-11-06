@@ -152,7 +152,7 @@ export default function AppHeader({
               </button>
             )}
             {pushStatus === "denied" && (
-              <p className="flex items-start gap-3 px-4 py-3 text-[11px] leading-snug text-even-offwhite/50">
+              <p className="flex items-start gap-3 px-4 py-3 text-[0.6875rem] leading-snug text-even-offwhite/50">
                 <Bell className="w-4 h-4 shrink-0" />
                 Notificaciones bloqueadas: actívalas en Ajustes del iPad
               </p>

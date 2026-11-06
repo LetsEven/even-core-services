@@ -345,7 +345,7 @@ export default function Comprobantes({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded uppercase tracking-wider ${
+                      className={`text-[0.6875rem] font-medium px-2 py-0.5 rounded uppercase tracking-wider ${
                         SERVICE_COLORS[v.service] ??
                         "bg-even-evergreen/10 text-even-evergreen"
                       }`}

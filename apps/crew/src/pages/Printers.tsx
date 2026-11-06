@@ -443,6 +443,8 @@ export default function Printers({
               const isMe = d.deviceId === deviceId;
               const isMaster = d.deviceId === masterDeviceId;
               const isOffline = !d.online;
+              const isWebDevice =
+                d.platform === "web" || (isMe && !canPrint);
               return (
                 <li
                   key={d.deviceId}
@@ -473,6 +475,7 @@ export default function Printers({
                         }`}
                       >
                         {isMe ? "Este dispositivo" : "Dispositivo"}
+                        {isWebDevice && " · Web"}
                         {isMaster && !isOffline && " · Master"}
                         {isMaster && isOffline && " · Master (offline)"}
                       </p>
@@ -481,7 +484,7 @@ export default function Printers({
                       </p>
                     </div>
                   </div>
-                  {!isMaster && !(isMe && !canPrint) && (
+                  {!isMaster && !isWebDevice && (
                     <button
                       onClick={() => setMaster(d.deviceId)}
                       className="ml-3 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen/70 hover:text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer shrink-0"

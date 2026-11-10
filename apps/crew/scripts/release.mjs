@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Construye Even Crew (Windows + Android), lo sube al bucket de Supabase y actualiza releases.json.
-// Uso: npm run release [-- --dry-run] [-- --skip-build] [-- --force] [-- --only=win|apk]
+// También crea el tag vX.Y.Z y el Release en GitHub con los instaladores adjuntos.
+// Uso: npm run release [-- --dry-run] [-- --skip-build] [-- --force] [-- --only=win|apk] [-- --no-github]
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { loadEnv } from "vite";
 import * as tus from "tus-js-client";
 
@@ -51,6 +52,39 @@ const ARTEFACTOS = [
     build: "npm run tauri android build",
   },
 ].filter((a) => !only || (only === "win" ? a.platform === "Windows" : a.platform === "Android"));
+
+const TAG = `v${version}`;
+const git = (...a) => execFileSync("git", a, { cwd: root, encoding: "utf8" }).trim();
+
+// El tag y el Release tienen que corresponder a lo que está en origin/main.
+function validarRepo() {
+  if (args.has("--no-github")) return;
+  if (git("status", "--porcelain")) {
+    throw new Error("Hay cambios sin commit: publica desde un árbol limpio.");
+  }
+  if (git("rev-parse", "--abbrev-ref", "HEAD") !== "main") {
+    throw new Error("Publica desde main (git switch main).");
+  }
+  git("fetch", "-q", "origin", "main", "--tags");
+  if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) {
+    throw new Error("Tu main no está al día con origin/main (git pull).");
+  }
+  if (git("tag", "-l", TAG)) {
+    throw new Error(`El tag ${TAG} ya existe. Sube la versión o usa --no-github.`);
+  }
+}
+
+function publicarEnGitHub(titulo, archivos, enlaces) {
+  if (args.has("--no-github")) return;
+  git("tag", "-a", TAG, "-m", titulo);
+  git("push", "-q", "origin", TAG);
+  const notas = ["## Descargas", ...enlaces.map((u) => `- ${u}`)].join("\n");
+  execFileSync(
+    "gh",
+    ["release", "create", TAG, ...archivos, "--title", titulo, "--notes", notas, "--generate-notes", "--verify-tag"],
+    { cwd: root, stdio: "inherit" },
+  );
+}
 
 const objectUrl = (name, visibility = "") =>
   `${API}/object/${visibility}${encodeURIComponent(BUCKET)}/${encodeURIComponent(name)}`;
@@ -171,6 +205,11 @@ async function actualizarManifiesto(key, publicados) {
 
 async function main() {
   validarEnv();
+  // Un Release parcial (--only) no tendría ambos instaladores.
+  if (only && !args.has("--no-github")) {
+    throw new Error("Con --only usa también --no-github.");
+  }
+  validarRepo();
   const key = serviceKey();
 
   // Antes de construir, para no esperar el build y luego descubrir que ya existe.
@@ -197,9 +236,20 @@ async function main() {
   for (const a of ARTEFACTOS) await subir(a, key);
   await actualizarManifiesto(key, ARTEFACTOS);
 
+  const urls = ARTEFACTOS.map((a) => objectUrl(a.filename, "public/"));
   console.log(`✔ Publicado Even Crew ${version}`);
-  for (const a of ARTEFACTOS) console.log(`  ${objectUrl(a.filename, "public/")}`);
+  for (const u of urls) console.log(`  ${u}`);
   console.log("  El admin-portal lo mostrará en máximo 5 minutos.");
+
+  try {
+    publicarEnGitHub(`Even Crew ${version}`, ARTEFACTOS.map((a) => a.path), urls);
+    console.log(`✔ Release ${TAG} creado en GitHub`);
+  } catch (err) {
+    // Los instaladores ya están publicados; solo falta el Release.
+    console.error(`✖ No se pudo crear el Release en GitHub: ${err.message}`);
+    console.error(`  Créalo a mano: gh release create ${TAG} <archivos> --generate-notes`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {

@@ -37,3 +37,6 @@ src-tauri/gen/android/app/.cxx/
 *.njsproj
 *.sln
 *.sw?
+
+# Temporales de la CLI de Supabase (los crea npm run release)
+supabase/.temp/

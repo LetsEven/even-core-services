@@ -7,7 +7,7 @@ export interface Printer {
   // Campos que vienen del backend/Supabase al sincronizar
   id?: string;
   name?: string | null;
-  role?: "bar" | "kitchen" | "other" | "all" | null;
+  role?: "bar" | "kitchen" | "other" | "all" | "payment" | null;
   is_active?: boolean;
 }
 

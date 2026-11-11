@@ -160,7 +160,7 @@ export interface PrinterRecord {
   ip: string | null;
   port: number | null;
   name: string | null;
-  role: "bar" | "kitchen" | "other" | "all" | null;
+  role: "bar" | "kitchen" | "other" | "all" | "payment" | null;
   is_active: boolean;
   last_seen_at: string | null;
   connection_type: "wifi" | "usb";

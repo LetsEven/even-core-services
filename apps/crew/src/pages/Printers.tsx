@@ -47,6 +47,11 @@ const ROLES = [
     label: "Todos",
     color: "bg-even-grass/25 text-even-evergreen ring-even-grass/40",
   },
+  {
+    value: "payment",
+    label: "Pagos",
+    color: "bg-amber-500/15 text-amber-700 ring-amber-500/30",
+  },
 ] as const;
 
 function RoleBadge({ role }: { role: string }) {

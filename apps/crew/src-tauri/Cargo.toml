@@ -1,6 +1,6 @@
 [package]
 name = "even-crew"
-version = "1.22.2"
+version = "1.23.0"
 description = "Even Crew — Kitchen Display System"
 authors = ["Even"]
 edition = "2021"

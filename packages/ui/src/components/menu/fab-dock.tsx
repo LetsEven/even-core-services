@@ -38,7 +38,7 @@ export type DockItem = {
 export type FabDockProps = {
   open: boolean;
   onToggle: () => void;
-  /** Cierra el menú (Escape o tocar fuera). */
+  /** Cierra el menú con Escape. No hay fondo: la página sigue usable con el menú abierto. */
   onClose: () => void;
   items: DockItem[];
   /** Artículos en el carrito. Con más de 0 el botón principal se pone verde y muestra el carrito. */
@@ -60,12 +60,12 @@ const GLASS: React.CSSProperties = {
 };
 
 /**
- * Menú flotante abajo a la derecha: el botón principal despliega hacia arriba una columna de vidrio con
- * las acciones. Los elementos `pinned` quedan siempre visibles junto al botón principal.
+ * Menú flotante abajo a la derecha: el botón principal despliega hacia arriba una columna de botones sueltos
+ * (sin cápsula ni fondo). Los elementos `pinned` quedan siempre visibles junto al botón principal.
  * Conserva `#cart-icon` y `#cart-badge` porque `useFlyToCart` (@even/cart) anima el platillo hasta ellos.
  *
- * El vidrio es `backdrop-filter` (no `liquid-glass-react`, que no se ve en Safari iOS) y la cápsula nunca
- * recibe transform: crece animando `height`, para que Safari no pinte el desenfoque corrupto.
+ * La burbuja de un elemento usa vidrio con `backdrop-filter` (no `liquid-glass-react`, que no se ve en
+ * Safari iOS).
  */
 export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel, hidden = false, menuLabel, labels }: FabDockProps) {
   useEffect(() => {
@@ -86,15 +86,6 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
 
   return (
     <MotionProvider>
-      {/* Capa hermana (no padre) del vidrio: un backdrop-filter dentro de otro rompe iOS Safari. */}
-      <div
-        data-testid="fab-dock-backdrop"
-        className="reduce-motion-fade fixed inset-0 z-[55] bg-black/25 backdrop-blur-md transition-opacity duration-200"
-        style={{ opacity: open && !hidden ? 1 : 0, pointerEvents: open && !hidden ? "auto" : "none" }}
-        inert={!open || hidden}
-        aria-hidden
-        onClick={onClose}
-      />
       <m.div
         className="fixed right-5 z-[60] flex flex-col items-center gap-3 md:right-8"
         style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
@@ -108,17 +99,17 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
           <div
             role="group"
             aria-label={menuLabel}
-            className="flex flex-col items-center rounded-full border border-white/50"
-            style={GLASS}
+            className="flex flex-col items-center"
           >
             <m.div
               initial={false}
               animate={open ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
               transition={SPRING}
-              className="overflow-hidden"
+              // Márgenes negativos: el recorte de la altura no corta las sombras de los botones.
+              className="-mx-4 -mt-3 overflow-hidden px-4 pt-3"
               inert={!open}
             >
-              <ul className="flex flex-col items-center gap-2 px-1.5 pt-1.5 md:px-2 md:pt-2">
+              <ul className="flex flex-col items-center gap-3 pb-3">
                 {folded.map((item, index) => (
                   <m.li
                     key={item.id}
@@ -133,7 +124,7 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
               </ul>
             </m.div>
             {pinned.length > 0 && (
-              <ul className="flex flex-col items-center gap-2 p-1.5 md:p-2">
+              <ul className="flex flex-col items-center gap-3">
                 {pinned.map((item) => (
                   <li key={item.id} className="relative">
                     <DockButton item={item} />
@@ -220,7 +211,7 @@ function DockButton({ item }: { item: DockItem }) {
   );
   const className = cn(
     "relative flex size-11 items-center justify-center rounded-full transition-colors active:scale-95 md:size-12",
-    hasProgress ? "bg-even-evergreen text-white" : "bg-white/60 text-warm-700 hover:bg-white",
+    hasProgress ? "bg-even-evergreen text-white shadow-lg" : "border border-white/40 bg-white/90 text-warm-700 shadow-lg hover:bg-white",
     item.clip && "overflow-hidden",
   );
 

@@ -94,30 +94,40 @@ export function MenuActionsModal({ open, onClose, label, children }: MenuActions
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
+  // Dos capas hermanas (no anidadas): el fondo con blur y el diálogo. Un
+  // backdrop-filter dentro de otro hace que iOS Safari pinte el fondo corrupto.
   return (
-    <div
-      data-testid="menu-actions-backdrop"
-      className="reduce-motion-fade fixed inset-0 z-[55] flex items-center justify-center bg-black/30 modal-blur-md transition-opacity duration-200"
-      style={{ opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none" }}
-      inert={!open}
-      aria-hidden={!open}
-      onClick={onClose}
-    >
+    <>
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        className="flex items-center gap-4 rounded-full border border-white/40 px-6 py-3 shadow-lg transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:gap-5 md:px-7 md:py-3.5"
-        style={{
-          background: "rgba(255, 255, 255, 0.82)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          transform: open ? "translateY(12vh) scale(1)" : "translateY(14vh) scale(0.96)",
-        }}
-        onClick={(event) => event.stopPropagation()}
+        data-testid="menu-actions-backdrop"
+        className="reduce-motion-fade fixed inset-0 z-[55] bg-black/30 backdrop-blur-md transition-opacity duration-200"
+        style={{ opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none" }}
+        inert={!open}
+        aria-hidden={!open}
+        onClick={onClose}
+      />
+      <div
+        className="pointer-events-none fixed inset-0 z-[56] flex items-center justify-center"
+        inert={!open}
+        aria-hidden={!open}
       >
-        {children}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={label}
+          className="pointer-events-auto flex items-center gap-4 rounded-full border border-white/40 px-6 py-3 shadow-lg transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:gap-5 md:px-7 md:py-3.5"
+          style={{
+            background: "rgba(255, 255, 255, 0.82)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            transform: open ? "translateY(12vh) scale(1)" : "translateY(14vh) scale(0.96)",
+            opacity: open ? 1 : 0,
+            transition: "transform 300ms cubic-bezier(0.32,0.72,0,1), opacity 200ms",
+          }}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

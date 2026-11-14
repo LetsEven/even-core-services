@@ -566,12 +566,11 @@ export default function PaymentSuccessPage() {
 
       {/* Ticket Modal */}
       {isTicketModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/25 modal-blur-xs z-999 flex items-center justify-center"
-          onClick={() => setIsTicketModalOpen(false)}
-        >
+        <>
+<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999" onClick={() => setIsTicketModalOpen(false)} />
+<div className="fixed inset-0 z-999 flex items-center justify-center pointer-events-none">
           <div
-            className="bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[77vh] flex flex-col"
+            className="pointer-events-auto bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[77vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header - Fixed */}
@@ -839,6 +838,7 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
         </div>
+</>
       )}
 
       {/* Breakdown Modal */}
@@ -935,12 +935,11 @@ export default function PaymentSuccessPage() {
 
       {/* Register Modal */}
       {isRegisterModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/25 modal-blur-xs z-999 flex items-center justify-center animate-fade-in"
-          onClick={() => setIsRegisterModalOpen(false)}
-        >
+        <>
+<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 animate-fade-in" onClick={() => setIsRegisterModalOpen(false)} />
+<div className="fixed inset-0 z-999 flex items-center justify-center pointer-events-none">
           <div
-            className="bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 flex flex-col justify-center py-12 md:py-16 lg:py-20 min-h-[70vh] animate-slide-up"
+            className="pointer-events-auto bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 flex flex-col justify-center py-12 md:py-16 lg:py-20 min-h-[70vh] animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
@@ -1012,6 +1011,7 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
         </div>
+</>
       )}
     </div>
   );

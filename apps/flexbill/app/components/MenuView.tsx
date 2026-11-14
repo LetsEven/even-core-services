@@ -685,12 +685,11 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
 
       {/* Status Modal */}
       {isStatusModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/25 modal-blur-xs z-[999] flex items-center justify-center"
-          onClick={() => setIsStatusModalOpen(false)}
-        >
+        <>
+<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={() => setIsStatusModalOpen(false)} />
+<div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
           <div
-            className="bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            className="pointer-events-auto bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -816,6 +815,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
             </div>
           </div>
         </div>
+</>
       )}
 
       {/* Reorder Modal */}

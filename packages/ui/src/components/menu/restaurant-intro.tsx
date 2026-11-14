@@ -12,7 +12,7 @@ import {
 
 export type IntroPhase = "show" | "fly" | "done";
 
-export const INTRO_SHOW_MS = 2800;
+export const INTRO_SHOW_MS = 1900;
 export const INTRO_FLY_MS = 700;
 
 const EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
@@ -260,7 +260,7 @@ export function RestaurantIntro({
             transform: visible ? "translateY(0)" : "translateY(0.75rem)",
             transition: flying
               ? `opacity ${INTRO_FLY_MS * 0.5}ms ease`
-              : `opacity 600ms ease 600ms, transform 700ms ${EASING} 600ms`,
+              : `opacity 400ms ease 200ms, transform 500ms ${EASING} 200ms`,
           }}
         >
           <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-black text-balance">{name}</h2>
@@ -271,7 +271,7 @@ export function RestaurantIntro({
           className="reduce-motion-fade absolute bottom-6 text-xs md:text-sm text-tone-600"
           style={{
             opacity: visible ? 1 : 0,
-            transition: "opacity 400ms ease 1000ms",
+            transition: "opacity 300ms ease 500ms",
           }}
         >
           {labels.skip}

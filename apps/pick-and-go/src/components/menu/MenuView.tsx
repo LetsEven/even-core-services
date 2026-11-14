@@ -443,7 +443,7 @@ export default function MenuView() {
       )}
 
       {/* Degradado para legibilidad del texto sobre el banner */}
-      <div className="absolute top-0 left-0 w-full h-28 md:h-40 bg-linear-to-b from-black/55 to-transparent z-0 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-40 md:h-56 bg-linear-to-b from-black/75 via-black/40 to-transparent z-0 pointer-events-none" />
 
       {/* Espacio donde estaba el header con la hamburguesa. Además de conservar la posición de la
           carta, evita que el margen superior de <main> se escape del contenedor y baje el banner. */}
@@ -505,24 +505,28 @@ export default function MenuView() {
             name={t("welcome", { gender: profile?.gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
           />
 
-          <div className="w-full">
-            <MenuSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder={t("searchPlaceholder")}
+          {/* Buscador + secciones fijos arriba: no se ocultan al hacer scroll. Márgenes
+              negativos para que el fondo blanco cubra el padding lateral de la tarjeta. */}
+          <div className="sticky top-0 z-10 self-stretch bg-white pb-3 md:pb-5 -mx-6 px-6 md:-mx-8 md:px-8 lg:-mx-10 lg:px-10">
+            <div className="w-full">
+              <MenuSearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder={t("searchPlaceholder")}
+              />
+            </div>
+
+            <CategoryTabs
+              className="mt-3 md:mt-5"
+              aria-label={t("categoriesLabel")}
+              tabs={categorias.map((cat) => ({
+                id: cat,
+                label: cat === "Todo" ? t("filterAll") : cat,
+              }))}
+              activeId={activeCat}
+              onSelect={selectCategory}
             />
           </div>
-
-          <CategoryTabs
-            className="mt-3 md:mt-5 mb-3 md:mb-5"
-            aria-label={t("categoriesLabel")}
-            tabs={categorias.map((cat) => ({
-              id: cat,
-              label: cat === "Todo" ? t("filterAll") : cat,
-            }))}
-            activeId={activeCat}
-            onSelect={selectCategory}
-          />
 
           {/* Items */}
           {filteredMenu.length > 0 ? (

@@ -306,22 +306,22 @@
  */
 :root {
   --menu-header-h: 3.75rem;
-  --menu-card-gap: 6.5rem;
+  --menu-card-gap: 9rem;
   --menu-card-top: calc(var(--menu-header-h) + var(--menu-card-gap));
-  --menu-banner-h: 15.625rem;
+  --menu-banner-h: 18.125rem;
 }
 @media (min-width: 768px) {
   :root {
     --menu-header-h: 4.75rem;
-    --menu-card-gap: 18rem;
-    --menu-banner-h: 26rem;
+    --menu-card-gap: 20.5rem;
+    --menu-banner-h: 28.5rem;
   }
 }
 @media (min-width: 1024px) {
   :root {
     --menu-header-h: 5.75rem;
-    --menu-card-gap: 22rem;
-    --menu-banner-h: 30rem;
+    --menu-card-gap: 24.5rem;
+    --menu-banner-h: 32.5rem;
   }
 }
 

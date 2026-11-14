@@ -23,6 +23,17 @@ export {
   type ScreenProps,
   type StackProps,
 } from "./components/layout";
+export {
+  SheetCard,
+  SheetFooter,
+  SheetHero,
+  SheetScreen,
+  sheetClasses,
+  type SheetCardProps,
+  type SheetFooterProps,
+  type SheetHeroProps,
+  type SheetScreenProps,
+} from "./components/sheet-screen";
 export { FullScreenLoader, type FullScreenLoaderProps } from "./components/loader";
 export { Modal, type ModalProps } from "./components/modal";
 export {

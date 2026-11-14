@@ -650,7 +650,7 @@ export default function MenuView() {
 <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
           <div
             ref={statusCardRef}
-            className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[88vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {activeOrders.length > 1 && (
@@ -673,90 +673,78 @@ export default function MenuView() {
             )}
             {/* Header */}
             <div className="flex-shrink-0">
-              <div className="w-full flex justify-end">
+              <div className="px-5 md:px-8 lg:px-10 pt-4 md:pt-5 flex items-center gap-3 md:gap-4">
+                {restaurant?.logo_url ? (
+                  <img
+                    src={restaurant.logo_url}
+                    alt={restaurant.name}
+                    className="size-11 md:size-14 lg:size-16 object-cover rounded-lg shrink-0"
+                  />
+                ) : (
+                  <Utensils className="size-11 md:size-14 lg:size-16 text-white shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-semibold leading-tight truncate">
+                    {tc("orderNumber", {
+                      folio: activeOrder.pick_and_go_order?.folio || "---",
+                    })}
+                  </h2>
+                  <p className="text-sm md:text-base text-white/80 font-medium truncate">
+                    {activeOrders.length > 1
+                      ? tc("orderIndexOf", {
+                          index: activeOrderIndex + 1,
+                          count: activeOrders.length,
+                        })
+                      : activeOrder.pick_and_go_order?.customer_name ||
+                        "Pick & Go"}
+                  </p>
+                </div>
                 <button
                   onClick={closeStatusModal}
-                  className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
+                  className="p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors shrink-0 self-start"
                 >
-                  <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+                  <X className="size-6 md:size-7 text-white" />
                 </button>
               </div>
-              <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
-                <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
-                  {restaurant?.logo_url ? (
-                    <img
-                      src={restaurant.logo_url}
-                      alt={restaurant.name}
-                      className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
-                    />
-                  ) : (
-                    <Utensils className="size-20 md:size-24 lg:size-28 text-white" />
-                  )}
-                  <div className="flex flex-col items-center justify-center">
-                    <h2 className="text-2xl md:text-3xl lg:text-4xl text-white font-semibold">
-                      {tc("orderNumber", {
-                        folio: activeOrder.pick_and_go_order?.folio || "---",
-                      })}
-                    </h2>
-                    <p className="text-base md:text-md lg:text-lg text-white/80 font-medium">
-                      {activeOrders.length > 1
-                        ? tc("orderIndexOf", {
-                            index: activeOrderIndex + 1,
-                            count: activeOrders.length,
-                          })
-                        : activeOrder.pick_and_go_order?.customer_name ||
-                          "Pick & Go"}
-                    </p>
-                    {activeOrder.pick_and_go_order?.cooking_status ===
-                      "preparing" &&
-                      (() => {
-                        const prepMins =
-                          activeOrder.pick_and_go_order?.prep_time_minutes ??
-                          15;
-                        const rangeStart = new Date(
-                          new Date(
-                            activeOrder.pick_and_go_order?.created_at ?? "",
-                          ).getTime() +
-                            prepMins * 60_000,
-                        );
-                        const rangeEnd = new Date(
-                          rangeStart.getTime() + 5 * 60_000,
-                        );
-                        const fmt = (d: Date) =>
-                          `${String(d.getHours()).padStart(2, "0")}:${String(
-                            d.getMinutes(),
-                          ).padStart(2, "0")}`;
-                        return (
-                          <div className="flex flex-col items-center gap-1 mt-2">
-                            <div className="flex gap-2 items-center px-3 py-1 rounded-full bg-white/10 border border-white/10">
-                              <span className="flex gap-1 text-sm text-white/70">
-                                {tc("estimatedTime")}
-                                <p>
-                                  {fmt(rangeStart)} - {fmt(rangeEnd)}
-                                </p>
-                              </span>
-                            </div>
-                            {extraMinutesAdded > 0 && (
-                              <span className="text-xs font-medium text-positive-300 bg-positive-500/20 border border-positive-400/30 px-2 py-0.5 rounded-full">
-                                {tc("extraMinutes", {
-                                  minutes: extraMinutesAdded,
-                                })}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                  </div>
-                </div>
-              </div>
+              {activeOrder.pick_and_go_order?.cooking_status === "preparing" &&
+                (() => {
+                  const prepMins =
+                    activeOrder.pick_and_go_order?.prep_time_minutes ?? 15;
+                  const rangeStart = new Date(
+                    new Date(
+                      activeOrder.pick_and_go_order?.created_at ?? "",
+                    ).getTime() +
+                      prepMins * 60_000,
+                  );
+                  const rangeEnd = new Date(rangeStart.getTime() + 5 * 60_000);
+                  const fmt = (d: Date) =>
+                    `${String(d.getHours()).padStart(2, "0")}:${String(
+                      d.getMinutes(),
+                    ).padStart(2, "0")}`;
+                  return (
+                    <div className="px-5 md:px-8 lg:px-10 mt-2 flex items-center gap-2 flex-wrap">
+                      <div className="flex gap-1 items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 text-sm text-white/70">
+                        {tc("estimatedTime")}
+                        <span>
+                          {fmt(rangeStart)} - {fmt(rangeEnd)}
+                        </span>
+                      </div>
+                      {extraMinutesAdded > 0 && (
+                        <span className="text-xs font-medium text-positive-300 bg-positive-500/20 border border-positive-400/30 px-2 py-0.5 rounded-full">
+                          {tc("extraMinutes", { minutes: extraMinutesAdded })}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
               {/* Estatus General - 3 pasos */}
-              <div className="px-6 md:px-8 lg:px-10 mb-4 md:mb-5 lg:mb-6">
+              <div className="px-6 md:px-8 lg:px-10 mt-3 mb-3 md:mb-4">
                 <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
                   {/* Preparando - siempre activo */}
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
-                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-positive-200">
-                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-positive-600" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-positive-200">
+                      <Clock className="w-5 h-5 md:w-6 md:h-6 text-positive-600" />
                     </div>
                     <span className="text-xs md:text-sm font-medium text-positive-100">
                       {tc("statusPreparing")}
@@ -788,7 +776,7 @@ export default function MenuView() {
                   {/* Listo */}
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
+                      className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
                         (activeOrder.pick_and_go_order?.cooking_status ??
                           "preparing") === "ready" ||
                         (activeOrder.pick_and_go_order?.cooking_status ??
@@ -798,7 +786,7 @@ export default function MenuView() {
                       }`}
                     >
                       <Utensils
-                        className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
+                        className={`w-5 h-5 md:w-6 md:h-6 ${
                           (activeOrder.pick_and_go_order?.cooking_status ??
                             "preparing") === "ready" ||
                           (activeOrder.pick_and_go_order?.cooking_status ??
@@ -836,7 +824,7 @@ export default function MenuView() {
                   {/* Entregado */}
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
+                      className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
                         (activeOrder.pick_and_go_order?.cooking_status ??
                           "preparing") === "delivered"
                           ? "bg-positive-200 border border-positive-300"
@@ -844,7 +832,7 @@ export default function MenuView() {
                       }`}
                     >
                       <svg
-                        className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
+                        className={`w-5 h-5 md:w-6 md:h-6 ${
                           (activeOrder.pick_and_go_order?.cooking_status ??
                             "preparing") === "delivered"
                             ? "text-positive-800"
@@ -874,9 +862,9 @@ export default function MenuView() {
                 </div>
               </div>
 
-              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-3 md:pt-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white">
+                  <h3 className="font-medium text-lg md:text-xl lg:text-2xl text-white">
                     {tc("orderedItems")}
                   </h3>
                   <button

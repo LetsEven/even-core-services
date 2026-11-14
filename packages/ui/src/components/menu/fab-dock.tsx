@@ -38,7 +38,7 @@ export type DockItem = {
 export type FabDockProps = {
   open: boolean;
   onToggle: () => void;
-  /** Cierra el menú (Escape o tocar fuera). */
+  /** Cierra el menú con Escape. No hay fondo: la página sigue usable con el menú abierto. */
   onClose: () => void;
   items: DockItem[];
   /** Artículos en el carrito. Con más de 0 el botón principal se pone verde y muestra el carrito. */
@@ -86,15 +86,6 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
 
   return (
     <MotionProvider>
-      {/* Capa hermana (no padre) del vidrio: un backdrop-filter dentro de otro rompe iOS Safari. */}
-      <div
-        data-testid="fab-dock-backdrop"
-        className="reduce-motion-fade fixed inset-0 z-[55] bg-black/25 backdrop-blur-md transition-opacity duration-200"
-        style={{ opacity: open && !hidden ? 1 : 0, pointerEvents: open && !hidden ? "auto" : "none" }}
-        inert={!open || hidden}
-        aria-hidden
-        onClick={onClose}
-      />
       <m.div
         className="fixed right-5 z-[60] flex flex-col items-center gap-3 md:right-8"
         style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}

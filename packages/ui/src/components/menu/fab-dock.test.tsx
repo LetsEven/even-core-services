@@ -40,12 +40,12 @@ describe("FabDock", () => {
     expect(screen.getByRole("button", { name: "Cerrar menú" }).getAttribute("aria-expanded")).toBe("true");
   });
 
-  it("Escape y el fondo cierran", async () => {
+  it("Escape cierra y no hay fondo que bloquee la página", async () => {
     const onClose = vi.fn();
     render(<FabDock {...base} open onClose={onClose} items={[item("perfil")]} />);
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(screen.getByTestId("fab-dock-backdrop"));
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("fab-dock-backdrop")).toBeNull();
   });
 
   it("oculto no es accesible, y un elemento oculto no se pinta", () => {

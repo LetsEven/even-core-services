@@ -400,7 +400,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
       {/* Logo + bienvenida sobre el banner (no sticky) */}
       <div className="absolute top-0 inset-x-0 z-6 pointer-events-none">
         <div className="container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9">
-          <div className="flex items-center gap-2 md:gap-3 h-10 md:h-12 lg:h-14 pr-24 md:pr-32 lg:pr-40">
+          <div className="flex items-center gap-2 md:gap-3 min-h-10 md:min-h-12 lg:min-h-14">
             <button
               ref={logoButtonRef}
               type="button"
@@ -420,7 +420,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
             {/* Con la intro activa (y durante el vuelo del logo) el texto queda
                 invisible pero ocupando su espacio; aparece al aterrizar el logo. */}
             <h1
-              className="reduce-motion-fade text-white text-xl md:text-3xl lg:text-4xl font-medium truncate drop-shadow"
+              className="reduce-motion-fade text-white text-xl md:text-3xl lg:text-4xl font-medium leading-tight min-w-0 wrap-break-word drop-shadow"
               style={{
                 opacity: introActive ? 0 : 1,
                 transform: introActive ? "translateX(-0.75rem)" : "none",

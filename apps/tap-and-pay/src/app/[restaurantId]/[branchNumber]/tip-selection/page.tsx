@@ -11,6 +11,7 @@ import { CircleAlert, X } from "lucide-react";
 import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
+import { prefetchMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useTranslations } from "next-intl";
 
 export default function TipSelectionPage() {
@@ -34,7 +35,11 @@ export default function TipSelectionPage() {
   const [equalPeople, setEqualPeople] = useState("2");
   const [splitStatus, setSplitStatus] = useState<any>(null);
   const [showTotalModal, setShowTotalModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // La mesa vive en el provider: si ya hay cuenta cargada se pinta de inmediato
+  // y el estado de la división se actualiza en segundo plano.
+  const [isLoading, setIsLoading] = useState(
+    () => !state.order?.items || state.order.items.length === 0,
+  );
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
 
   const loadSplitStatus = async () => {
@@ -54,6 +59,11 @@ export default function TipSelectionPage() {
       setSplitStatus(null);
     }
   };
+
+  // Se calienta la configuración de MSI del paso de pago.
+  useEffect(() => {
+    prefetchMsiConfig();
+  }, []);
 
   // Establecer restaurantId y branchNumber desde los path params
   useEffect(() => {

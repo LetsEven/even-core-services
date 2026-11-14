@@ -9,3 +9,12 @@ export {
   readGuestIdFromStorage,
   type ApiClientConfig,
 } from "./request";
+export {
+  DEFAULT_TTL_MS,
+  hasResource,
+  invalidateResources,
+  isResourceFresh,
+  loadResource,
+  peekResource,
+  prefetchResource,
+} from "./resourceCache";

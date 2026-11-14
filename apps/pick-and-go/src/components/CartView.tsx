@@ -21,6 +21,7 @@ import UnavailableItemsModal, {
 } from "./UnavailableItemsModal";
 import UnavailableCartRow from "./UnavailableCartRow";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
+import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 
 const API_BASE_URL = getBackendOrigin(
   process.env.NEXT_PUBLIC_API_URL,
@@ -59,6 +60,9 @@ export default function CartView({
     agentStatus !== null && agentStatus.hasIntegration && agentStatus.isActive;
   const { restaurant } = useRestaurant();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
+
+  // Desde que se entra al carrito se calientan propina/pago (ver el hook).
+  useCheckoutPrefetch(["order-confirm", "card-selection"]);
 
   const { state, updateQuantity, orderNotes, setOrderNotes, updateOrderNotes } =
     useCart();

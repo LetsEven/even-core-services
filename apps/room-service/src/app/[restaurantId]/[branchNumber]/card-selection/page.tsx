@@ -122,7 +122,11 @@ export default function CardSelectionPage() {
   const [posModalReason, setPosModalReason] = useState<
     "turno_closed" | "agent_disconnected"
   >("turno_closed");
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  // El carrito vive en el provider: si ya cargó (vengo de la confirmación) no
+  // hay nada que esperar y el paso se pinta completo desde el primer render.
+  const [isLoadingInitial, setIsLoadingInitial] = useState(
+    !cartState.hasLoaded || cartState.isLoading,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string>(t("processingError"));
   // false cuando ya hay certeza de que se cobró (o no hay

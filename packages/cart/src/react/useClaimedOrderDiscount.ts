@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCachedResource } from "./useCachedResource";
 import type { UserDiscount, UserDiscountsService } from "../userDiscounts";
 import type { UseAuth } from "./types";
 
@@ -12,42 +12,45 @@ export interface ClaimedOrderDiscountDeps {
   useAuth: UseAuth;
 }
 
+// Corto: el descuento se usa para calcular el total, así que se revalida en
+// cuanto vence; mientras tanto el paso se pinta al instante con el valor previo.
+export const CLAIMED_DISCOUNT_TTL_MS = 20_000;
+
+export function claimedOrderDiscountKey(
+  userId: string | number | null | undefined,
+  restaurantId: number,
+) {
+  return `discount:claimed-user:${userId ?? "anon"}:${restaurantId}`;
+}
+
+export function fetchClaimedOrderDiscount(
+  userDiscountsService: Pick<UserDiscountsService, "getActive">,
+  restaurantId: number,
+): Promise<UserDiscount | null> {
+  return userDiscountsService.getActive(restaurantId).then((response) => {
+    const list = response.success && response.data ? response.data : [];
+    return (
+      list.find((d) => d.discount_type === "order" && d.status === "claimed") ??
+      null
+    );
+  });
+}
+
 export function createUseClaimedOrderDiscount({
   userDiscountsService,
   useAuth,
 }: ClaimedOrderDiscountDeps) {
   return function useClaimedOrderDiscount(restaurantId: number | null) {
-    const { isAuthenticated, isLoading: authLoading } = useAuth();
-    const key = restaurantId && isAuthenticated ? String(restaurantId) : null;
-    const [resolved, setResolved] = useState<{
-      key: string;
-      discount: UserDiscount | null;
-    } | null>(null);
-
-    useEffect(() => {
-      if (!key) return;
-      let cancelled = false;
-      userDiscountsService
-        .getActive(Number(key))
-        .then((response) => {
-          if (cancelled) return;
-          const claimed = (
-            response.success && response.data ? response.data : []
-          ).find((d) => d.discount_type === "order" && d.status === "claimed");
-          setResolved({ key, discount: claimed ?? null });
-        })
-        .catch(() => {
-          if (!cancelled) setResolved({ key, discount: null });
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, [key]);
-
-    const loading = authLoading || (key !== null && resolved?.key !== key);
-    const discount =
-      key !== null && resolved?.key === key ? resolved.discount : null;
-
-    return { discount, loading };
+    const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+    const key =
+      restaurantId && isAuthenticated
+        ? claimedOrderDiscountKey(user?.id, restaurantId)
+        : null;
+    const { data, loading } = useCachedResource<UserDiscount | null>(
+      key,
+      () => fetchClaimedOrderDiscount(userDiscountsService, Number(restaurantId)),
+      { ttlMs: CLAIMED_DISCOUNT_TTL_MS },
+    );
+    return { discount: data ?? null, loading: authLoading || loading };
   };
 }

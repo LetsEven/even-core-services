@@ -1,5 +1,6 @@
 "use client";
 
+import { clearCheckoutDraft } from "@even/cart";
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
@@ -42,6 +43,10 @@ export default function PaymentSuccessPage() {
   const branchNumber = params?.branchNumber as string;
   const { state } = useTable();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  useEffect(() => {
+    clearCheckoutDraft();
+  }, []);
 
   useEffect(() => {
     if (restaurantId && !isNaN(parseInt(restaurantId))) {

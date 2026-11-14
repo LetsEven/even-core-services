@@ -1,5 +1,6 @@
 "use client";
 
+import { clearCheckoutDraft } from "@even/cart";
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -43,6 +44,10 @@ export default function PaymentSuccessPage() {
   const { state } = useRoom();
   const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
   const { guestId } = useGuest();
+
+  useEffect(() => {
+    clearCheckoutDraft();
+  }, []);
 
   useEffect(() => {
     if (restaurantId && !isNaN(parseInt(restaurantId))) {

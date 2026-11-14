@@ -72,7 +72,7 @@ const RING_R = 46;
 const RING_C = 2 * Math.PI * RING_R;
 
 /** Anillo que rodea al botón; se llena con el avance del pedido. */
-function ProgressRing({ value, label }: { value: number; label?: string }) {
+export function ProgressRing({ value, label }: { value: number; label?: string }) {
   const v = Math.min(1, Math.max(0, value));
   return (
     <svg

@@ -8,16 +8,11 @@ import RestaurantDetailCard, {
 import RestaurantIntro from "./RestaurantIntro";
 import {
   CategoryTabs,
-  MenuActionsModal,
-  MenuFab,
-  OrderFab,
+  FabDock,
+  MorphPanel,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
-  PillButton,
-  PillCartButton,
-  PillOrderButton,
-  PillPepperButton,
   SheetBackdrop,
   UserAvatar as SharedUserAvatar,
   setMenuCategory,
@@ -35,6 +30,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Clock,
+  ReceiptText,
+  ShoppingBag,
+  ShoppingCart,
 } from "lucide-react";
 import {
   useState,
@@ -65,7 +63,6 @@ import {
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
 import { overallProgress, useNow } from "../../lib/orderProgress";
-import { useButtonMorph } from "../../hooks/useButtonMorph";
 const ReorderModal = lazy(() => import("../modals/ReorderModal"));
 const OrdersSheet = lazy(() => import("./OrdersSheet"));
 
@@ -152,14 +149,7 @@ export default function MenuView() {
   >([]);
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const {
-    cardRef: statusCardRef,
-    backdropRef: statusBackdropRef,
-    rememberOrigin: rememberStatusOrigin,
-    closeWithMorph: closeStatusWithMorph,
-  } = useButtonMorph(showStatusModal);
-  const closeStatusModal = () =>
-    closeStatusWithMorph(() => setShowStatusModal(false));
+  const closeStatusModal = () => setShowStatusModal(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showReorderModal, setShowReorderModal] = useState(false);
   const [lastOrderItems, setLastOrderItems] = useState<PickAndGoItem[]>([]);
@@ -559,47 +549,6 @@ export default function MenuView() {
         </div>
       </main>
 
-      {/* Botón flotante: hamburguesa; con artículos se vuelve verde y muestra el carrito */}
-      <MenuFab
-        open={menuOpenByUser}
-        onToggle={() => setMenuOpenByUser((open) => !open)}
-        count={totalItems}
-        countLabel={(count) => t("fabCountLabel", { count })}
-        hidden={
-          showDetail ||
-          introActive ||
-          showPepperChat ||
-          showSettingsModal ||
-          showCart ||
-          showOrdersSheet ||
-          pillVisible
-        }
-        labels={{ open: t("openMenu"), close: t("closeMenu") }}
-      />
-
-      {/* Pedido activo: abre directo su detalle, con el avance del pedido */}
-      {fabProgress !== null && (
-        <OrderFab
-          progress={fabProgress}
-          label={t("activeOrderLabel")}
-          progressLabel={t("orderProgressLabel")}
-          hidden={
-            showDetail ||
-            introActive ||
-            showPepperChat ||
-            showSettingsModal ||
-            showCart ||
-            showOrdersSheet ||
-            showStatusModal
-          }
-          onClick={(event) => {
-            closeActionsMenu();
-            rememberStatusOrigin(event.currentTarget);
-            setShowStatusModal(true);
-          }}
-        />
-      )}
-
       {/* Bienvenida al cargar la página */}
       {introActive && (
         <RestaurantIntro
@@ -644,15 +593,16 @@ export default function MenuView() {
       )}
 
       {/* Status Modal */}
-      {showStatusModal && activeOrder && (
-        <>
-<div ref={statusBackdropRef} className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={closeStatusModal} />
-<div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
-          <div
-            ref={statusCardRef}
-            className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[88vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <MorphPanel
+        open={showStatusModal && !!activeOrder}
+        onClose={closeStatusModal}
+        layoutId="active-order"
+        label={t("activeOrderLabel")}
+        className="mx-4 max-h-[88vh] bg-even-evergreen/95 border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] md:mx-12 lg:mx-28"
+        radius={32}
+      >
+        {activeOrder && (
+          <>
             {activeOrders.length > 1 && (
               <>
                 <button
@@ -938,54 +888,93 @@ export default function MenuView() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-</>
-      )}
+          </>
+        )}
+      </MorphPanel>
 
       {/* Píldora de acciones — se abre con la hamburguesa o aparece al hacer
           scroll; siempre en el mismo lugar */}
-      <MenuActionsModal open={pillVisible} onClose={closeActionsMenu} label={t("menuLabel")}>
-        <PillButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowSettingsModal(true);
-          }}
-          aria-label={t("profileAlt")}
-          clip
-        >
-          <UserAvatar
-            isAuthenticated={isAuthenticated}
-            profile={profile}
-            iconSize="size-6 md:size-7"
-            textSize="text-base md:text-lg"
-          />
-        </PillButton>
-        <PillCartButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowCart(true);
-          }}
-          count={state.totalItems}
-          aria-label={t("viewCart", { count: state.totalItems })}
-        />
-        <PillOrderButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowOrdersSheet(true);
-          }}
-          aria-label={t("ordersLabel")}
-        />
-        <PillPepperButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowPepperChat(true);
-          }}
-          aria-label={t("pepperLabel")}
-        >
-          <PepperIcon />
-        </PillPepperButton>
-      </MenuActionsModal>
+      <FabDock
+        open={pillVisible}
+        onToggle={() => setMenuOpenByUser((open) => !open)}
+        onClose={closeActionsMenu}
+        count={totalItems}
+        countLabel={(count) => t("fabCountLabel", { count })}
+        hidden={
+          showDetail ||
+          introActive ||
+          showPepperChat ||
+          showSettingsModal ||
+          showCart ||
+          showOrdersSheet
+        }
+        menuLabel={t("menuLabel")}
+        labels={{ open: t("openMenu"), close: t("closeMenu") }}
+        items={[
+          {
+            id: "profile",
+            label: t("profileAlt"),
+            clip: true,
+            icon: (
+              <UserAvatar
+                isAuthenticated={isAuthenticated}
+                profile={profile}
+                iconSize="size-6 md:size-7"
+                textSize="text-base md:text-lg"
+              />
+            ),
+            onClick: () => {
+              closeActionsMenu();
+              setShowSettingsModal(true);
+            },
+          },
+          {
+            id: "cart",
+            label: t("viewCart", { count: state.totalItems }),
+            count: state.totalItems,
+            icon: <ShoppingCart className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              setShowCart(true);
+            },
+          },
+          {
+            id: "orders",
+            label: t("ordersLabel"),
+            icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              setShowOrdersSheet(true);
+            },
+          },
+          {
+            id: "pepper",
+            label: t("pepperLabel"),
+            clip: true,
+            icon: <PepperIcon />,
+            onClick: () => {
+              closeActionsMenu();
+              setShowPepperChat(true);
+            },
+          },
+          // Pedido activo: siempre visible; al tocarlo se transforma en su detalle (MorphPanel).
+          {
+            id: "active-order",
+            pinned: true,
+            hidden: fabProgress === null,
+            label: t("activeOrderLabel"),
+            icon: <ShoppingBag className="size-5 md:size-6" />,
+            progress: fabProgress,
+            progressLabel: t("orderProgressLabel"),
+            morphId: "active-order",
+            expanded: showStatusModal,
+            onClick: () => {
+              closeActionsMenu();
+              setShowStatusModal(true);
+            },
+          },
+        ]}
+      />
 
       {/* Pepper Chat Modal */}
       {showPepperChat && (
@@ -1052,7 +1041,6 @@ export default function MenuView() {
             clientId={user?.id || guestId}
             restaurantId={restaurant?.id}
             onOpenStatus={(index) => {
-              rememberStatusOrigin(null);
               setActiveOrderIndex(index);
               setShowStatusModal(true);
             }}

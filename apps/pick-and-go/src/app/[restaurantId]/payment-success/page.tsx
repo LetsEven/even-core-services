@@ -7,6 +7,7 @@ import { useRestaurant } from "../../../context/RestaurantContext";
 import { useGuest, useIsGuest } from "../../../context/GuestContext";
 import { authService } from "../../../services/auth.service";
 import { pickAndGoService } from "../../../services/pickandgo.service";
+import { clearCheckoutDraft } from "@even/cart";
 
 /**
  * Paso intermedio tras pagar. Ya no muestra la vista "¡Gracias por tu
@@ -36,6 +37,7 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     if (done.current || typeof window === "undefined") return;
     done.current = true;
+    clearCheckoutDraft();
 
     const run = async () => {
       const urlPaymentId = paymentId || searchParams.get("transactionId");

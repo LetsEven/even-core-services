@@ -1,6 +1,7 @@
 import {
   AUTH_TOKEN_STORAGE_KEY,
   type ApiResponse,
+  invalidateResources,
   type Requester,
 } from "@even/api-client";
 import type { ActivationMenuItem } from "./promoActivations";
@@ -82,17 +83,20 @@ export function createUserDiscountsService(
     ): Promise<
       ApiResponse<{ discount: UserDiscount; cartItemId: string | null }>
     > {
-      return request<{ discount: UserDiscount; cartItemId: string | null }>(
-        `/user-discounts/${discountId}/claim`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            restaurant_id: restaurantId || null,
-            branch_number: branchNumber || null,
-            add_to_cart: addToCart,
-          }),
-        },
-      );
+      const response = await request<{
+        discount: UserDiscount;
+        cartItemId: string | null;
+      }>(`/user-discounts/${discountId}/claim`, {
+        method: "POST",
+        body: JSON.stringify({
+          restaurant_id: restaurantId || null,
+          branch_number: branchNumber || null,
+          add_to_cart: addToCart,
+        }),
+      });
+      // Reclamar cambia el descuento de cuenta: no servir el valor en caché.
+      invalidateResources("discount:");
+      return response;
     },
   };
 }

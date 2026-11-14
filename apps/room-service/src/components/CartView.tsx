@@ -19,6 +19,7 @@ import UnavailableItemsModal, {
   toUnavailableModalItems,
 } from "./UnavailableItemsModal";
 import UnavailableCartRow from "./UnavailableCartRow";
+import { useCheckoutPrefetch } from "../hooks/useCheckoutPrefetch";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
 
 const API_BASE_URL = getBackendOrigin(
@@ -66,6 +67,9 @@ export default function CartView() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
+  // Desde que se entra al carrito se calientan propina/pago (ver el hook).
+  useCheckoutPrefetch(["order-confirm", "card-selection"]);
+
   const {
     block,
     unavailableItems,

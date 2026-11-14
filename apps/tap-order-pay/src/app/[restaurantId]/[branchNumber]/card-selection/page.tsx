@@ -127,7 +127,11 @@ export default function CardSelectionPage() {
   >(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  // El carrito vive en el provider: si ya cargó (vengo de la confirmación) no
+  // hay nada que esperar y el paso se pinta completo desde el primer render.
+  const [isLoadingInitial, setIsLoadingInitial] = useState(
+    !cartState.hasLoaded || cartState.isLoading,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string>(t("processingError"));
   // False cuando ya hay certeza de que se cobró (o no hay

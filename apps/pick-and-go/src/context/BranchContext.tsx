@@ -4,6 +4,26 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { useSearchParams } from "next/navigation";
 import type { Branch, BranchContextType } from "@/types/branch.types";
 import { branchService } from "@/services/branch.service";
+import { loadResource, peekResource, prefetchResource } from "@even/api-client";
+
+type BranchesResponse = Awaited<ReturnType<typeof branchService.getBranches>>;
+
+// Las sucursales casi no cambian: se conservan 5 min y se comparten entre pasos.
+const BRANCHES_TTL_MS = 5 * 60_000;
+const branchesKey = (restaurantId: number) => `branches:${restaurantId}`;
+const loadBranches = (restaurantId: number) =>
+  branchService.getBranches(restaurantId).then((response) => {
+    // No guardar en caché una respuesta fallida.
+    if (!response.success || !response.data) throw new Error("branches unavailable");
+    return response;
+  });
+
+/** Precarga las sucursales (p. ej. desde el carrito, antes de la confirmación). */
+export function prefetchBranches(restaurantId: number) {
+  prefetchResource(branchesKey(restaurantId), () => loadBranches(restaurantId), {
+    ttlMs: BRANCHES_TTL_MS,
+  });
+}
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
@@ -26,26 +46,39 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
   }, [searchParams]);
 
   const fetchBranches = useCallback(async (restaurantId: number) => {
-    setIsLoading(true);
-    try {
-      const response = await branchService.getBranches(restaurantId);
-      if (response.success && response.data) {
-        setBranches(response.data);
+    const applyBranches = (response: BranchesResponse) => {
+      if (!response.success || !response.data) return;
+      setBranches(response.data);
 
-        // Obtener branch de la URL
-        const branchNumberFromUrl = searchParams.get("branch");
+      // Obtener branch de la URL
+      const branchNumberFromUrl = searchParams.get("branch");
 
-        // Si hay branch en la URL, usarlo
-        if (branchNumberFromUrl) {
-          const branchNum = parseInt(branchNumberFromUrl);
-          if (!isNaN(branchNum)) {
-            setSelectedBranchNumber(branchNum);
-          }
-        } else if (response.data.length > 0) {
-          // Si no hay branch en la URL, seleccionar la primera sucursal por defecto
-          setSelectedBranchNumber(response.data[0].branch_number);
+      // Si hay branch en la URL, usarlo
+      if (branchNumberFromUrl) {
+        const branchNum = parseInt(branchNumberFromUrl);
+        if (!isNaN(branchNum)) {
+          setSelectedBranchNumber(branchNum);
         }
+      } else if (response.data.length > 0) {
+        // Si no hay branch en la URL, seleccionar la primera sucursal por defecto
+        setSelectedBranchNumber((current) => current ?? response.data![0].branch_number);
       }
+    };
+
+    // Con sucursales ya cargadas se pintan al instante; se revalidan solo si vencieron.
+    const cached = peekResource<BranchesResponse>(branchesKey(restaurantId));
+    if (cached) {
+      applyBranches(cached);
+      setBranchInitialized(true);
+    } else {
+      setIsLoading(true);
+    }
+    try {
+      applyBranches(
+        await loadResource(branchesKey(restaurantId), () => loadBranches(restaurantId), {
+          ttlMs: BRANCHES_TTL_MS,
+        }),
+      );
     } catch (error) {
       console.error("Error fetching branches:", error);
     } finally {

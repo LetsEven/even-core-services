@@ -16,6 +16,12 @@ import BranchSelectionModal from "@/components/modals/BranchSelectionModal";
 import { calculateCommissions } from "@/utils/commissionCalculator";
 import { restaurantService } from "@/services/restaurant.service";
 import { cartService } from "@/services/cart.service";
+import {
+  DEFAULT_TIP_PERCENTAGE,
+  readCheckoutDraft,
+  writeCheckoutDraft,
+} from "@even/cart";
+import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 
 export default function OrderConfirmPage() {
   const t = useTranslations("OrderConfirmPage");
@@ -37,9 +43,15 @@ export default function OrderConfirmPage() {
   const baseAmount = cartState.totalPrice;
   const MINIMUM_AMOUNT = 20;
 
-  const [tipPercentage, setTipPercentage] = useState(10);
-  const [customTip, setCustomTip] = useState("");
-  const [showCustomTipInput, setShowCustomTipInput] = useState(false);
+  // La propina elegida se conserva al ir a "pago" y volver.
+  const [initialDraft] = useState(() => readCheckoutDraft(restaurantId));
+  const [tipPercentage, setTipPercentage] = useState(
+    initialDraft?.tipPercentage ?? DEFAULT_TIP_PERCENTAGE,
+  );
+  const [customTip, setCustomTip] = useState(initialDraft?.customTip ?? "");
+  const [showCustomTipInput, setShowCustomTipInput] = useState(
+    initialDraft?.showCustomTipInput ?? false,
+  );
   const [scheduledPickupTime, setScheduledPickupTime] = useState<string | null>(
     null,
   );
@@ -53,7 +65,11 @@ export default function OrderConfirmPage() {
     [],
   );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  // El carrito vive en el provider: si ya cargó (vengo del carrito o de "pago")
+  // no hay nada que esperar y la tarjeta se pinta completa desde el primer render.
+  const [isLoadingInitial, setIsLoadingInitial] = useState(
+    !cartState.hasLoaded || cartState.isLoading,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const calculateTipAmount = () => {
@@ -68,6 +84,18 @@ export default function OrderConfirmPage() {
   const { totalAmountCharged: totalAmount } = commissions;
 
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
+
+  useEffect(() => {
+    writeCheckoutDraft({
+      scope: restaurantId,
+      tipPercentage,
+      customTip,
+      showCustomTipInput,
+    });
+  }, [restaurantId, tipPercentage, customTip, showCustomTipInput]);
+
+  // Ya en la confirmación se calienta el siguiente paso (pago).
+  useCheckoutPrefetch(["card-selection"]);
 
   useEffect(() => {
     const prev = {

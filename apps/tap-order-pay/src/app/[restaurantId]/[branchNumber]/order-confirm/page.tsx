@@ -1,5 +1,8 @@
 "use client";
 
+import { DEFAULT_TIP_PERCENTAGE, readCheckoutDraft, writeCheckoutDraft } from "@even/cart";
+import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCart } from "@/context/CartContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
@@ -14,16 +17,35 @@ export default function OrderConfirmPage() {
   const t = useTranslations("OrderConfirmPage");
   const tc = useTranslations("Common");
   const { validationError } = useValidateAccess();
+  const params = useParams();
   const { state: cartState } = useCart();
   const { navigateWithTable } = useTableNavigation();
 
   const baseAmount = cartState.totalPrice;
   const MINIMUM_AMOUNT = 20;
 
-  const [tipPercentage, setTipPercentage] = useState(10);
-  const [customTip, setCustomTip] = useState("");
-  const [showCustomTipInput, setShowCustomTipInput] = useState(false);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  // La propina elegida se conserva al ir a "pago" y volver.
+  const draftScope = `${params?.restaurantId}/${params?.branchNumber}`;
+  const [initialDraft] = useState(() => readCheckoutDraft(draftScope));
+  const [tipPercentage, setTipPercentage] = useState(
+    initialDraft?.tipPercentage ?? DEFAULT_TIP_PERCENTAGE,
+  );
+  const [customTip, setCustomTip] = useState(initialDraft?.customTip ?? "");
+  const [showCustomTipInput, setShowCustomTipInput] = useState(
+    initialDraft?.showCustomTipInput ?? false,
+  );
+  // El carrito vive en el provider: si ya cargó no hay nada que esperar y la
+  // tarjeta se pinta completa desde el primer render.
+  const [isLoadingInitial, setIsLoadingInitial] = useState(
+    !cartState.hasLoaded || cartState.isLoading,
+  );
+
+  useEffect(() => {
+    writeCheckoutDraft({ scope: draftScope, tipPercentage, customTip, showCustomTipInput });
+  }, [draftScope, tipPercentage, customTip, showCustomTipInput]);
+
+  // Ya en la confirmación se calienta el siguiente paso (pago).
+  useCheckoutPrefetch(["card-selection"]);
 
   const tipAmount = useMemo(() => {
     if (customTip && parseFloat(customTip) > 0) return parseFloat(customTip);

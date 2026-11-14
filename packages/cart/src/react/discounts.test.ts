@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { invalidateResources } from "@even/api-client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserDiscount } from "../userDiscounts";
 import { createUseAccountDiscount } from "./useAccountDiscount";
 import { createUseClaimedOrderDiscount } from "./useClaimedOrderDiscount";
@@ -20,6 +21,8 @@ const discount = (over: Partial<UserDiscount>): UserDiscount => ({
   menu_items: null,
   ...over,
 });
+
+beforeEach(() => invalidateResources());
 
 const auth =
   (over = {}) =>
@@ -92,6 +95,7 @@ describe("useAccountDiscount", () => {
       useClaimedOrderDiscount: claimed(
         discount({ id: "p1", discount_percentage: 20 }),
       ),
+      useAuth: auth(),
     });
     const { result } = renderHook(() => useHook(1, 2));
     expect(result.current).toEqual({
@@ -109,6 +113,7 @@ describe("useAccountDiscount", () => {
     const useHook = createUseAccountDiscount({
       promoActivationsService: service,
       useClaimedOrderDiscount: claimed(null),
+      useAuth: auth(),
     });
     const { result } = renderHook(() => useHook(1, 2));
     expect(result.current.loading).toBe(true);
@@ -126,6 +131,7 @@ describe("useAccountDiscount", () => {
     const useHook = createUseAccountDiscount({
       promoActivationsService: service,
       useClaimedOrderDiscount: claimed(null),
+      useAuth: auth(),
     });
     const { result } = renderHook(() => useHook(1, null));
     expect(result.current).toEqual({ accountDiscount: null, loading: false });

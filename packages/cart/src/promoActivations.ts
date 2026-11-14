@@ -1,4 +1,8 @@
-import type { ApiResponse, Requester } from "@even/api-client";
+import {
+  invalidateResources,
+  type ApiResponse,
+  type Requester,
+} from "@even/api-client";
 
 export interface ActivationMenuItem {
   id: number;
@@ -100,17 +104,20 @@ export function createPromoActivationsService(request: Requester) {
     ): Promise<
       ApiResponse<{ redemptionId: string; cartItemId: string | null }>
     > {
-      return request<{ redemptionId: string; cartItemId: string | null }>(
-        `/promotions/${activationId}/claim`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            restaurant_id: restaurantId || null,
-            branch_number: branchNumber || null,
-            promo_code: promoCode || null,
-          }),
-        },
-      );
+      const response = await request<{
+        redemptionId: string;
+        cartItemId: string | null;
+      }>(`/promotions/${activationId}/claim`, {
+        method: "POST",
+        body: JSON.stringify({
+          restaurant_id: restaurantId || null,
+          branch_number: branchNumber || null,
+          promo_code: promoCode || null,
+        }),
+      });
+      // Reclamar cambia el descuento de cuenta: no servir el valor en caché.
+      invalidateResources("discount:");
+      return response;
     },
 
     // Promo de cuenta ya reclamada para esta sucursal — usado por

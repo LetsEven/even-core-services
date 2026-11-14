@@ -144,6 +144,7 @@ function MenuProductCardBase({
         {/* Sin overflow-hidden en el contenedor externo: el selector sobresale de la foto. */}
         <div className="relative size-26 shrink-0">
           <div
+            data-menu-image
             className={cn(
               "flex size-full items-center justify-center overflow-hidden rounded-xl bg-tone-300",
               outOfStock && "opacity-45 grayscale",

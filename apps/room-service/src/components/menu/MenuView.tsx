@@ -528,10 +528,7 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
                   "opacity 300ms ease, transform 300ms cubic-bezier(0.32, 0.72, 0, 1)",
               }}
             >
-              {t("welcome", {
-                gender: profile?.gender === "female" ? "female" : "other",
-                name: profile?.firstName ? ` ${profile.firstName}` : "",
-              })}
+              {restaurant.name}
             </h1>
           </div>
         </div>
@@ -550,7 +547,7 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
           />
           {/* Nombre del restaurante y mesa/habitación */}
           <MenuRestaurantHeading
-            name={restaurant.name}
+            name={t("welcome", { gender: profile?.gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
             subtitle={tc("roomLabel", { room: roomNumber ?? "" })}
             actions={
               activeOrder || reorderItems.length > 0 ? (

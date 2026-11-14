@@ -509,10 +509,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
                   "opacity 300ms ease, transform 300ms cubic-bezier(0.32, 0.72, 0, 1)",
               }}
             >
-              {t("welcome", {
-                gender: gender === "female" ? "female" : "other",
-                name: profile?.firstName ? ` ${profile.firstName}` : "",
-              })}
+              {restaurant.name}
             </h1>
           </div>
         </div>
@@ -531,7 +528,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
           />
           {/* Nombre del restaurante y mesa/habitación */}
           <MenuRestaurantHeading
-            name={restaurant.name}
+            name={t("welcome", { gender: gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
             subtitle={tc("tableLabel", { table: tableNumber ?? "" })}
             actions={
               activeOrders.length > 0 || hasLastOrder ? (

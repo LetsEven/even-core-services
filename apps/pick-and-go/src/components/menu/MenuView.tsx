@@ -483,10 +483,7 @@ export default function MenuView() {
                   "opacity 300ms ease, transform 300ms cubic-bezier(0.32, 0.72, 0, 1)",
               }}
             >
-              {t("welcome", {
-                gender: profile?.gender === "female" ? "female" : "other",
-                name: profile?.firstName ? ` ${profile.firstName}` : "",
-              })}
+              {restaurant.name}
             </h1>
           </div>
         </div>
@@ -505,7 +502,7 @@ export default function MenuView() {
           />
           {/* Nombre del restaurante + asistente */}
           <MenuRestaurantHeading
-            name={restaurant.name}
+            name={t("welcome", { gender: profile?.gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
           />
 
           <div className="w-full">

@@ -3,6 +3,8 @@ export const PACKAGE_NAME = "@even/ui";
 
 export { brandColors } from "./lib/colors";
 export { cn } from "./lib/cn";
+export { playMorphClose, playMorphOpen, prefersReducedMotion } from "./lib/button-morph";
+export { getBlurredImage, peekBlurredImage, useBlurredImage } from "./lib/blurred-image";
 export { lockScroll, unlockScroll } from "./lib/scroll-lock";
 export { useScrollLock } from "./lib/use-scroll-lock";
 export { useModalBackClose } from "./lib/use-modal-back-close";
@@ -23,6 +25,19 @@ export {
   type ScreenProps,
   type StackProps,
 } from "./components/layout";
+export {
+  SheetBackdrop,
+  SheetCard,
+  SheetFooter,
+  SheetHero,
+  SheetScreen,
+  sheetClasses,
+  type SheetBackdropProps,
+  type SheetCardProps,
+  type SheetFooterProps,
+  type SheetHeroProps,
+  type SheetScreenProps,
+} from "./components/sheet-screen";
 export { FullScreenLoader, type FullScreenLoaderProps } from "./components/loader";
 export { Modal, type ModalProps } from "./components/modal";
 export {
@@ -72,6 +87,14 @@ export {
 export { CategoryTabs, type CategoryTab, type CategoryTabsProps } from "./components/menu/category-tabs";
 export { FloatingCartButton, type FloatingCartButtonProps } from "./components/menu/floating-cart-button";
 export { MenuEmptyState, type MenuEmptyStateProps } from "./components/menu/menu-empty-state";
+export {
+  MenuFab,
+  MenuActionsModal,
+  OrderFab,
+  type OrderFabProps,
+  type MenuFabProps,
+  type MenuActionsModalProps,
+} from "./components/menu/menu-fab";
 export { MenuProductCard, type MenuProductCardProps } from "./components/menu/menu-product-card";
 export { MenuQuickAddModal, type MenuQuickAddModalProps } from "./components/menu/menu-quick-add-modal";
 export { MenuRestaurantHeading, type MenuRestaurantHeadingProps } from "./components/menu/menu-restaurant-heading";

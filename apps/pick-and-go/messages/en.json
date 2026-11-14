@@ -117,8 +117,13 @@
     "noItemsAvailable": "No items available",
     "viewCart": "View cart • {count}",
     "profileAlt": "Profile",
+    "activeOrderLabel": "View order in progress",
+    "orderProgressLabel": "Order progress",
+    "ordersLabel": "Open orders",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "menuLabel": "Menu",
+    "fabCountLabel": "{count, plural, one {# item} other {# items}}"
   },
   "MenuItem": {
     "addToCart": "Add {name}",
@@ -207,6 +212,7 @@
   "CardSelectionPage": {
     "selectPaymentMethodTitle": "Select your payment method",
     "paymentMethodsLabel": "Payment methods",
+    "showOtherCards": "Show other cards ({count})",
     "addPaymentMethodCta": "Add payment method",
     "processingCta": "Processing...",
     "selectCardCta": "Select card",
@@ -494,5 +500,13 @@
   "RestaurantIntro": {
     "title": "Welcome",
     "skip": "Tap to continue"
+  },
+  "OrdersSheet": {
+    "title": "Orders",
+    "inProgress": "In progress",
+    "previous": "Previous",
+    "progressLabel": "Order progress",
+    "viewStatus": "View status",
+    "empty": "You have no previous orders yet"
   }
 }

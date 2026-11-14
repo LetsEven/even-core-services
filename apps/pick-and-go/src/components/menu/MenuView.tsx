@@ -1,6 +1,5 @@
 "use client";
 
-import MenuHeader from "../headers/MenuHeader";
 import MenuCategory from "./MenuCategory";
 import PepperIcon from "../UI/PepperIcon";
 import RestaurantDetailCard, {
@@ -9,14 +8,17 @@ import RestaurantDetailCard, {
 import RestaurantIntro from "./RestaurantIntro";
 import {
   CategoryTabs,
-  FloatingCartButton,
-  MenuActionsPill,
+  MenuActionsModal,
+  MenuFab,
+  OrderFab,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
   PillButton,
   PillCartButton,
+  PillOrderButton,
   PillPepperButton,
+  SheetBackdrop,
   UserAvatar as SharedUserAvatar,
   setMenuCategory,
   takeMenuPosition,
@@ -62,9 +64,13 @@ import {
   type PickAndGoItem,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
+import { overallProgress, useNow } from "../../lib/orderProgress";
+import { useButtonMorph } from "../../hooks/useButtonMorph";
 const ReorderModal = lazy(() => import("../modals/ReorderModal"));
+const OrdersSheet = lazy(() => import("./OrdersSheet"));
 
 const ChatView = lazy(() => import("../ChatView"));
+const CartView = lazy(() => import("../CartView"));
 const AuthView = lazy(() => import("./../AuthView"));
 const DashboardView = lazy(() => import("./../DashboardView"));
 const RestaurantClosedModal = lazy(() => import("../RestaurantClosedModal"));
@@ -146,8 +152,15 @@ export default function MenuView() {
   >([]);
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const {
+    cardRef: statusCardRef,
+    backdropRef: statusBackdropRef,
+    rememberOrigin: rememberStatusOrigin,
+    closeWithMorph: closeStatusWithMorph,
+  } = useButtonMorph(showStatusModal);
+  const closeStatusModal = () =>
+    closeStatusWithMorph(() => setShowStatusModal(false));
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasLastOrder, setHasLastOrder] = useState(false);
   const [showReorderModal, setShowReorderModal] = useState(false);
   const [lastOrderItems, setLastOrderItems] = useState<PickAndGoItem[]>([]);
   const { user, profile, isAuthenticated, logout } = useAuth();
@@ -161,13 +174,16 @@ export default function MenuView() {
   const [showPepperChat, setShowPepperChat] = useState(false);
   const [isPepperClosing, setIsPepperClosing] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const [isCartClosing, setIsCartClosing] = useState(false);
   const [isSettingsClosing, setIsSettingsClosing] = useState(false);
+  const [showOrdersSheet, setShowOrdersSheet] = useState(false);
+  const [isOrdersClosing, setIsOrdersClosing] = useState(false);
   const [dashboardInitialTab, setDashboardInitialTab] = useState<
     "profile" | "cards" | "history" | "support"
   >("profile");
-  const [showStickyBar, setShowStickyBar] = useState(false);
-  // La píldora (perfil, carrito, Pepper) es un solo componente: se ve si el
-  // usuario la abrió con la hamburguesa o si aparece por scroll.
+  const [, setShowStickyBar] = useState(false);
+  // La píldora (perfil, carrito, Pepper) se abre solo con el botón flotante.
   const [menuOpenByUser, setMenuOpenByUser] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
   const stickyTriggerRef = useRef<HTMLDivElement>(null);
@@ -191,25 +207,18 @@ export default function MenuView() {
   // No capturamos "previous" del DOM: el effect de arriba ya lo dejó en
   // "#ffffff", así que ese es el valor correcto al que hay que volver.
   useEffect(() => {
-    const modalOpen = showPepperChat || showSettingsModal;
+    const modalOpen =
+      showPepperChat || showSettingsModal || showCart || showOrdersSheet;
     document.body.style.backgroundColor = modalOpen
       ? "var(--color-overscroll)"
       : "var(--color-background)";
     return () => {
       document.body.style.backgroundColor = "var(--color-background)";
     };
-  }, [showPepperChat, showSettingsModal]);
+  }, [showPepperChat, showSettingsModal, showCart, showOrdersSheet]);
 
-  const pillVisible =
-    (menuOpenByUser || showStickyBar) && !showDetail && !introActive;
-
-  // Al volver arriba (la barra por scroll pasa de visible a oculta) se
-  // reinicia la apertura manual: la píldora se cierra sola, como antes.
-  const prevStickyRef = useRef(false);
-  useEffect(() => {
-    if (prevStickyRef.current && !showStickyBar) setMenuOpenByUser(false);
-    prevStickyRef.current = showStickyBar;
-  }, [showStickyBar]);
+  const pillVisible = menuOpenByUser && !showDetail && !introActive;
+  const closeActionsMenu = useCallback(() => setMenuOpenByUser(false), []);
 
   const closePepperChat = () => {
     setIsPepperClosing(true);
@@ -220,11 +229,27 @@ export default function MenuView() {
     }, 380);
   };
 
+  const closeCart = () => {
+    setIsCartClosing(true);
+    setTimeout(() => {
+      setShowCart(false);
+      setIsCartClosing(false);
+    }, 380);
+  };
+
   const closeSettingsModal = () => {
     setIsSettingsClosing(true);
     setTimeout(() => {
       setShowSettingsModal(false);
       setIsSettingsClosing(false);
+    }, 380);
+  };
+
+  const closeOrdersSheet = () => {
+    setIsOrdersClosing(true);
+    setTimeout(() => {
+      setShowOrdersSheet(false);
+      setIsOrdersClosing(false);
     }, 380);
   };
 
@@ -240,6 +265,8 @@ export default function MenuView() {
   useModalBackClose(showDetail, () => closeDetail());
   useModalBackClose(showPepperChat, () => closePepperChat());
   useModalBackClose(showSettingsModal, () => closeSettingsModal());
+  useModalBackClose(showCart, () => closeCart());
+  useModalBackClose(showOrdersSheet, () => closeOrdersSheet());
 
   // Logout desde el modal: primero cerrar con animación, luego limpiar la
   // sesión. Si se limpia antes, el modal re-renderiza su contenido como
@@ -257,6 +284,8 @@ export default function MenuView() {
   useScrollLock(
     showPepperChat ||
       showSettingsModal ||
+      showCart ||
+      showOrdersSheet ||
       showStatusModal ||
       showReorderModal ||
       showDetail ||
@@ -269,11 +298,16 @@ export default function MenuView() {
       import("./../DashboardView");
       import("./../AuthView");
       import("./../ChatView");
+      import("./../CartView");
     }, 1500);
     return () => clearTimeout(t);
   }, []);
 
   const activeOrder = activeOrders[activeOrderIndex] ?? null;
+  const progressNow = useNow(
+    activeOrders.some((o) => o.pick_and_go_order?.cooking_status === "preparing"),
+  );
+  const fabProgress = overallProgress(activeOrders, progressNow);
 
   const { secondsLeft, extraMinutesAdded } = usePrepCountdown(
     activeOrder?.pick_and_go_order?.created_at ?? "",
@@ -326,47 +360,6 @@ export default function MenuView() {
     await checkActiveOrder();
     setIsRefreshing(false);
   };
-
-  // Cargar el último pedido reordenable — independiente del estatus para no
-  // bloquear el botón "Estatus" (en Pick & Go son 2 llamadas secuenciales).
-  // Resetea hasLastOrder cuando no hay sesión/pedido (evita botón fantasma al salir).
-  useEffect(() => {
-    let cancelled = false;
-    const checkLastOrder = async () => {
-      const clientId = user?.id || guestId;
-      if (!clientId || !restaurant?.id) {
-        setLastOrderItems([]);
-        setHasLastOrder(false);
-        return;
-      }
-      try {
-        const response = await pickAndGoService.getUserOrders(clientId, {
-          limit: 1,
-          restaurant_id: restaurant.id,
-        });
-        if (!response.success || !response.data?.length) {
-          if (!cancelled) {
-            setLastOrderItems([]);
-            setHasLastOrder(false);
-          }
-          return;
-        }
-        const detail = await pickAndGoService.getOrder(response.data[0].id);
-        const dishes = detail.data?.items?.filter((d) => d.menu_item_id) ?? [];
-        if (cancelled) return;
-        setLastOrderItems(dishes);
-        setHasLastOrder(dishes.length > 0);
-      } catch (error) {
-        console.error("Error checking last order:", error);
-      }
-    };
-    checkLastOrder();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, guestId, restaurant?.id]);
-
-  const handleReorder = () => setShowReorderModal(true);
 
   // Mostrar barra sticky al hacer scroll past el trigger
   useEffect(() => {
@@ -462,11 +455,9 @@ export default function MenuView() {
       {/* Degradado para legibilidad del texto sobre el banner */}
       <div className="absolute top-0 left-0 w-full h-28 md:h-40 bg-linear-to-b from-black/55 to-transparent z-0 pointer-events-none" />
 
-      <MenuHeader
-        restaurant={restaurant}
-        menuOpen={menuOpenByUser}
-        onToggleMenu={() => setMenuOpenByUser((open) => !open)}
-      />
+      {/* Espacio donde estaba el header con la hamburguesa. Además de conservar la posición de la
+          carta, evita que el margen superior de <main> se escape del contenedor y baje el banner. */}
+      <div aria-hidden className="h-15 md:h-19 lg:h-23" />
 
       {/* Logo + bienvenida sobre el banner (no sticky) */}
       <div className="absolute top-0 inset-x-0 z-6 pointer-events-none">
@@ -525,29 +516,6 @@ export default function MenuView() {
           {/* Nombre del restaurante + asistente */}
           <MenuRestaurantHeading
             name={restaurant.name}
-            actions={
-              activeOrders.length > 0 ? (
-                <>
-                  <button
-                    onClick={() =>
-                      setTimeout(() => setShowStatusModal(true), 400)
-                    }
-                    className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit active:scale-90 transition-all"
-                  >
-                    {activeOrders.length > 1 ? t("viewOrders") : t("orderStatus")}
-                  </button>
-                  {hasLastOrder && (
-                    <button
-                      onClick={handleReorder}
-                      className="bg-even-grass text-even-evergreen border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all flex items-center gap-1.5"
-                    >
-                      {tc("reorderCta")}
-                      <RefreshCw className="size-4" />
-                    </button>
-                  )}
-                </>
-              ) : undefined
-            }
           />
 
           <div className="w-full">
@@ -591,13 +559,46 @@ export default function MenuView() {
         </div>
       </main>
 
-      {/* Carrito flotante */}
-      <FloatingCartButton
+      {/* Botón flotante: hamburguesa; con artículos se vuelve verde y muestra el carrito */}
+      <MenuFab
+        open={menuOpenByUser}
+        onToggle={() => setMenuOpenByUser((open) => !open)}
         count={totalItems}
-        hidden={showDetail || introActive}
-        label={t("viewCart", { count: totalItems })}
-        onClick={() => navigateWithRestaurantId("/cart")}
+        countLabel={(count) => t("fabCountLabel", { count })}
+        hidden={
+          showDetail ||
+          introActive ||
+          showPepperChat ||
+          showSettingsModal ||
+          showCart ||
+          showOrdersSheet ||
+          pillVisible
+        }
+        labels={{ open: t("openMenu"), close: t("closeMenu") }}
       />
+
+      {/* Pedido activo: abre directo su detalle, con el avance del pedido */}
+      {fabProgress !== null && (
+        <OrderFab
+          progress={fabProgress}
+          label={t("activeOrderLabel")}
+          progressLabel={t("orderProgressLabel")}
+          hidden={
+            showDetail ||
+            introActive ||
+            showPepperChat ||
+            showSettingsModal ||
+            showCart ||
+            showOrdersSheet ||
+            showStatusModal
+          }
+          onClick={(event) => {
+            closeActionsMenu();
+            rememberStatusOrigin(event.currentTarget);
+            setShowStatusModal(true);
+          }}
+        />
+      )}
 
       {/* Bienvenida al cargar la página */}
       {introActive && (
@@ -644,12 +645,12 @@ export default function MenuView() {
 
       {/* Status Modal */}
       {showStatusModal && activeOrder && (
-        <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999] flex items-center justify-center"
-          onClick={() => setShowStatusModal(false)}
-        >
+        <>
+<div ref={statusBackdropRef} className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={closeStatusModal} />
+<div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
           <div
-            className="relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[88vh] flex flex-col"
+            ref={statusCardRef}
+            className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[88vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {activeOrders.length > 1 && (
@@ -699,7 +700,7 @@ export default function MenuView() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowStatusModal(false)}
+                  onClick={closeStatusModal}
                   className="p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors shrink-0 self-start"
                 >
                   <X className="size-6 md:size-7 text-white" />
@@ -939,12 +940,20 @@ export default function MenuView() {
             </div>
           </div>
         </div>
+</>
       )}
 
       {/* Píldora de acciones — se abre con la hamburguesa o aparece al hacer
           scroll; siempre en el mismo lugar */}
-      <MenuActionsPill visible={pillVisible}>
-        <PillButton onClick={() => setShowSettingsModal(true)} aria-label={t("profileAlt")} clip>
+      <MenuActionsModal open={pillVisible} onClose={closeActionsMenu} label={t("menuLabel")}>
+        <PillButton
+          onClick={() => {
+            closeActionsMenu();
+            setShowSettingsModal(true);
+          }}
+          aria-label={t("profileAlt")}
+          clip
+        >
           <UserAvatar
             isAuthenticated={isAuthenticated}
             profile={profile}
@@ -953,14 +962,30 @@ export default function MenuView() {
           />
         </PillButton>
         <PillCartButton
-          onClick={() => navigateWithRestaurantId("/cart")}
+          onClick={() => {
+            closeActionsMenu();
+            setShowCart(true);
+          }}
           count={state.totalItems}
           aria-label={t("viewCart", { count: state.totalItems })}
         />
-        <PillPepperButton onClick={() => setShowPepperChat(true)} aria-label={t("pepperLabel")}>
+        <PillOrderButton
+          onClick={() => {
+            closeActionsMenu();
+            setShowOrdersSheet(true);
+          }}
+          aria-label={t("ordersLabel")}
+        />
+        <PillPepperButton
+          onClick={() => {
+            closeActionsMenu();
+            setShowPepperChat(true);
+          }}
+          aria-label={t("pepperLabel")}
+        >
           <PepperIcon />
         </PillPepperButton>
-      </MenuActionsPill>
+      </MenuActionsModal>
 
       {/* Pepper Chat Modal */}
       {showPepperChat && (
@@ -996,6 +1021,47 @@ export default function MenuView() {
             </Suspense>
           </div>
         </>
+      )}
+
+      {/* Carrito: la imagen del restaurante desenfocada queda de fondo y solo
+          la tarjeta sube desde abajo, tapando el menú */}
+      {showCart && (
+        <div className="fixed inset-0 z-50 isolate overflow-hidden">
+          <SheetBackdrop
+            style={{
+              animation: isCartClosing
+                ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "fade-in 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          />
+          <Suspense fallback={null}>
+            <div className="relative h-full">
+              <CartView onClose={closeCart} closing={isCartClosing} />
+            </div>
+          </Suspense>
+        </div>
+      )}
+
+      {/* Hoja de pedidos */}
+      {showOrdersSheet && (
+        <Suspense fallback={null}>
+          <OrdersSheet
+            closing={isOrdersClosing}
+            onClose={closeOrdersSheet}
+            activeOrders={activeOrders}
+            clientId={user?.id || guestId}
+            restaurantId={restaurant?.id}
+            onOpenStatus={(index) => {
+              rememberStatusOrigin(null);
+              setActiveOrderIndex(index);
+              setShowStatusModal(true);
+            }}
+            onReorder={(items) => {
+              setLastOrderItems(items);
+              setShowReorderModal(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Settings Modal */}

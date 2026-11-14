@@ -6,6 +6,7 @@ import { Minus, Plus, ChevronDown, ShoppingBag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
+import { SheetCard, SheetFooter, SheetHero, SheetScreen } from "@even/ui";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "@/context/AuthContext";
 import { useBranch } from "@/context/BranchContext";
@@ -26,7 +27,23 @@ const API_BASE_URL = getBackendOrigin(
   "http://localhost:5000",
 );
 
-export default function CartView() {
+/**
+ * `onClose` activa el modo hoja: el carrito se muestra sobre el menú (sin
+ * cambiar de página) y "volver" lo cierra. Sin `onClose` es la página /cart.
+ */
+export default function CartView({
+  onClose,
+  closing = false,
+}: { onClose?: () => void; closing?: boolean } = {}) {
+  // En modo hoja el fondo es la imagen del restaurante (la pone el menú): solo
+  // la tarjeta sube desde abajo; el encabezado y el título aparecen con fundido.
+  const EASE = "0.38s cubic-bezier(0.32, 0.72, 0, 1)";
+  const fadeStyle = onClose
+    ? { animation: closing ? `fadeOut ${EASE} forwards` : `fade-in ${EASE}` }
+    : undefined;
+  const cardStyle = onClose
+    ? { animation: closing ? `slideDownModal ${EASE} forwards` : `slideUp ${EASE}` }
+    : undefined;
   const t = useTranslations("CartView");
   const tc = useTranslations("Common");
   const params = useParams();
@@ -46,6 +63,7 @@ export default function CartView() {
   const { state, updateQuantity, orderNotes, setOrderNotes, updateOrderNotes } =
     useCart();
   const { navigateWithRestaurantId } = useNavigation();
+  const goToMenu = () => (onClose ? onClose() : navigateWithRestaurantId("/menu"));
   const { isLoading, user, profile, refreshProfile } = useAuth();
   const [showPOSModal, setShowPOSModal] = useState(false);
   const [posModalReason, setPosModalReason] = useState<
@@ -134,11 +152,16 @@ export default function CartView() {
   };
 
   return (
-    <div className="min-h-screen brand-evergreen flex flex-col">
-      <MenuHeaderBack onBack={() => navigateWithRestaurantId("/menu")} />
+    <SheetScreen
+      className={onClose ? "h-full min-h-0 overflow-hidden" : undefined}
+      style={onClose ? { background: "transparent" } : undefined}
+    >
+      <div style={fadeStyle}>
+        <MenuHeaderBack onBack={goToMenu} />
+      </div>
 
-      <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-        <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+      <div className="w-full flex-1 flex flex-col">
+        <SheetHero className={onClose ? "bg-transparent p-0" : "p-0"} style={fadeStyle}>
           {state.items.length === 0 ? (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
@@ -158,11 +181,11 @@ export default function CartView() {
               </h2>
             </div>
           )}
-        </div>
+        </SheetHero>
 
         <div className="flex-1 h-full flex flex-col overflow-hidden">
           {/* Cart Items */}
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 overflow-hidden">
+          <SheetCard className="overflow-hidden" style={cardStyle}>
             {/* Scrollable content */}
             <div
               ref={scrollContainerRef}
@@ -190,7 +213,7 @@ export default function CartView() {
                       {t("cartEmptySubtitle")}
                     </p>
                     <button
-                      onClick={() => navigateWithRestaurantId("/menu")}
+                      onClick={goToMenu}
                       className="bg-even-grass text-even-evergreen font-medium text-base md:text-lg px-8 py-3 md:py-4 rounded-full transition-opacity hover:opacity-90 active:scale-95"
                     >
                       {t("viewMenuCta")}
@@ -404,12 +427,7 @@ export default function CartView() {
 
             {/* Fixed bottom section */}
             {state.items.length > 0 && (
-              <div
-                className="fixed bottom-0 left-0 bg-white right-0 mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-                style={{
-                  paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
-                }}
-              >
+              <SheetFooter>
                 <div className="w-full flex gap-3 md:gap-4 lg:gap-5 mt-6 md:mt-7 lg:mt-8 justify-between">
                   <div className="flex flex-col justify-center min-w-0">
                     <span className="text-tone-600 text-sm md:text-base lg:text-lg whitespace-nowrap">
@@ -446,9 +464,9 @@ export default function CartView() {
                     {t("promoOnlyWarning")}
                   </p>
                 )}
-              </div>
+              </SheetFooter>
             )}
-          </div>
+          </SheetCard>
         </div>
       </div>
       <POSBlockedModal
@@ -472,6 +490,6 @@ export default function CartView() {
         showImages={showImages}
         onRemove={removeUnavailable}
       />
-    </div>
+    </SheetScreen>
   );
 }

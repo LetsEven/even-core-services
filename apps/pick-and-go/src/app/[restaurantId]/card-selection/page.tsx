@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -12,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { useGuest, useIsGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
+import { CardSelectionBody, FlowHero } from "@/components/flow-skeletons";
 import HighDemandBanner from "@/components/modals/HighDemandBanner";
 import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
@@ -166,6 +168,8 @@ export default function CardSelectionPage() {
   >(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
+  const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
   const [googlePayToken, setGooglePayToken] = useState<string | null>(null);
@@ -209,14 +213,24 @@ export default function CardSelectionPage() {
     if (!restaurantId || !selectedBranchNumber) return;
     const API_BASE =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     fetch(
       `${API_BASE}/restaurants/${restaurantId}/${selectedBranchNumber}/order-flow-status`,
     )
       .then((r) => r.json())
       .then(({ data }) => {
-        if (data?.is_high_demand) setShowHighDemandBanner(true);
+        // Se muestra 1.5 s después de abrir la vista: primero carga y termina
+        // la animación de entrada, luego sale la alerta.
+        if (data?.is_high_demand && !cancelled) {
+          timer = setTimeout(() => setShowHighDemandBanner(true), 1500);
+        }
       })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [restaurantId, selectedBranchNumber]);
 
   // Estado para mostrar animación y guardar orderId e items
@@ -317,6 +331,15 @@ export default function CardSelectionPage() {
 
     // Apple Pay solo aplica cuando el proveedor es eCartPay (o null como fallback)
     if (provider !== null && provider !== "ecartpay") return;
+
+    // Apple Pay solo funciona sobre HTTPS (ni siquiera localhost sirve). En un
+    // documento inseguro el SDK lanza "InvalidAccessError: Trying to start an
+    // Apple Pay session from an insecure document", así que ni se carga y se
+    // cae a tarjeta guardada.
+    if (window.location.protocol !== "https:") {
+      setApplePayUnavailable(true);
+      return;
+    }
 
     const loadSDK = () => {
       setApplePayUnavailable(false);
@@ -492,7 +515,9 @@ export default function CardSelectionPage() {
       accountDiscountLoading ||
       baseAmount <= 0 ||
       totalAmount <= 0 ||
-      typeof window === "undefined"
+      typeof window === "undefined" ||
+      // El SDK lanza InvalidAccessError si se inicia Apple Pay en un documento inseguro.
+      window.location.protocol !== "https:"
     )
       return;
     if (applePayListenersRef.current) return;
@@ -1495,62 +1520,23 @@ export default function CardSelectionPage() {
 
   if (isLoadingInitial || isLoadingProvider) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="relative z-10 isolate min-h-dvh flex flex-col">
         <div className="fixed top-0 left-0 right-0 z-50">
-          <MenuHeaderBack />
+          <MenuHeaderBack
+            onBack={() =>
+              navigateWithRestaurantId("/order-confirm", { replace: true })
+            }
+          />
         </div>
         <div className="h-20" />
 
-        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-          {/* Título skeleton */}
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
-            </div>
-          </div>
+        <div className="w-full flex-1 flex flex-col">
+          <FlowHero step="card-selection" />
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-10">
-              <div
-                className={`flex-1 overflow-y-auto py-8 pb-[120px] flex flex-col gap-4`}
-              >
-                {/* Subtotal row */}
-                <div className="flex justify-between items-center">
-                  <div className="h-4 w-20 bg-tone-200 rounded-full animate-pulse" />
-                  <div className="h-4 w-24 bg-tone-200 rounded-full animate-pulse" />
-                </div>
-                {/* Total row */}
-                <div className="flex justify-between items-center border-t pt-3">
-                  <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                  <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                </div>
-
-                {/* Label métodos de pago */}
-                <div className="h-4 w-36 bg-tone-200 rounded-full animate-pulse mt-1" />
-
-                {/* Card skeleton 1 */}
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-                {/* Card skeleton 2 */}
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-
-                {/* Botón agregar tarjeta */}
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-              </div>
+            <div className={`${sheetClasses.card} overflow-hidden`}>
+              <CardSelectionBody />
             </div>
-          </div>
-        </div>
-
-        {/* Barra inferior fija — skeleton */}
-        <div
-          className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-        >
-          <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
-            <div className="flex flex-col gap-1.5">
-              <div className="h-3 w-16 bg-tone-200 rounded-full animate-pulse" />
-              <div className="h-6 w-28 bg-tone-200 rounded-full animate-pulse" />
-            </div>
-            <div className="h-12 w-36 bg-tone-200 rounded-full animate-pulse" />
           </div>
         </div>
       </div>
@@ -1677,13 +1663,17 @@ export default function CardSelectionPage() {
         </div>
       )}
 
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="relative z-10 isolate min-h-dvh flex flex-col">
         {/* Header fijo */}
-        <MenuHeaderBack />
+        <MenuHeaderBack
+            onBack={() =>
+              navigateWithRestaurantId("/order-confirm", { replace: true })
+            }
+          />
 
         {/* Contenido de página (flujo normal, scrolleable) */}
-        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+        <div className="w-full flex-1 flex flex-col">
+          <div className={sheetClasses.hero}>
             <div className="py-6 px-8 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
                 {t("selectPaymentMethodTitle")}
@@ -1692,7 +1682,7 @@ export default function CardSelectionPage() {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-50">
+            <div className={`${sheetClasses.card} z-50 overflow-hidden`}>
               <div className={`flex-1 overflow-y-auto py-8 pb-[120px]`}>
                 {/* Resumen compacto del pedido */}
                 <div className="mb-3 space-y-2">
@@ -1784,7 +1774,12 @@ export default function CardSelectionPage() {
                     {t("paymentMethodsLabel")}
                   </h3>
                   <div className="space-y-2.5">
-                    {paymentMethods.map((method) => (
+                    {(showAllCards
+                      ? paymentMethods
+                      : paymentMethods.filter(
+                          (pm) => pm.id === selectedPaymentMethodId,
+                        )
+                    ).map((method) => (
                       <div
                         key={method.id}
                         className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
@@ -1797,6 +1792,7 @@ export default function CardSelectionPage() {
                           onClick={() => {
                             setSelectedPaymentMethodId(method.id);
                             setSelectedMSI(null);
+                            setShowAllCards(false);
                           }}
                           className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
                         >
@@ -1812,6 +1808,7 @@ export default function CardSelectionPage() {
                           onClick={() => {
                             setSelectedPaymentMethodId(method.id);
                             setSelectedMSI(null);
+                            setShowAllCards(false);
                           }}
                           className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
                             selectedPaymentMethodId === method.id
@@ -1839,6 +1836,18 @@ export default function CardSelectionPage() {
                         </button>
                       </div>
                     ))}
+
+                    {!showAllCards && paymentMethods.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllCards(true)}
+                        className="w-full py-1.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
+                      >
+                        {t("showOtherCards", {
+                          count: paymentMethods.length - 1,
+                        })}
+                      </button>
+                    )}
 
                     {walletOrderRejected && (
                       <p className="text-sm text-tone-600 text-center">
@@ -1945,7 +1954,7 @@ export default function CardSelectionPage() {
         </div>
 
         {/* Barra inferior fija — total + botón pagar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed bottom-0 left-0 right-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button
             onClick={handleInitiatePayment}
             disabled={isProcessing || !selectedPaymentMethodId}

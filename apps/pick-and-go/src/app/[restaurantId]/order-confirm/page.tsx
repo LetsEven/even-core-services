@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -7,6 +8,7 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
+import { FlowHero, OrderConfirmBody } from "@/components/flow-skeletons";
 import { X, ChevronRight, Loader2, CircleAlert } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useBranch } from "@/context/BranchContext";
@@ -170,50 +172,21 @@ export default function OrderConfirmPage() {
 
   if (isLoadingInitial) {
     return (
-      <div className="h-screen overflow-hidden brand-evergreen flex flex-col">
+      <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
         <div className="fixed top-0 left-0 right-0 z-50">
-          <MenuHeaderBack />
+          <MenuHeaderBack
+            onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
+          />
         </div>
         <div className="h-20" />
 
         <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
-          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-            {/* Título skeleton */}
-            <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
-              <div className="py-6 px-8 flex flex-col justify-center">
-                <div className="h-8 w-2/3 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
-              </div>
-            </div>
+          <div className="flex flex-col relative w-full">
+            <FlowHero step="order-confirm" />
 
-            {/* Cuerpo skeleton */}
-            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 gap-4">
-              {/* Subtotal row */}
-              <div className="flex justify-between items-center">
-                <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse" />
-                <div className="h-4 w-24 bg-tone-200 rounded-full animate-pulse" />
-              </div>
-
-              {/* Propina label + botones */}
-              <div className="flex items-center gap-4">
-                <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse flex-shrink-0" />
-                <div className="grid grid-cols-5 gap-2 flex-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-8 bg-tone-100 rounded-full animate-pulse"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Total row */}
-              <div className="flex justify-between items-center border-t pt-4">
-                <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-              </div>
-
-              {/* Botón continuar */}
-              <div className="h-12 w-full bg-tone-200 rounded-full animate-pulse" />
+            {/* Cuerpo skeleton: mismas filas que la tarjeta cargada */}
+            <div className={`${sheetClasses.card} flex-none py-8`}>
+              <OrderConfirmBody />
             </div>
           </div>
         </div>
@@ -222,17 +195,19 @@ export default function OrderConfirmPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden brand-evergreen flex flex-col">
+    <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
       {/* Header fijo */}
       <div className="fixed top-0 left-0 right-0 z-50">
-        <MenuHeaderBack />
+        <MenuHeaderBack
+            onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
+          />
       </div>
       <div className="h-20" />
 
       {/* Tarjeta anclada al fondo */}
       <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
-        <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+        <div className="flex flex-col relative w-full">
+          <div className={sheetClasses.hero}>
             <div className="py-6 px-8 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
                 {t("title")}
@@ -240,7 +215,7 @@ export default function OrderConfirmPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]">
+          <div className={`${sheetClasses.card} flex-none py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]`}>
             {/* Sucursal */}
             {branches.length > 0 && (
               <div

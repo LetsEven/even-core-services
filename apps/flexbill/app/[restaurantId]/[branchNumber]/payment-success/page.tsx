@@ -567,7 +567,7 @@ export default function PaymentSuccessPage() {
       {/* Ticket Modal */}
       {isTicketModalOpen && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 modal-blur-xs z-999 flex items-center justify-center"
           onClick={() => setIsTicketModalOpen(false)}
         >
           <div
@@ -936,7 +936,7 @@ export default function PaymentSuccessPage() {
       {/* Register Modal */}
       {isRegisterModalOpen && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center animate-fade-in"
+          className="fixed inset-0 bg-black/25 modal-blur-xs z-999 flex items-center justify-center animate-fade-in"
           onClick={() => setIsRegisterModalOpen(false)}
         >
           <div

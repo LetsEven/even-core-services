@@ -209,6 +209,7 @@
   "CardSelectionPage": {
     "selectPaymentMethodTitle": "Select your payment method",
     "paymentMethodsLabel": "Payment methods",
+    "showOtherCards": "Show other cards ({count})",
     "addPaymentMethodCta": "Add payment method",
     "processingCta": "Processing...",
     "selectCardCta": "Select card",

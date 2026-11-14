@@ -332,3 +332,46 @@
     transition-duration: 150ms !important;
   }
 }
+
+
+/* Fondo de modales: el desenfoque va en un pseudo-elemento hermano del diálogo,
+   no en el contenedor. Un backdrop-filter anidado dentro de otro (diálogo con
+   su propio blur sobre un overlay con blur) hace que iOS Safari pinte el fondo
+   corrupto y espejado. Requiere que el contenedor sea fixed (ya lo es). */
+.modal-blur-xs::before,
+.modal-blur-md::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.modal-blur-xs::before {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.modal-blur-md::before {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+
+/* Salida de una vista del flujo de compra: la tarjeta baja y el título se
+   desvanece. Lo activa el cambio de paso poniendo data-flow-leaving en esos
+   elementos (apps/pick-and-go/src/lib/route-transition.ts). */
+@keyframes sheet-leave-down {
+  to {
+    transform: translateY(105%);
+  }
+}
+@keyframes sheet-leave-fade {
+  to {
+    opacity: 0;
+  }
+}
+.sheet-card[data-flow-leaving] {
+  animation: sheet-leave-down 0.5s cubic-bezier(0.5, 0, 0.75, 0.4) forwards !important;
+}
+.sheet-hero[data-flow-leaving] {
+  animation: sheet-leave-fade 0.35s ease forwards !important;
+}

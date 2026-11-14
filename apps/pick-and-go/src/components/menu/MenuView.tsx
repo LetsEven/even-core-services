@@ -16,6 +16,7 @@ import {
   PillButton,
   PillCartButton,
   PillPepperButton,
+  SheetBackdrop,
   UserAvatar as SharedUserAvatar,
   setMenuCategory,
   takeMenuPosition,
@@ -651,7 +652,7 @@ export default function MenuView() {
       {/* Status Modal */}
       {showStatusModal && activeOrder && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999] flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 modal-blur-xs z-[999] flex items-center justify-center"
           onClick={() => setShowStatusModal(false)}
         >
           <div
@@ -1035,24 +1036,14 @@ export default function MenuView() {
       {/* Carrito: la imagen del restaurante desenfocada queda de fondo y solo
           la tarjeta sube desde abajo, tapando el menú */}
       {showCart && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          <div
-            className="absolute inset-0 bg-even-evergreen"
+        <div className="fixed inset-0 z-50 isolate overflow-hidden">
+          <SheetBackdrop
             style={{
               animation: isCartClosing
                 ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
                 : "fade-in 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
-          >
-            {restaurant.banner_url && (
-              <img
-                src={restaurant.banner_url}
-                alt=""
-                className="absolute inset-0 size-full scale-110 object-cover blur-xl"
-              />
-            )}
-            <div className="absolute inset-0 bg-black/30" />
-          </div>
+          />
           <Suspense fallback={null}>
             <div className="relative h-full">
               <CartView onClose={closeCart} closing={isCartClosing} />

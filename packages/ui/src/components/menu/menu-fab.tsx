@@ -97,7 +97,7 @@ export function MenuActionsModal({ open, onClose, label, children }: MenuActions
   return (
     <div
       data-testid="menu-actions-backdrop"
-      className="reduce-motion-fade fixed inset-0 z-[55] flex items-center justify-center bg-black/30 backdrop-blur-md transition-opacity duration-200"
+      className="reduce-motion-fade fixed inset-0 z-[55] flex items-center justify-center bg-black/30 modal-blur-md transition-opacity duration-200"
       style={{ opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none" }}
       inert={!open}
       aria-hidden={!open}

@@ -570,7 +570,7 @@ export default function PaymentSuccessPage() {
   };
 
   return (
-    <div className="min-h-dvh overflow-hidden brand-evergreen flex flex-col">
+    <div className="relative z-10 isolate min-h-dvh overflow-hidden flex flex-col">
       <div>
         {/* Modal notificacion pedido */}
         {showOrderNotificationModal && (
@@ -690,7 +690,7 @@ export default function PaymentSuccessPage() {
       {/* Ticket Modal */}
       {isTicketModalOpen && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 modal-blur-xs z-999 flex items-center justify-center"
           onClick={() => setIsTicketModalOpen(false)}
         >
           <div
@@ -995,7 +995,7 @@ export default function PaymentSuccessPage() {
       {/* Status Modal */}
       {isStatusModalOpen && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999] flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 modal-blur-xs z-[999] flex items-center justify-center"
           onClick={() => setIsStatusModalOpen(false)}
         >
           <div

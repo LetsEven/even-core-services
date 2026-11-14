@@ -680,7 +680,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
       {/* Status Modal */}
       {isStatusModalOpen && activeOrder && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 modal-blur-xs z-999 flex items-center justify-center"
           onClick={() => setIsStatusModalOpen(false)}
         >
           <div

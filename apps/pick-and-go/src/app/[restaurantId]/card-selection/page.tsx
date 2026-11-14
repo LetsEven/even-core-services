@@ -167,6 +167,8 @@ export default function CardSelectionPage() {
   >(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
+  const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
   const [googlePayToken, setGooglePayToken] = useState<string | null>(null);
@@ -210,14 +212,24 @@ export default function CardSelectionPage() {
     if (!restaurantId || !selectedBranchNumber) return;
     const API_BASE =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     fetch(
       `${API_BASE}/restaurants/${restaurantId}/${selectedBranchNumber}/order-flow-status`,
     )
       .then((r) => r.json())
       .then(({ data }) => {
-        if (data?.is_high_demand) setShowHighDemandBanner(true);
+        // Se muestra 1.5 s después de abrir la vista: primero carga y termina
+        // la animación de entrada, luego sale la alerta.
+        if (data?.is_high_demand && !cancelled) {
+          timer = setTimeout(() => setShowHighDemandBanner(true), 1500);
+        }
       })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [restaurantId, selectedBranchNumber]);
 
   // Estado para mostrar animación y guardar orderId e items
@@ -318,6 +330,15 @@ export default function CardSelectionPage() {
 
     // Apple Pay solo aplica cuando el proveedor es eCartPay (o null como fallback)
     if (provider !== null && provider !== "ecartpay") return;
+
+    // Apple Pay solo funciona sobre HTTPS (ni siquiera localhost sirve). En un
+    // documento inseguro el SDK lanza "InvalidAccessError: Trying to start an
+    // Apple Pay session from an insecure document", así que ni se carga y se
+    // cae a tarjeta guardada.
+    if (window.location.protocol !== "https:") {
+      setApplePayUnavailable(true);
+      return;
+    }
 
     const loadSDK = () => {
       setApplePayUnavailable(false);
@@ -493,7 +514,9 @@ export default function CardSelectionPage() {
       accountDiscountLoading ||
       baseAmount <= 0 ||
       totalAmount <= 0 ||
-      typeof window === "undefined"
+      typeof window === "undefined" ||
+      // El SDK lanza InvalidAccessError si se inicia Apple Pay en un documento inseguro.
+      window.location.protocol !== "https:"
     )
       return;
     if (applePayListenersRef.current) return;
@@ -1496,9 +1519,13 @@ export default function CardSelectionPage() {
 
   if (isLoadingInitial || isLoadingProvider) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="relative z-10 isolate min-h-dvh flex flex-col">
         <div className="fixed top-0 left-0 right-0 z-50">
-          <MenuHeaderBack />
+          <MenuHeaderBack
+            onBack={() =>
+              navigateWithRestaurantId("/order-confirm", { replace: true })
+            }
+          />
         </div>
         <div className="h-20" />
 
@@ -1678,9 +1705,13 @@ export default function CardSelectionPage() {
         </div>
       )}
 
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="relative z-10 isolate min-h-dvh flex flex-col">
         {/* Header fijo */}
-        <MenuHeaderBack />
+        <MenuHeaderBack
+            onBack={() =>
+              navigateWithRestaurantId("/order-confirm", { replace: true })
+            }
+          />
 
         {/* Contenido de página (flujo normal, scrolleable) */}
         <div className="w-full flex-1 flex flex-col">
@@ -1785,7 +1816,12 @@ export default function CardSelectionPage() {
                     {t("paymentMethodsLabel")}
                   </h3>
                   <div className="space-y-2.5">
-                    {paymentMethods.map((method) => (
+                    {(showAllCards
+                      ? paymentMethods
+                      : paymentMethods.filter(
+                          (pm) => pm.id === selectedPaymentMethodId,
+                        )
+                    ).map((method) => (
                       <div
                         key={method.id}
                         className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
@@ -1798,6 +1834,7 @@ export default function CardSelectionPage() {
                           onClick={() => {
                             setSelectedPaymentMethodId(method.id);
                             setSelectedMSI(null);
+                            setShowAllCards(false);
                           }}
                           className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
                         >
@@ -1813,6 +1850,7 @@ export default function CardSelectionPage() {
                           onClick={() => {
                             setSelectedPaymentMethodId(method.id);
                             setSelectedMSI(null);
+                            setShowAllCards(false);
                           }}
                           className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
                             selectedPaymentMethodId === method.id
@@ -1840,6 +1878,18 @@ export default function CardSelectionPage() {
                         </button>
                       </div>
                     ))}
+
+                    {!showAllCards && paymentMethods.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllCards(true)}
+                        className="w-full py-1.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
+                      >
+                        {t("showOtherCards", {
+                          count: paymentMethods.length - 1,
+                        })}
+                      </button>
+                    )}
 
                     {walletOrderRejected && (
                       <p className="text-sm text-tone-600 text-center">

@@ -3,6 +3,7 @@ export const PACKAGE_NAME = "@even/ui";
 
 export { brandColors } from "./lib/colors";
 export { cn } from "./lib/cn";
+export { getBlurredImage, peekBlurredImage, useBlurredImage } from "./lib/blurred-image";
 export { lockScroll, unlockScroll } from "./lib/scroll-lock";
 export { useScrollLock } from "./lib/use-scroll-lock";
 export { useModalBackClose } from "./lib/use-modal-back-close";
@@ -24,11 +25,13 @@ export {
   type StackProps,
 } from "./components/layout";
 export {
+  SheetBackdrop,
   SheetCard,
   SheetFooter,
   SheetHero,
   SheetScreen,
   sheetClasses,
+  type SheetBackdropProps,
   type SheetCardProps,
   type SheetFooterProps,
   type SheetHeroProps,

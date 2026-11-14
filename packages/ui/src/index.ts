@@ -3,6 +3,7 @@ export const PACKAGE_NAME = "@even/ui";
 
 export { brandColors } from "./lib/colors";
 export { cn } from "./lib/cn";
+export { playMorphClose, playMorphOpen, prefersReducedMotion } from "./lib/button-morph";
 export { getBlurredImage, peekBlurredImage, useBlurredImage } from "./lib/blurred-image";
 export { lockScroll, unlockScroll } from "./lib/scroll-lock";
 export { useScrollLock } from "./lib/use-scroll-lock";
@@ -89,6 +90,8 @@ export { MenuEmptyState, type MenuEmptyStateProps } from "./components/menu/menu
 export {
   MenuFab,
   MenuActionsModal,
+  OrderFab,
+  type OrderFabProps,
   type MenuFabProps,
   type MenuActionsModalProps,
 } from "./components/menu/menu-fab";

@@ -10,11 +10,13 @@ import {
   CategoryTabs,
   MenuActionsModal,
   MenuFab,
+  OrderFab,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
   PillButton,
   PillCartButton,
+  PillOrderButton,
   PillPepperButton,
   SheetBackdrop,
   UserAvatar as SharedUserAvatar,
@@ -62,7 +64,10 @@ import {
   type PickAndGoItem,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
+import { overallProgress, useNow } from "../../lib/orderProgress";
+import { useButtonMorph } from "../../hooks/useButtonMorph";
 const ReorderModal = lazy(() => import("../modals/ReorderModal"));
+const OrdersSheet = lazy(() => import("./OrdersSheet"));
 
 const ChatView = lazy(() => import("../ChatView"));
 const CartView = lazy(() => import("../CartView"));
@@ -147,8 +152,15 @@ export default function MenuView() {
   >([]);
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const {
+    cardRef: statusCardRef,
+    backdropRef: statusBackdropRef,
+    rememberOrigin: rememberStatusOrigin,
+    closeWithMorph: closeStatusWithMorph,
+  } = useButtonMorph(showStatusModal);
+  const closeStatusModal = () =>
+    closeStatusWithMorph(() => setShowStatusModal(false));
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasLastOrder, setHasLastOrder] = useState(false);
   const [showReorderModal, setShowReorderModal] = useState(false);
   const [lastOrderItems, setLastOrderItems] = useState<PickAndGoItem[]>([]);
   const { user, profile, isAuthenticated, logout } = useAuth();
@@ -165,6 +177,8 @@ export default function MenuView() {
   const [showCart, setShowCart] = useState(false);
   const [isCartClosing, setIsCartClosing] = useState(false);
   const [isSettingsClosing, setIsSettingsClosing] = useState(false);
+  const [showOrdersSheet, setShowOrdersSheet] = useState(false);
+  const [isOrdersClosing, setIsOrdersClosing] = useState(false);
   const [dashboardInitialTab, setDashboardInitialTab] = useState<
     "profile" | "cards" | "history" | "support"
   >("profile");
@@ -193,14 +207,15 @@ export default function MenuView() {
   // No capturamos "previous" del DOM: el effect de arriba ya lo dejó en
   // "#ffffff", así que ese es el valor correcto al que hay que volver.
   useEffect(() => {
-    const modalOpen = showPepperChat || showSettingsModal || showCart;
+    const modalOpen =
+      showPepperChat || showSettingsModal || showCart || showOrdersSheet;
     document.body.style.backgroundColor = modalOpen
       ? "var(--color-overscroll)"
       : "var(--color-background)";
     return () => {
       document.body.style.backgroundColor = "var(--color-background)";
     };
-  }, [showPepperChat, showSettingsModal, showCart]);
+  }, [showPepperChat, showSettingsModal, showCart, showOrdersSheet]);
 
   const pillVisible = menuOpenByUser && !showDetail && !introActive;
   const closeActionsMenu = useCallback(() => setMenuOpenByUser(false), []);
@@ -230,6 +245,14 @@ export default function MenuView() {
     }, 380);
   };
 
+  const closeOrdersSheet = () => {
+    setIsOrdersClosing(true);
+    setTimeout(() => {
+      setShowOrdersSheet(false);
+      setIsOrdersClosing(false);
+    }, 380);
+  };
+
   // El back gesto/botón del dispositivo cierra estos modales en vez de
   // salir de la página (misma animación que cerrar con la X/backdrop).
   const closeDetail = useCallback(() => {
@@ -243,6 +266,7 @@ export default function MenuView() {
   useModalBackClose(showPepperChat, () => closePepperChat());
   useModalBackClose(showSettingsModal, () => closeSettingsModal());
   useModalBackClose(showCart, () => closeCart());
+  useModalBackClose(showOrdersSheet, () => closeOrdersSheet());
 
   // Logout desde el modal: primero cerrar con animación, luego limpiar la
   // sesión. Si se limpia antes, el modal re-renderiza su contenido como
@@ -261,6 +285,7 @@ export default function MenuView() {
     showPepperChat ||
       showSettingsModal ||
       showCart ||
+      showOrdersSheet ||
       showStatusModal ||
       showReorderModal ||
       showDetail ||
@@ -279,6 +304,10 @@ export default function MenuView() {
   }, []);
 
   const activeOrder = activeOrders[activeOrderIndex] ?? null;
+  const progressNow = useNow(
+    activeOrders.some((o) => o.pick_and_go_order?.cooking_status === "preparing"),
+  );
+  const fabProgress = overallProgress(activeOrders, progressNow);
 
   const { secondsLeft, extraMinutesAdded } = usePrepCountdown(
     activeOrder?.pick_and_go_order?.created_at ?? "",
@@ -331,47 +360,6 @@ export default function MenuView() {
     await checkActiveOrder();
     setIsRefreshing(false);
   };
-
-  // Cargar el último pedido reordenable — independiente del estatus para no
-  // bloquear el botón "Estatus" (en Pick & Go son 2 llamadas secuenciales).
-  // Resetea hasLastOrder cuando no hay sesión/pedido (evita botón fantasma al salir).
-  useEffect(() => {
-    let cancelled = false;
-    const checkLastOrder = async () => {
-      const clientId = user?.id || guestId;
-      if (!clientId || !restaurant?.id) {
-        setLastOrderItems([]);
-        setHasLastOrder(false);
-        return;
-      }
-      try {
-        const response = await pickAndGoService.getUserOrders(clientId, {
-          limit: 1,
-          restaurant_id: restaurant.id,
-        });
-        if (!response.success || !response.data?.length) {
-          if (!cancelled) {
-            setLastOrderItems([]);
-            setHasLastOrder(false);
-          }
-          return;
-        }
-        const detail = await pickAndGoService.getOrder(response.data[0].id);
-        const dishes = detail.data?.items?.filter((d) => d.menu_item_id) ?? [];
-        if (cancelled) return;
-        setLastOrderItems(dishes);
-        setHasLastOrder(dishes.length > 0);
-      } catch (error) {
-        console.error("Error checking last order:", error);
-      }
-    };
-    checkLastOrder();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, guestId, restaurant?.id]);
-
-  const handleReorder = () => setShowReorderModal(true);
 
   // Mostrar barra sticky al hacer scroll past el trigger
   useEffect(() => {
@@ -528,29 +516,6 @@ export default function MenuView() {
           {/* Nombre del restaurante + asistente */}
           <MenuRestaurantHeading
             name={restaurant.name}
-            actions={
-              activeOrders.length > 0 ? (
-                <>
-                  <button
-                    onClick={() =>
-                      setTimeout(() => setShowStatusModal(true), 400)
-                    }
-                    className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit active:scale-90 transition-all"
-                  >
-                    {activeOrders.length > 1 ? t("viewOrders") : t("orderStatus")}
-                  </button>
-                  {hasLastOrder && (
-                    <button
-                      onClick={handleReorder}
-                      className="bg-even-grass text-even-evergreen border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all flex items-center gap-1.5"
-                    >
-                      {tc("reorderCta")}
-                      <RefreshCw className="size-4" />
-                    </button>
-                  )}
-                </>
-              ) : undefined
-            }
           />
 
           <div className="w-full">
@@ -601,10 +566,39 @@ export default function MenuView() {
         count={totalItems}
         countLabel={(count) => t("fabCountLabel", { count })}
         hidden={
-          showDetail || introActive || showPepperChat || showSettingsModal || showCart
+          showDetail ||
+          introActive ||
+          showPepperChat ||
+          showSettingsModal ||
+          showCart ||
+          showOrdersSheet ||
+          pillVisible
         }
         labels={{ open: t("openMenu"), close: t("closeMenu") }}
       />
+
+      {/* Pedido activo: abre directo su detalle, con el avance del pedido */}
+      {fabProgress !== null && (
+        <OrderFab
+          progress={fabProgress}
+          label={t("activeOrderLabel")}
+          progressLabel={t("orderProgressLabel")}
+          hidden={
+            showDetail ||
+            introActive ||
+            showPepperChat ||
+            showSettingsModal ||
+            showCart ||
+            showOrdersSheet ||
+            showStatusModal
+          }
+          onClick={(event) => {
+            closeActionsMenu();
+            rememberStatusOrigin(event.currentTarget);
+            setShowStatusModal(true);
+          }}
+        />
+      )}
 
       {/* Bienvenida al cargar la página */}
       {introActive && (
@@ -652,9 +646,10 @@ export default function MenuView() {
       {/* Status Modal */}
       {showStatusModal && activeOrder && (
         <>
-<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={() => setShowStatusModal(false)} />
+<div ref={statusBackdropRef} className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={closeStatusModal} />
 <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
           <div
+            ref={statusCardRef}
             className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
@@ -680,7 +675,7 @@ export default function MenuView() {
             <div className="flex-shrink-0">
               <div className="w-full flex justify-end">
                 <button
-                  onClick={() => setShowStatusModal(false)}
+                  onClick={closeStatusModal}
                   className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
                 >
                   <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
@@ -986,6 +981,13 @@ export default function MenuView() {
           count={state.totalItems}
           aria-label={t("viewCart", { count: state.totalItems })}
         />
+        <PillOrderButton
+          onClick={() => {
+            closeActionsMenu();
+            setShowOrdersSheet(true);
+          }}
+          aria-label={t("ordersLabel")}
+        />
         <PillPepperButton
           onClick={() => {
             closeActionsMenu();
@@ -1050,6 +1052,28 @@ export default function MenuView() {
             </div>
           </Suspense>
         </div>
+      )}
+
+      {/* Hoja de pedidos */}
+      {showOrdersSheet && (
+        <Suspense fallback={null}>
+          <OrdersSheet
+            closing={isOrdersClosing}
+            onClose={closeOrdersSheet}
+            activeOrders={activeOrders}
+            clientId={user?.id || guestId}
+            restaurantId={restaurant?.id}
+            onOpenStatus={(index) => {
+              rememberStatusOrigin(null);
+              setActiveOrderIndex(index);
+              setShowStatusModal(true);
+            }}
+            onReorder={(items) => {
+              setLastOrderItems(items);
+              setShowReorderModal(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Settings Modal */}

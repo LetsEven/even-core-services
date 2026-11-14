@@ -117,6 +117,9 @@
     "noItemsAvailable": "No hay items disponibles",
     "viewCart": "Ver el carrito • {count}",
     "profileAlt": "Perfil",
+    "activeOrderLabel": "Ver pedido en curso",
+    "orderProgressLabel": "Progreso del pedido",
+    "ordersLabel": "Abrir pedidos",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
     "menuLabel": "Menú",
@@ -497,5 +500,13 @@
   "RestaurantIntro": {
     "title": "Bienvenida",
     "skip": "Toca para continuar"
+  },
+  "OrdersSheet": {
+    "title": "Pedidos",
+    "inProgress": "En curso",
+    "previous": "Anteriores",
+    "progressLabel": "Progreso del pedido",
+    "viewStatus": "Ver estatus",
+    "empty": "Aún no tienes pedidos anteriores"
   }
 }

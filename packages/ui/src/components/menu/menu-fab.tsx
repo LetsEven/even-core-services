@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { Menu, ShoppingCart, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { Menu, ShoppingBag, ShoppingCart, X } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { playMorphClose, playMorphOpen, prefersReducedMotion } from "../../lib/button-morph";
 
 export type MenuFabProps = {
   open: boolean;
@@ -67,6 +68,77 @@ export function MenuFab({ open, onToggle, count = 0, hidden = false, countLabel,
   );
 }
 
+const RING_R = 46;
+const RING_C = 2 * Math.PI * RING_R;
+
+/** Anillo que rodea al botón; se llena con el avance del pedido. */
+function ProgressRing({ value, label }: { value: number; label?: string }) {
+  const v = Math.min(1, Math.max(0, value));
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(v * 100)}
+      className="pointer-events-none absolute inset-[3px] size-[calc(100%-6px)] -rotate-90"
+    >
+      <circle cx="50" cy="50" r={RING_R} fill="none" strokeWidth="6" className="stroke-white/20" />
+      <circle
+        cx="50"
+        cy="50"
+        r={RING_R}
+        fill="none"
+        strokeWidth="6"
+        strokeLinecap="round"
+        className="stroke-even-grass transition-[stroke-dashoffset] duration-700 ease-out"
+        strokeDasharray={RING_C}
+        strokeDashoffset={RING_C * (1 - v)}
+      />
+    </svg>
+  );
+}
+
+export type OrderFabProps = {
+  /** Avance del pedido activo (0 a 1). */
+  progress: number;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  hidden?: boolean;
+  /** "Ver pedido en curso". */
+  label: string;
+  /** Texto del progreso para lectores de pantalla. */
+  progressLabel?: string;
+};
+
+/**
+ * Botón flotante del pedido activo, justo encima del botón del menú. Muestra el avance del pedido
+ * como un aro dentro del botón y abre directo el detalle de ese pedido.
+ */
+export function OrderFab({ progress, onClick, hidden = false, label, progressLabel }: OrderFabProps) {
+  return (
+    <div
+      className={cn(
+        "fixed right-5 z-[60] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:right-8",
+        hidden && "pointer-events-none translate-y-4 opacity-0",
+      )}
+      style={{ bottom: "calc(max(1.25rem, env(safe-area-inset-bottom)) + 4.25rem)" }}
+      inert={hidden}
+      aria-hidden={hidden}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className="relative flex size-12 items-center justify-center rounded-full bg-even-evergreen text-white shadow-lg before:absolute before:-inset-1 active:scale-90 md:size-14"
+      >
+        <ProgressRing value={progress} label={progressLabel} />
+        <ShoppingBag className="size-5 md:size-6" />
+      </button>
+    </div>
+  );
+}
+
 function FabIcon({ children }: { children: ReactNode }) {
   return <span className="flex items-center justify-center">{children}</span>;
 }
@@ -85,6 +157,34 @@ export type MenuActionsModalProps = {
  * Los hijos son `PillButton`, `PillCartButton` y `PillPepperButton`.
  */
 export function MenuActionsModal({ open, onClose, label, children }: MenuActionsModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(open);
+
+  // La píldora nace del botón flotante (#cart-icon): el botón viaja al centro y ahí se expande
+  // hasta la forma de la píldora; al cerrar vuelve a encogerse y regresa a su lugar.
+  useLayoutEffect(() => {
+    if (wasOpen.current === open) return;
+    wasOpen.current = open;
+    const dialog = dialogRef.current;
+    const fab = document.getElementById("cart-icon");
+    if (!dialog || !fab || prefersReducedMotion()) return;
+    const origin = fab.getBoundingClientRect();
+    if (open) {
+      playMorphOpen(dialog, origin, { fullRadius: "9999px" });
+    } else {
+      // React ya la dejó con opacity 0: se mantiene visible hasta que termine el viaje de regreso.
+      dialog.style.opacity = "1";
+      playMorphClose(
+        dialog,
+        origin,
+        () => {
+          dialog.style.opacity = "0";
+        },
+        { fullRadius: "9999px" },
+      );
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -112,17 +212,17 @@ export function MenuActionsModal({ open, onClose, label, children }: MenuActions
         aria-hidden={!open}
       >
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-label={label}
-          className="pointer-events-auto flex items-center gap-4 rounded-full border border-white/40 px-6 py-3 shadow-lg transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:gap-5 md:px-7 md:py-3.5"
+          className="pointer-events-auto flex items-center gap-4 rounded-full border border-white/40 px-6 py-3 shadow-lg md:gap-5 md:px-7 md:py-3.5"
           style={{
             background: "rgba(255, 255, 255, 0.82)",
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
-            transform: open ? "translateY(12vh) scale(1)" : "translateY(14vh) scale(0.96)",
+            transform: "translateY(12vh)",
             opacity: open ? 1 : 0,
-            transition: "transform 300ms cubic-bezier(0.32,0.72,0,1), opacity 200ms",
           }}
         >
           {children}

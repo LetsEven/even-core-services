@@ -669,7 +669,7 @@ export default function MenuView() {
                       d.getMinutes(),
                     ).padStart(2, "0")}`;
                   return (
-                    <div className="px-5 md:px-8 lg:px-10 mt-2 flex items-center gap-2 flex-wrap">
+                    <div className="px-5 md:px-8 lg:px-10 mt-2 flex items-center justify-center gap-2 flex-wrap">
                       <div className="flex gap-1 items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 text-sm text-white/70">
                         {tc("estimatedTime")}
                         <span>

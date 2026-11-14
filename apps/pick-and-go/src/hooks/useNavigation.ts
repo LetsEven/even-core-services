@@ -3,6 +3,7 @@
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { useRestaurant } from "../context/RestaurantContext";
+import { startRouteTransition } from "../lib/route-transition";
 
 /**
  * Hook de navegación para Pick & Go
@@ -64,11 +65,13 @@ export function useNavigation() {
         fullPath = `${fullPath}${separator}branch=${finalBranchNumber}`;
       }
 
-      if (replace) {
-        router.replace(fullPath);
-      } else {
-        router.push(fullPath);
-      }
+      startRouteTransition(fullPath, () => {
+        if (replace) {
+          router.replace(fullPath);
+        } else {
+          router.push(fullPath);
+        }
+      });
     },
     [router, currentRestaurantId, currentBranchNumber]
   );

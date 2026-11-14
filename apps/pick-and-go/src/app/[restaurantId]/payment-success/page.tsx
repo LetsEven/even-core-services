@@ -570,7 +570,7 @@ export default function PaymentSuccessPage() {
   };
 
   return (
-    <div className="min-h-dvh overflow-hidden brand-evergreen flex flex-col">
+    <div className="relative z-10 isolate min-h-dvh overflow-hidden flex flex-col">
       <div>
         {/* Modal notificacion pedido */}
         {showOrderNotificationModal && (
@@ -689,12 +689,11 @@ export default function PaymentSuccessPage() {
 
       {/* Ticket Modal */}
       {isTicketModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
-          onClick={() => setIsTicketModalOpen(false)}
-        >
+        <>
+<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999" onClick={() => setIsTicketModalOpen(false)} />
+<div className="fixed inset-0 z-999 flex items-center justify-center pointer-events-none">
           <div
-            className="bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[77vh] flex flex-col"
+            className="pointer-events-auto bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[77vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex justify-end flex-shrink-0">
@@ -892,6 +891,7 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
         </div>
+</>
       )}
 
       {/* Breakdown Modal */}
@@ -994,12 +994,11 @@ export default function PaymentSuccessPage() {
 
       {/* Status Modal */}
       {isStatusModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999] flex items-center justify-center"
-          onClick={() => setIsStatusModalOpen(false)}
-        >
+        <>
+<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={() => setIsStatusModalOpen(false)} />
+<div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
           <div
-            className="relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Flechas de navegación entre órdenes */}
@@ -1301,6 +1300,7 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
         </div>
+</>
       )}
 
       {/* Reorder Modal */}

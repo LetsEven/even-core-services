@@ -12,12 +12,11 @@ export default function HighDemandBanner({ onDismiss }: Props) {
   const t = useTranslations("HighDemandBanner");
   const tc = useTranslations("Common");
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[99999] flex items-center justify-center animate-fade-in"
-      onClick={onDismiss}
-    >
+    <>
+<div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[99999] animate-fade-in" onClick={onDismiss} />
+<div className="fixed inset-0 z-[99999] flex items-center justify-center pointer-events-none">
       <div
-        className="relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 rounded-4xl overflow-hidden animate-slide-up"
+        className="pointer-events-auto relative bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 rounded-4xl overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -53,7 +52,8 @@ export default function HighDemandBanner({ onDismiss }: Props) {
           </button>
         </div>
       </div>
-    </div>,
+    </div>
+</>,
     document.body,
   );
 }

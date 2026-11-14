@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { cn } from "../lib/cn";
+import { useBlurredImage } from "../lib/blurred-image";
 
 /**
  * Layout compartido de las vistas "tarjeta sobre fondo" del flujo de compra
@@ -23,10 +24,43 @@ const SHEET_PADDING_X = "px-6 md:px-8 lg:px-10";
  * tarjetas ancladas al fondo) que no pueden usar los componentes.
  */
 export const sheetClasses = {
-  screen: "brand-evergreen flex min-h-dvh flex-col",
-  hero: "z-0 mx-4 translate-y-7 rounded-t-4xl bg-even-evergreen md:mx-6 lg:mx-8",
-  card: cn("relative z-10 flex w-full flex-1 flex-col rounded-t-4xl bg-white", SHEET_PADDING_X),
+  screen: "relative z-10 isolate flex min-h-dvh flex-col",
+  hero: "sheet-hero z-0 mx-4 translate-y-7 rounded-t-4xl md:mx-6 lg:mx-8",
+  card: cn("sheet-card relative z-10 flex w-full flex-1 flex-col rounded-t-4xl bg-white", SHEET_PADDING_X),
 } as const;
+
+export type SheetBackdropProps = Omit<ComponentProps<"div">, "children"> & {
+  /** Imagen del restaurante (banner). Sin ella queda el verde de marca. */
+  imageUrl?: string | null;
+};
+
+/**
+ * Fondo común de todo el flujo de compra: la imagen del restaurante desenfocada
+ * y oscurecida. Se monta una sola vez en un layout (no por vista) y las pantallas
+ * (`SheetScreen`) quedan transparentes por encima.
+ */
+export function SheetBackdrop({ imageUrl, className, ...props }: SheetBackdropProps) {
+  // Miniatura ya desenfocada y cacheada; si no se puede generar (sin CORS) se usa
+  // la original con desenfoque CSS.
+  const blurred = useBlurredImage(imageUrl);
+  return (
+    <div
+      aria-hidden
+      className={cn("pointer-events-none fixed inset-0 z-0 overflow-hidden bg-even-evergreen", className)}
+      {...props}
+    >
+      {imageUrl && blurred !== undefined && (
+        // eslint-disable-next-line @next/next/no-img-element -- UI compartida, sin dependencia de next/image
+        <img
+          src={blurred ?? imageUrl}
+          alt=""
+          className={cn("absolute inset-0 size-full object-cover", blurred ? "scale-105" : "scale-110 blur-xl")}
+        />
+      )}
+      {imageUrl && <div className="absolute inset-0 bg-black/30" />}
+    </div>
+  );
+}
 
 export type SheetScreenProps = ComponentProps<"div">;
 

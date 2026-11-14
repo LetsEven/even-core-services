@@ -16,7 +16,8 @@ import { PepperProvider } from "@/context/PepperContext";
 import AuthCartSync from "@/components/AuthCartSync";
 import TermsUpdateToast from "@/components/TermsUpdateToast";
 import EnvBadge from "@/components/EnvBadge";
-import Script from "next/script";
+import RouteTransitionGate from "@/components/RouteTransitionGate";
+import EcartPaySdk from "@/components/EcartPaySdk";
 
 const dmMono = DM_Mono({
   subsets: ["latin"],
@@ -68,11 +69,9 @@ export default async function RootLayout({
         className={`${dmMono.variable} ${jakarta.variable} antialiased`}
         style={{ fontFamily: "var(--font-dm-mono)" }}
       >
-        <Script
-          src="https://pay.ecart.com/sdk/pay.js"
-          strategy="afterInteractive"
-        />
+        <EcartPaySdk />
         <EnvBadge />
+        <RouteTransitionGate />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
             <TermsUpdateToast />

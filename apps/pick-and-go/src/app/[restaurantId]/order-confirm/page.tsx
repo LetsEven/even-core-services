@@ -171,9 +171,11 @@ export default function OrderConfirmPage() {
 
   if (isLoadingInitial) {
     return (
-      <div className="h-screen overflow-hidden brand-evergreen flex flex-col">
+      <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
         <div className="fixed top-0 left-0 right-0 z-50">
-          <MenuHeaderBack />
+          <MenuHeaderBack
+            onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
+          />
         </div>
         <div className="h-20" />
 
@@ -223,10 +225,12 @@ export default function OrderConfirmPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden brand-evergreen flex flex-col">
+    <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
       {/* Header fijo */}
       <div className="fixed top-0 left-0 right-0 z-50">
-        <MenuHeaderBack />
+        <MenuHeaderBack
+            onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
+          />
       </div>
       <div className="h-20" />
 

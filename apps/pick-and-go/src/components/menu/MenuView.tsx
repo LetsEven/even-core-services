@@ -64,6 +64,7 @@ import { useGuest } from "@/context/GuestContext";
 const ReorderModal = lazy(() => import("../modals/ReorderModal"));
 
 const ChatView = lazy(() => import("../ChatView"));
+const CartView = lazy(() => import("../CartView"));
 const AuthView = lazy(() => import("./../AuthView"));
 const DashboardView = lazy(() => import("./../DashboardView"));
 const RestaurantClosedModal = lazy(() => import("../RestaurantClosedModal"));
@@ -160,6 +161,8 @@ export default function MenuView() {
   const [showPepperChat, setShowPepperChat] = useState(false);
   const [isPepperClosing, setIsPepperClosing] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const [isCartClosing, setIsCartClosing] = useState(false);
   const [isSettingsClosing, setIsSettingsClosing] = useState(false);
   const [dashboardInitialTab, setDashboardInitialTab] = useState<
     "profile" | "cards" | "history" | "support"
@@ -189,14 +192,14 @@ export default function MenuView() {
   // No capturamos "previous" del DOM: el effect de arriba ya lo dejó en
   // "#ffffff", así que ese es el valor correcto al que hay que volver.
   useEffect(() => {
-    const modalOpen = showPepperChat || showSettingsModal;
+    const modalOpen = showPepperChat || showSettingsModal || showCart;
     document.body.style.backgroundColor = modalOpen
       ? "var(--color-overscroll)"
       : "var(--color-background)";
     return () => {
       document.body.style.backgroundColor = "var(--color-background)";
     };
-  }, [showPepperChat, showSettingsModal]);
+  }, [showPepperChat, showSettingsModal, showCart]);
 
   const pillVisible = menuOpenByUser && !showDetail && !introActive;
   const closeActionsMenu = useCallback(() => setMenuOpenByUser(false), []);
@@ -207,6 +210,14 @@ export default function MenuView() {
     setTimeout(() => {
       setShowPepperChat(false);
       setIsPepperClosing(false);
+    }, 380);
+  };
+
+  const closeCart = () => {
+    setIsCartClosing(true);
+    setTimeout(() => {
+      setShowCart(false);
+      setIsCartClosing(false);
     }, 380);
   };
 
@@ -230,6 +241,7 @@ export default function MenuView() {
   useModalBackClose(showDetail, () => closeDetail());
   useModalBackClose(showPepperChat, () => closePepperChat());
   useModalBackClose(showSettingsModal, () => closeSettingsModal());
+  useModalBackClose(showCart, () => closeCart());
 
   // Logout desde el modal: primero cerrar con animación, luego limpiar la
   // sesión. Si se limpia antes, el modal re-renderiza su contenido como
@@ -247,6 +259,7 @@ export default function MenuView() {
   useScrollLock(
     showPepperChat ||
       showSettingsModal ||
+      showCart ||
       showStatusModal ||
       showReorderModal ||
       showDetail ||
@@ -259,6 +272,7 @@ export default function MenuView() {
       import("./../DashboardView");
       import("./../AuthView");
       import("./../ChatView");
+      import("./../CartView");
     }, 1500);
     return () => clearTimeout(t);
   }, []);
@@ -585,7 +599,9 @@ export default function MenuView() {
         onToggle={() => setMenuOpenByUser((open) => !open)}
         count={totalItems}
         countLabel={(count) => t("fabCountLabel", { count })}
-        hidden={showDetail || introActive || showPepperChat || showSettingsModal}
+        hidden={
+          showDetail || introActive || showPepperChat || showSettingsModal || showCart
+        }
         labels={{ open: t("openMenu"), close: t("closeMenu") }}
       />
 
@@ -964,7 +980,7 @@ export default function MenuView() {
         <PillCartButton
           onClick={() => {
             closeActionsMenu();
-            navigateWithRestaurantId("/cart");
+            setShowCart(true);
           }}
           count={state.totalItems}
           aria-label={t("viewCart", { count: state.totalItems })}
@@ -1014,6 +1030,35 @@ export default function MenuView() {
             </Suspense>
           </div>
         </>
+      )}
+
+      {/* Carrito: la imagen del restaurante desenfocada queda de fondo y solo
+          la tarjeta sube desde abajo, tapando el menú */}
+      {showCart && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div
+            className="absolute inset-0 bg-even-evergreen"
+            style={{
+              animation: isCartClosing
+                ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "fade-in 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
+            {restaurant.banner_url && (
+              <img
+                src={restaurant.banner_url}
+                alt=""
+                className="absolute inset-0 size-full scale-110 object-cover blur-xl"
+              />
+            )}
+            <div className="absolute inset-0 bg-black/30" />
+          </div>
+          <Suspense fallback={null}>
+            <div className="relative h-full">
+              <CartView onClose={closeCart} closing={isCartClosing} />
+            </div>
+          </Suspense>
+        </div>
       )}
 
       {/* Settings Modal */}

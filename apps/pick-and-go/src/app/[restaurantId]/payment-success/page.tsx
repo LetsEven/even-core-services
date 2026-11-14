@@ -35,7 +35,7 @@ import InvoiceModal from "../../../components/modals/InvoiceModal";
 import OrderNotificationModal from "@/components/modals/OrderNotificationModal";
 import { invoiceService } from "../../../services/invoice.service";
 import { ticketService } from "../../../services/ticket.service";
-import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
+import { lockScroll, sheetClasses, unlockScroll, useModalBackClose } from "@even/ui";
 import ItemCustomizations from "@/components/ItemCustomizations";
 
 const ReorderModal = lazy(
@@ -589,9 +589,9 @@ export default function PaymentSuccessPage() {
         />
       </div>
 
-      <div className="px-4 md:px-6 lg:px-8 w-full animate-slide-up">
+      <div className="w-full animate-slide-up">
         <div className="flex-1 flex flex-col">
-          <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+          <div className={sheetClasses.hero}>
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center items-center mb-6 md:mb-8 lg:mb-10 mt-2 md:mt-4 lg:mt-6 gap-2 md:gap-3 lg:gap-4">
               <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight">
                 {t("heroTitle")}
@@ -602,7 +602,7 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-80 justify-center px-6 md:px-8 lg:px-10 flex-1">
+          <div className={`${sheetClasses.card} min-h-80 justify-center`}>
             {/* Action Buttons */}
             <div
               className="space-y-3 md:space-y-4 lg:space-y-5"

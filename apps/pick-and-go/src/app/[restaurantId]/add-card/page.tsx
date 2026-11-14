@@ -3,6 +3,7 @@
 // NOTE: This page is maintained for users who want to manage payment methods separately
 // Main payment flows now use EcartPay SDK directly in payment/page.tsx and add-tip/page.tsx
 
+import { sheetClasses } from "@even/ui";
 import { Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -300,8 +301,8 @@ function AddCardContent() {
       <div className="min-h-screen brand-evergreen flex flex-col">
         <MenuHeaderBack onBack={handleBack} />
 
-        <div className="px-4 w-full flex-1 flex flex-col justify-end">
-          <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+        <div className="w-full flex-1 flex flex-col justify-end">
+          <div className={sheetClasses.hero}>
             <div className="pt-6 pb-12 px-8 flex flex-col justify-center">
               <h2 className="font-medium text-white text-3xl leading-7 mt-2 mb-2">
                 {t("title")}
@@ -311,7 +312,7 @@ function AddCardContent() {
           </div>
 
           <div className="flex-1 h-full flex flex-col">
-            <div className="min-h-full bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 py-6">
+            <div className={`${sheetClasses.card} min-h-full py-6`}>
               {/* Test Card Helper */}
               {process.env.NODE_ENV === "development" && (
                 <div className="bg-info-50 border border-info-200 rounded-lg p-4 mb-4">

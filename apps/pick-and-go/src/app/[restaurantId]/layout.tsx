@@ -1,3 +1,5 @@
+import { MotionProvider } from "@even/ui";
+import DishFlight from "@/components/DishFlight";
 import FlowBackdrop from "@/components/FlowBackdrop";
 import FlowNavOverlay from "@/components/FlowNavOverlay";
 
@@ -5,7 +7,10 @@ export default function RestaurantLayout({ children }: LayoutProps<"/[restaurant
   return (
     <>
       <FlowBackdrop />
-      {children}
+      <MotionProvider>
+        {children}
+        <DishFlight />
+      </MotionProvider>
       <FlowNavOverlay />
     </>
   );

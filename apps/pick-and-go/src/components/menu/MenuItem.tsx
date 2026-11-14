@@ -10,9 +10,10 @@ import { useCart } from "../../context/CartContext";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useRestaurant } from "../../context/RestaurantContext";
-import { MenuProductCard, MenuQuickAddModal, rememberMenuPosition } from "@even/ui";
+import { MenuProductCard, rememberMenuPosition } from "@even/ui";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
 import OutOfStockModal from "../OutOfStockModal";
+import { startDishFlight } from "../../lib/dish-transition";
 import { usePersonalItemDiscounts } from "../../hooks/usePersonalItemDiscounts";
 
 interface MenuItemProps {
@@ -59,7 +60,6 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
   const [localQuantity, setLocalQuantity] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Verificar si el item está agotado en la sucursal actual
@@ -93,11 +93,12 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
     if (card) {
       rememberMenuPosition(String(restaurantId), String(adaptedItem.id), card);
     }
+    if (showImages) startDishFlight(adaptedItem.id, adaptedItem.images[0], card);
     navigateToDish(adaptedItem.id);
   };
 
   // Requiere configuración si tiene cualquier custom_field (obligatorio u opcional: tamaño, leche, extras...).
-  // Esos productos se agregan desde /dish/[id]; el resto, desde el mini modal de la tarjeta.
+  // Con configuración, el "+" de la píldora abre el detalle; sin ella agrega 1 directo.
   const requiresConfiguration = useMemo(() => {
     const cf = (item as MenuItemDB).custom_fields as unknown;
     if (!cf) return false;
@@ -252,21 +253,14 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
 
   const formatPrice = (amount: number) => `$${amount.toFixed(2)}`;
 
-  // Tocar la tarjeta: agotado -> modal de agotado; con configuración -> detalle; sin configuración -> mini modal.
+  // Tocar la tarjeta: agotado -> modal de agotado; si no, detalle del producto.
   const handleCardOpen = (card: HTMLElement) => {
     if (isOutOfStock) {
       setShowOutOfStockModal(true);
       return;
     }
-    if (requiresConfiguration) {
-      openDish(card);
-      return;
-    }
-    if (!isOpen) {
-      onRestaurantClosed?.();
-      return;
-    }
-    setShowQuickAdd(true);
+    // Todos los productos abren el mismo detalle (con o sin opciones).
+    openDish(card);
   };
 
   // "+" de la píldora (cantidad > 0): con configuración lleva al detalle; sin ella agrega 1.
@@ -288,18 +282,6 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
         isOpen={showOutOfStockModal}
         onClose={() => setShowOutOfStockModal(false)}
         itemName={adaptedItem.name}
-      />
-      <MenuQuickAddModal
-        open={showQuickAdd}
-        onClose={() => setShowQuickAdd(false)}
-        onConfirm={() => void handleAddToCart()}
-        name={adaptedItem.name}
-        description={adaptedItem.description}
-        imageUrl={adaptedItem.images[0]}
-        priceLabel={formatPrice(
-          adaptedItem.price * (1 - effectiveDiscount / 100),
-        )}
-        labels={{ add: tc("quickAddAdd"), back: tc("quickAddBack") }}
       />
       <MenuProductCard
         id={adaptedItem.id}

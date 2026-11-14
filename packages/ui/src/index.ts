@@ -97,6 +97,7 @@ export {
 } from "./components/menu/menu-fab";
 export { FabDock, type DockItem, type FabDockProps } from "./components/menu/fab-dock";
 export { MorphPanel, type MorphPanelProps } from "./components/menu/morph-panel";
+export { MotionProvider, SPRING } from "./components/menu/motion-provider";
 export { MenuProductCard, type MenuProductCardProps } from "./components/menu/menu-product-card";
 export { MenuQuickAddModal, type MenuQuickAddModalProps } from "./components/menu/menu-quick-add-modal";
 export { MenuRestaurantHeading, type MenuRestaurantHeadingProps } from "./components/menu/menu-restaurant-heading";

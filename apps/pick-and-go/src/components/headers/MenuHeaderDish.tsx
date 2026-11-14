@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { startDishClose } from "@/lib/dish-transition";
 
 export default function MenuHeaderDish() {
   const router = useRouter();
 
   const handleBack = () => {
+    startDishClose();
     router.back();
   };
 

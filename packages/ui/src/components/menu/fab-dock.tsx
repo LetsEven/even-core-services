@@ -184,7 +184,7 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
               </m.span>
             </AnimatePresence>
           </button>
-          {hasItems && (
+          {hasItems && !open && (
             <div
               id="cart-badge"
               key={count}

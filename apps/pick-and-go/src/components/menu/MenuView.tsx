@@ -6,6 +6,9 @@ import RestaurantDetailCard, {
   DETAIL_ANIMATION_MS,
 } from "./RestaurantDetailCard";
 import RestaurantIntro from "./RestaurantIntro";
+import OrderDetailCarousel from "./OrderDetailCarousel";
+import OrderTicketSlide from "./OrderTicketSlide";
+import OrderNotificationModal from "../modals/OrderNotificationModal";
 import {
   CategoryTabs,
   FabDock,
@@ -47,8 +50,10 @@ import {
   Suspense,
 } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import type { MenuItemData } from "../../interfaces/menuItemData";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { useBranch } from "../../context/BranchContext";
 import { useNavigation } from "../../hooks/useNavigation";
@@ -62,8 +67,9 @@ import {
   type PickAndGoItem,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
+import { useIsOffSchedule } from "../../hooks/useCartAvailability";
 import { overallProgress, useNow } from "../../lib/orderProgress";
-const ReorderModal = lazy(() => import("../modals/ReorderModal"));
+import { mapOrderToActiveOrderData } from "../../lib/mapOrder";
 const OrdersSheet = lazy(() => import("./OrdersSheet"));
 
 const ChatView = lazy(() => import("../ChatView"));
@@ -151,11 +157,15 @@ export default function MenuView() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const closeStatusModal = () => setShowStatusModal(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showReorderModal, setShowReorderModal] = useState(false);
-  const [lastOrderItems, setLastOrderItems] = useState<PickAndGoItem[]>([]);
   const { user, profile, isAuthenticated, logout } = useAuth();
-  const { state, refreshCart } = useCart();
-  const { restaurant, menu, error } = useRestaurant();
+  const { state, refreshCart, addItem } = useCart();
+  const {
+    restaurant,
+    menu,
+    error,
+    isOpen: restaurantIsOpen,
+  } = useRestaurant();
+  const isOffSchedule = useIsOffSchedule();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
   const { branches, selectedBranchNumber } = useBranch();
 
@@ -277,7 +287,6 @@ export default function MenuView() {
       showCart ||
       showOrdersSheet ||
       showStatusModal ||
-      showReorderModal ||
       showDetail ||
       introActive,
   );
@@ -305,31 +314,103 @@ export default function MenuView() {
     activeOrder?.pick_and_go_order?.cooking_status ?? "idle",
   );
 
-  const checkActiveOrder = useCallback(async () => {
-    const clientId = user?.id || guestId;
-    if (!clientId || !restaurant?.id) {
-      setActiveOrders([]);
-      setActiveOrderIndex(0);
+  // Reordenar: agrega al carrito los productos del pedido (omitiendo los
+  // agotados o fuera de horario) y abre directo la vista del carrito para que
+  // el usuario agregue o quite lo que quiera.
+  const handleReorder = async (items: PickAndGoItem[]) => {
+    if (!restaurantIsOpen) {
+      closeOrdersSheet();
+      setShowClosedModal(true);
       return;
     }
-    try {
-      const response: any = await pickAndGoService.getActiveOrderByUser(
-        clientId,
-        restaurant.id,
-      );
-      if (response.hasActiveOrder && response.orders?.length > 0) {
-        setActiveOrders(response.orders);
-        setActiveOrderIndex((prev) =>
-          prev < response.orders.length ? prev : 0,
-        );
-      } else {
-        setActiveOrders([]);
-        setActiveOrderIndex(0);
+    const outOfStockIds = new Set<number>();
+    for (const section of menu ?? []) {
+      for (const it of section.items ?? []) {
+        if (it.is_out_of_stock) outOfStockIds.add(it.id);
       }
+    }
+    const available = items.filter(
+      (it) =>
+        it.menu_item_id &&
+        !outOfStockIds.has(it.menu_item_id) &&
+        !isOffSchedule(it.menu_item_id),
+    );
+    closeOrdersSheet();
+    setShowCart(true);
+    for (const it of available) {
+      await addItem(
+        {
+          id: it.menu_item_id!,
+          name: it.item,
+          description: "",
+          price: it.price,
+          images: it.images,
+          features: [],
+          discount: 0,
+          customFields:
+            (it.custom_fields as MenuItemData["customFields"]) ?? [],
+          extraPrice: it.extra_price,
+        },
+        it.quantity || 1,
+        it.special_instructions,
+      );
+    }
+  };
+
+  // Pedido recién pagado (?order=<id>): la sesión de guest se limpia tras el
+  // pago, así que "pedidos activos del usuario" puede no encontrarlo; se
+  // consulta directo por id como respaldo.
+  const searchParams = useSearchParams();
+  const justPaidOrderId = useRef<string | null>(searchParams.get("order"));
+  const justPaidHandled = useRef(false);
+  const [showOrderNotification, setShowOrderNotification] = useState(false);
+
+  const checkActiveOrder = useCallback(async () => {
+    const clientId = user?.id || guestId;
+    let orders: NonNullable<ActiveOrderResponse["data"]>[] = [];
+    try {
+      if (clientId && restaurant?.id) {
+        const response: any = await pickAndGoService.getActiveOrderByUser(
+          clientId,
+          restaurant.id,
+        );
+        if (response.hasActiveOrder && response.orders?.length > 0) {
+          orders = response.orders;
+        }
+      }
+      const paidId = justPaidOrderId.current;
+      if (
+        paidId &&
+        !orders.some((o) => String(o.pick_and_go_order?.id) === paidId)
+      ) {
+        const res = await pickAndGoService.getOrder(paidId);
+        if (res.success && res.data) {
+          orders = [...orders, mapOrderToActiveOrderData(res.data)];
+        }
+      }
+      setActiveOrders(orders);
+      setActiveOrderIndex((prev) => (prev < orders.length ? prev : 0));
     } catch (error) {
       console.error("Error checking active order:", error);
     }
   }, [user?.id, guestId, restaurant?.id]);
+
+  // Tras pagar: abrir automáticamente el detalle del pedido en curso.
+  useEffect(() => {
+    const paidId = justPaidOrderId.current;
+    if (!paidId || justPaidHandled.current) return;
+    const idx = activeOrders.findIndex(
+      (o) => String(o.pick_and_go_order?.id) === paidId,
+    );
+    if (idx < 0) return;
+    justPaidHandled.current = true;
+    setActiveOrderIndex(idx);
+    setShowStatusModal(true);
+    setShowOrderNotification(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("order");
+    window.history.replaceState({}, "", url);
+  }, [activeOrders]);
 
   useEffect(() => {
     checkActiveOrder();
@@ -593,13 +674,19 @@ export default function MenuView() {
         </Suspense>
       )}
 
+      {showOrderNotification && (
+        <OrderNotificationModal
+          onDismiss={() => setShowOrderNotification(false)}
+        />
+      )}
+
       {/* Status Modal */}
       <MorphPanel
         open={showStatusModal && !!activeOrder}
         onClose={closeStatusModal}
         layoutId="active-order"
         label={t("activeOrderLabel")}
-        className="mx-4 max-h-[88vh] bg-even-evergreen/95 border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] md:mx-12 lg:mx-28"
+        className="mx-4 max-h-[88vh] overflow-visible md:mx-12 lg:mx-28"
         radius={32}
       >
         {activeOrder && (
@@ -622,73 +709,93 @@ export default function MenuView() {
                 </button>
               </>
             )}
-            {/* Header */}
-            <div className="flex-shrink-0">
-              <div className="px-5 md:px-8 lg:px-10 pt-4 md:pt-5 flex items-center gap-3 md:gap-4">
-                {restaurant?.logo_url ? (
-                  <img
-                    src={restaurant.logo_url}
-                    alt={restaurant.name}
-                    className="size-11 md:size-14 lg:size-16 object-cover rounded-lg shrink-0"
-                  />
-                ) : (
-                  <Utensils className="size-11 md:size-14 lg:size-16 text-white shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-semibold leading-tight truncate">
-                    {tc("orderNumber", {
-                      folio: activeOrder.pick_and_go_order?.folio || "---",
-                    })}
-                  </h2>
-                  <p className="text-sm md:text-base text-white/80 font-medium truncate">
-                    {activeOrders.length > 1
-                      ? tc("orderIndexOf", {
-                          index: activeOrderIndex + 1,
-                          count: activeOrders.length,
-                        })
-                      : activeOrder.pick_and_go_order?.customer_name ||
-                        "Pick & Go"}
-                  </p>
+            {(() => {
+              const orderHeader = (
+              <div className="flex-shrink-0">
+                <div className="px-5 md:px-8 lg:px-10 pt-4 md:pt-5 flex items-center gap-3 md:gap-4">
+                  {restaurant?.logo_url ? (
+                    <img
+                      src={restaurant.logo_url}
+                      alt={restaurant.name}
+                      className="size-11 md:size-14 lg:size-16 object-cover rounded-lg shrink-0"
+                    />
+                  ) : (
+                    <Utensils className="size-11 md:size-14 lg:size-16 text-white shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-semibold leading-tight truncate">
+                      {tc("orderNumber", {
+                        folio: activeOrder.pick_and_go_order?.folio || "---",
+                      })}
+                    </h2>
+                    <p className="text-sm md:text-base text-white/80 font-medium truncate">
+                      {activeOrders.length > 1
+                        ? tc("orderIndexOf", {
+                            index: activeOrderIndex + 1,
+                            count: activeOrders.length,
+                          })
+                        : [
+                            "Pick & Go",
+                            activeOrder.pick_and_go_order?.created_at &&
+                              new Date(
+                                activeOrder.pick_and_go_order.created_at,
+                              ).toLocaleTimeString(undefined, {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={closeStatusModal}
+                    className="p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors shrink-0 self-start"
+                  >
+                    <X className="size-6 md:size-7 text-white" />
+                  </button>
                 </div>
-                <button
-                  onClick={closeStatusModal}
-                  className="p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors shrink-0 self-start"
-                >
-                  <X className="size-6 md:size-7 text-white" />
-                </button>
-              </div>
-              {activeOrder.pick_and_go_order?.cooking_status === "preparing" &&
-                (() => {
-                  const prepMins =
-                    activeOrder.pick_and_go_order?.prep_time_minutes ?? 15;
-                  const rangeStart = new Date(
-                    new Date(
-                      activeOrder.pick_and_go_order?.created_at ?? "",
-                    ).getTime() +
-                      prepMins * 60_000,
-                  );
-                  const rangeEnd = new Date(rangeStart.getTime() + 5 * 60_000);
-                  const fmt = (d: Date) =>
-                    `${String(d.getHours()).padStart(2, "0")}:${String(
-                      d.getMinutes(),
-                    ).padStart(2, "0")}`;
-                  return (
-                    <div className="px-5 md:px-8 lg:px-10 mt-2 flex items-center justify-center gap-2 flex-wrap">
-                      <div className="flex gap-1 items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 text-sm text-white/70">
-                        {tc("estimatedTime")}
-                        <span>
-                          {fmt(rangeStart)} - {fmt(rangeEnd)}
-                        </span>
+                {activeOrder.pick_and_go_order?.cooking_status === "preparing" &&
+                  (() => {
+                    const prepMins =
+                      activeOrder.pick_and_go_order?.prep_time_minutes ?? 15;
+                    const rangeStart = new Date(
+                      new Date(
+                        activeOrder.pick_and_go_order?.created_at ?? "",
+                      ).getTime() +
+                        prepMins * 60_000,
+                    );
+                    const rangeEnd = new Date(rangeStart.getTime() + 5 * 60_000);
+                    const fmt = (d: Date) =>
+                      `${String(d.getHours()).padStart(2, "0")}:${String(
+                        d.getMinutes(),
+                      ).padStart(2, "0")}`;
+                    return (
+                      <div className="px-5 md:px-8 lg:px-10 mt-2 flex items-center justify-center gap-2 flex-wrap">
+                        <div className="flex gap-1 items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 text-sm text-white/70">
+                          {tc("estimatedTime")}
+                          <span>
+                            {fmt(rangeStart)} - {fmt(rangeEnd)}
+                          </span>
+                        </div>
+                        {extraMinutesAdded > 0 && (
+                          <span className="text-xs font-medium text-positive-300 bg-positive-500/20 border border-positive-400/30 px-2 py-0.5 rounded-full">
+                            {tc("extraMinutes", { minutes: extraMinutesAdded })}
+                          </span>
+                        )}
                       </div>
-                      {extraMinutesAdded > 0 && (
-                        <span className="text-xs font-medium text-positive-300 bg-positive-500/20 border border-positive-400/30 px-2 py-0.5 rounded-full">
-                          {tc("extraMinutes", { minutes: extraMinutesAdded })}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
-
+                    );
+                  })()}
+  
+                </div>
+              );
+              return (
+            <OrderDetailCarousel labels={[tc("statusSlideLabel"), tc("ticketSlideLabel")]}>
+            {/* Slide 1: Estatus del pedido */}
+            <div className="flex h-full w-full shrink-0 snap-center snap-always items-center px-1">
+              <div className="flex w-full max-h-[76vh] flex-col overflow-hidden rounded-[32px] border border-white/20 bg-even-evergreen/95 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
+                {orderHeader}
+                <div className="min-h-0 flex-1 overflow-y-auto">
               {/* Estatus General - 3 pasos */}
               <div className="px-6 md:px-8 lg:px-10 mt-3 mb-3 md:mb-4">
                 <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
@@ -829,10 +936,9 @@ export default function MenuView() {
                   </button>
                 </div>
               </div>
-            </div>
 
             {/* Order Items - Scrollable */}
-            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
+            <div className="px-6 md:px-8 lg:px-10 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
               {isRefreshing ? (
                 <div className="flex justify-center items-center py-12 md:py-16 lg:py-20">
                   <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-white" />
@@ -889,6 +995,25 @@ export default function MenuView() {
                 </div>
               )}
             </div>
+                </div>
+              </div>
+            </div>
+            {/* Slide 2: Ticket de compra (contenedor de cristal independiente) */}
+            <div className="flex h-full w-full shrink-0 snap-center snap-always items-center px-1">
+              <div className="flex w-full max-h-[76vh] flex-col overflow-hidden rounded-[32px] border border-white/20 bg-even-evergreen/95 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
+                {orderHeader}
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <OrderTicketSlide
+                    order={activeOrder}
+                    restaurantId={restaurant?.id ?? 0}
+                    isAuthenticated={isAuthenticated}
+                  />
+                </div>
+              </div>
+            </div>
+            </OrderDetailCarousel>
+              );
+            })()}
           </>
         )}
       </MorphPanel>
@@ -1045,10 +1170,7 @@ export default function MenuView() {
               setActiveOrderIndex(index);
               setShowStatusModal(true);
             }}
-            onReorder={(items) => {
-              setLastOrderItems(items);
-              setShowReorderModal(true);
-            }}
+            onReorder={handleReorder}
           />
         </Suspense>
       )}
@@ -1098,15 +1220,6 @@ export default function MenuView() {
           </div>
         </div>
       )}
-
-      {/* Reorder Modal */}
-      <Suspense fallback={null}>
-        <ReorderModal
-          isOpen={showReorderModal}
-          onClose={() => setShowReorderModal(false)}
-          items={lastOrderItems}
-        />
-      </Suspense>
 
       {/* Restaurant Closed Modal */}
       <Suspense fallback={null}>

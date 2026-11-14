@@ -422,6 +422,8 @@
     "reorderCta": "Reorder",
     "invoiceCta": "Invoice",
     "orderItems": "Order items",
+    "statusSlideLabel": "Status",
+    "ticketSlideLabel": "Receipt",
     "statusPreparing": "Preparing",
     "statusReady": "Ready",
     "statusDelivered": "Delivered",

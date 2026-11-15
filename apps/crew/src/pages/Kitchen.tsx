@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import OrderCarousel from "../components/OrderCarousel";
+import KitchenBoard from "../components/KitchenBoard";
 import { useRegisterRefresh } from "../app/refresh";
 import { syncTapPayOrderFromPOS, saveFcmToken } from "../services/api";
 import type { Branch } from "../services/api";
@@ -223,7 +223,7 @@ export default function Kitchen({
             </button>
           </div>
         ) : (
-          <OrderCarousel
+          <KitchenBoard
             orders={orders}
             onDishStatusChange={updateDish}
             onOrderCookingStatusChange={updateOrderCookingStatus}

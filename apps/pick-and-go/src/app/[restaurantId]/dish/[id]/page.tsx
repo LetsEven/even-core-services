@@ -13,7 +13,8 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { useBranch } from "@/context/BranchContext";
 import { ChevronDown, X, Home, CircleAlert, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
+import PullToDismiss from "@/components/PullToDismiss";
+import { startDishClose } from "@/lib/dish-transition";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
 import OutOfStockModal from "@/components/OutOfStockModal";
 import {
@@ -70,6 +71,10 @@ export default function DishDetailPage() {
   const tc = useTranslations("Common");
   const params = useParams();
   const router = useRouter();
+  const dismiss = () => {
+    startDishClose();
+    router.back();
+  };
   const dishId = parseInt(params.id as string);
   const restaurantId = params.restaurantId as string;
   const editCartItemId = useSearchParams().get("cartItemId");
@@ -660,8 +665,13 @@ export default function DishDetailPage() {
     }
   };
 
-  // Esqueleto con la foto y el botón de volver activos mientras carga.
-  if (loading || dishLoading) return <DishSkeleton />;
+  // Esqueleto con la foto; ya se puede cerrar arrastrando hacia abajo mientras carga.
+  if (loading || dishLoading)
+    return (
+      <PullToDismiss onDismiss={dismiss}>
+        <DishSkeleton />
+      </PullToDismiss>
+    );
 
   if (!restaurantId || isNaN(parseInt(restaurantId))) {
     return (
@@ -729,7 +739,8 @@ export default function DishDetailPage() {
   const { dish, section } = dishData;
 
   return (
-    <m.div layoutRoot className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto">
+    <PullToDismiss onDismiss={dismiss}>
+    <m.div layoutRoot className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto overscroll-y-none">
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}
@@ -804,10 +815,6 @@ export default function DishDetailPage() {
           )}
         </div>
       )}
-
-      <div className="relative z-90">
-        <MenuHeaderDish />
-      </div>
 
       <m.main
         data-dish-sheet
@@ -1475,5 +1482,6 @@ export default function DishDetailPage() {
         </div>
       )}
     </m.div>
+    </PullToDismiss>
   );
 }

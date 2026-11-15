@@ -5,12 +5,10 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { peekDishImage } from "@/lib/dish-transition";
 import DishHeroImage from "@/components/DishHeroImage";
 import DishBottomBar from "@/components/UI/DishBottomBar";
-import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
 
 /**
- * Esqueleto del detalle de producto: misma estructura que la página (foto, botón
- * de volver, hoja blanca y barra inferior) para que al cargar solo cambie el contenido.
- * El botón de volver ya funciona desde aquí.
+ * Esqueleto del detalle de producto: misma estructura que la página (foto, hoja blanca y barra
+ * inferior) para que al cargar solo cambie el contenido.
  */
 export default function DishSkeleton({ className = "" }: { className?: string }) {
   const { restaurant } = useRestaurant();
@@ -31,10 +29,6 @@ export default function DishSkeleton({ className = "" }: { className?: string })
           />
         </div>
       )}
-
-      <div className="relative z-90">
-        <MenuHeaderDish />
-      </div>
 
       <main className={`${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}>
         <div

@@ -135,7 +135,6 @@
     "noItemsInSection": "No hay items en esta sección"
   },
   "CartView": {
-    "emptyCartHero": "El carrito está vacío, agrega items y disfruta",
     "confirmYourOrder": "Confirma tu pedido",
     "myCart": "Mi carrito",
     "cartEmptyTitle": "Tu carrito está vacío",

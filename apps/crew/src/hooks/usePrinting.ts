@@ -16,6 +16,8 @@ export interface PrintJobData {
   jobId?: string; // ID en print_job_queue — presente cuando viene de la cola confiable
   wasFlowHeld?: boolean;
   notifyOnPrint?: boolean;
+  /** true cuando es una reimpresión: el ticket lleva el encabezado "*** REIMPRESIÓN ***". */
+  reprint?: boolean;
   items: {
     name: string;
     quantity: number;
@@ -114,12 +116,15 @@ type TicketItem = {
   special_instructions?: string | null;
 };
 
-async function buildTicket(
+export const REPRINT_HEADER = "*** REIMPRESIÓN ***";
+
+export async function buildTicket(
   items: TicketItem[],
   identifier: string,
   folio: string | number,
   orderedBy?: string | null,
   notes?: string | null,
+  reprint = false,
 ): Promise<number[]> {
   const buf: number[] = [];
   const now = new Date();
@@ -133,6 +138,10 @@ async function buildTicket(
 
   buf.push(0x1b, 0x40); // Init
   buf.push(0x1b, 0x61, 0x01); // Align center
+  if (reprint) {
+    buf.push(0x1b, 0x21, 0x08); // Negrita
+    buf.push(...encodeText(`${REPRINT_HEADER}\n`));
+  }
   buf.push(0x1b, 0x21, 0x30); // Double size
   // Si no hay código (ej. identifier llegó como "Habitación" sin número),
   // no reconstruimos "HABITACION <identifier>" — mostramos el identifier
@@ -401,6 +410,7 @@ export function usePrinting(branchId: string | null) {
         data.orderInfo.folio ?? "",
         data.orderInfo.orderedBy,
         data.orderInfo.notes,
+        data.reprint === true,
       );
 
       const label =

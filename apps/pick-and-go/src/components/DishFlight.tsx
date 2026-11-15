@@ -20,6 +20,9 @@ export default function DishFlight() {
   const sheetHidden = window.innerHeight - flight.sheetTop;
   const sheetY = (open ? !end : end) ? sheetHidden : 0;
   const toCard = open ? !end : end;
+  // Al abrir, todo va por debajo del contenido del detalle (z-10) para no tapar su esqueleto;
+  // al volver, por encima de la página que se está yendo.
+  const z = open ? { veil: 3, img: 4, sheet: 5 } : { veil: 80, img: 81, sheet: 82 };
 
   return (
     <>
@@ -29,7 +32,8 @@ export default function DishFlight() {
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 0] }}
         transition={{ duration: 0.7, times: [0, 0.35, 1], ease: "easeOut" }}
-        className="pointer-events-none fixed inset-0 z-[80] bg-white/40 backdrop-blur-md [-webkit-backdrop-filter:blur(12px)]"
+        style={{ zIndex: z.veil }}
+        className="pointer-events-none fixed inset-0 bg-white/40 backdrop-blur-md [-webkit-backdrop-filter:blur(12px)]"
       />
       <m.div
         key={`img-${flight.mode}-${flight.id}`}
@@ -39,7 +43,7 @@ export default function DishFlight() {
         transition={SPRING}
         style={{
           position: "fixed",
-          zIndex: 81,
+          zIndex: z.img,
           left: box.left,
           top: box.top,
           width: box.width,
@@ -56,7 +60,7 @@ export default function DishFlight() {
         initial={{ y: sheetY }}
         animate={{ y: sheetY }}
         transition={SPRING}
-        style={{ position: "fixed", zIndex: 82, left: 0, right: 0, bottom: 0, top: flight.sheetTop }}
+        style={{ position: "fixed", zIndex: z.sheet, left: 0, right: 0, bottom: 0, top: flight.sheetTop }}
         className="pointer-events-none rounded-t-4xl bg-white"
       />
     </>

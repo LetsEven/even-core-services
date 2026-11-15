@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, Input, Modal } from "@even/ui";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import {
   Banknote,
   CreditCard,

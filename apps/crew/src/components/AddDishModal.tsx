@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, Minus, Plus, ChevronRight } from "lucide-react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import type { Order } from "../types";
 import type {
   Branch,

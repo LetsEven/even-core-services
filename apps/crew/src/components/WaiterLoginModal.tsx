@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import { Check, Loader2, User, ArrowLeft } from "lucide-react";
 import { Button, Input, Modal } from "@even/ui";
 import { verifyWaiterPassword } from "../services/api";

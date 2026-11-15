@@ -1,13 +1,28 @@
-import { useState } from "react";
-import { useSignIn } from "@clerk/clerk-react";
+import { lazy, Suspense, useState } from "react";
+import { useClerkSignInForm } from "../lib/auth";
+import { isDemoMode } from "../lib/demoMode";
 import { Mail, KeyRound, Loader2, Eye, EyeOff } from "lucide-react";
 
 const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
 
+// En modo demo (ver src/demo) no hay Clerk: pantalla con "Entrar al modo demo".
+const DemoLogin = lazy(() => import("../demo/DemoLogin"));
+
+export default function LoginPage() {
+  if (isDemoMode()) {
+    return (
+      <Suspense fallback={null}>
+        <DemoLogin />
+      </Suspense>
+    );
+  }
+  return <ClerkLoginForm />;
+}
+
 // Login del negocio (Clerk). Al completarse, el guard del router detecta la
 // sesión y redirige a "/".
-export default function LoginPage() {
-  const { signIn, setActive } = useSignIn();
+function ClerkLoginForm() {
+  const { signIn, setActive } = useClerkSignInForm();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

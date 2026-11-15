@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router";
 import {
   DndContext,

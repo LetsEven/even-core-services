@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 
 export function AppLoader() {
   return (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import {
   ArrowLeft,
   Cable,

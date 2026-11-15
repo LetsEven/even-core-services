@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import KitchenBoard from "../components/KitchenBoard";
 import { useRegisterRefresh } from "../app/refresh";
 import { syncTapPayOrderFromPOS, saveFcmToken } from "../services/api";

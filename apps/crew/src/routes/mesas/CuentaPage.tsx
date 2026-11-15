@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../../lib/auth";
 import { ArrowLeft, Banknote, Plus, Printer, User } from "lucide-react";
 import {
   Badge,

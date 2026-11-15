@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Banknote, Loader2, Plus, Printer, User, History } from "lucide-react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import type { Order, DishStatus, CookingStatus } from "../types";
 import type { Branch, QRCodeRow } from "../services/api";
 import { getQRCodesForBranch, updateOrderWaiter } from "../services/api";

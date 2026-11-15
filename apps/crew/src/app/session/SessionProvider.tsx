@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { ReactNode } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../../lib/auth";
 import { useSocket } from "../../hooks/useSocket";
 import type { CrewDevice } from "../../hooks/useSocket";
 import { usePrinting } from "../../hooks/usePrinting";

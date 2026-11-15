@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../../lib/auth";
 import { Trash2 } from "lucide-react";
 import {
   Button,

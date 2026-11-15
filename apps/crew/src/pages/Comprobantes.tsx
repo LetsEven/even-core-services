@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, X } from "lucide-react";
 import { Badge, Button, Card, IconButton } from "@even/ui";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import { useSession } from "../app/session/context";
 import { useCaja } from "../features/caja/context";
 import { formatDateTime } from "../features/caja/dateRange";

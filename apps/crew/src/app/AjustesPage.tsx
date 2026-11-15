@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useAuth, useClerk } from "@clerk/clerk-react";
+import { useAuth, useSignOut } from "../lib/auth";
 import {
   Bell,
   ChevronRight,
@@ -50,7 +50,7 @@ function Row({
 
 export default function AjustesPage() {
   const { getToken } = useAuth();
-  const { signOut } = useClerk();
+  const signOut = useSignOut();
   const { waiterSession, requireWaiterLogin } = useSession();
 
   const [pushStatus, setPushStatus] = useState<WebPushStatus>("unsupported");

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "../lib/auth";
 import type { Order, DishStatus, CookingStatus } from "../types";
 import {
   getActiveOrders,

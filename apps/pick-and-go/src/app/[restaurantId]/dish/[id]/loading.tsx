@@ -1,5 +1,5 @@
-import DishSkeleton from "@/components/UI/DishSkeleton";
+import DishLoadingShell from "@/components/UI/DishLoadingShell";
 
 export default function DishLoading() {
-  return <DishSkeleton />;
+  return <DishLoadingShell />;
 }

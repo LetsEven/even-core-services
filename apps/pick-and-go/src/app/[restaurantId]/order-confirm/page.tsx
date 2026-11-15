@@ -201,14 +201,14 @@ export default function OrderConfirmPage() {
   if (isLoadingInitial) {
     return (
       <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
-        <div className="fixed top-0 left-0 right-0 z-50">
+        <div className="fixed fixed-col top-0 z-50">
           <MenuHeaderBack
             onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
           />
         </div>
         <div className="h-20" />
 
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+        <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
           <div className="flex flex-col relative w-full">
             <FlowHero step="order-confirm" />
 
@@ -225,7 +225,7 @@ export default function OrderConfirmPage() {
   return (
     <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
       {/* Header fijo */}
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed fixed-col top-0 z-50">
         <MenuHeaderBack
             onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
           />
@@ -233,7 +233,7 @@ export default function OrderConfirmPage() {
       <div className="h-20" />
 
       {/* Tarjeta anclada al fondo */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+      <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
         <div className="flex flex-col relative w-full">
           <div className={sheetClasses.hero}>
             <div className="py-6 px-8 flex flex-col justify-center">

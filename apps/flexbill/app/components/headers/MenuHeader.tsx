@@ -20,7 +20,7 @@ export default function MenuHeader({
   const t = useTranslations("MenuView");
 
   return (
-    <header className="relative container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-5">
+    <header className="relative app-col px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-5">
       <div className="flex items-center justify-end z-10">
         <MenuHamburger
           open={menuOpen}

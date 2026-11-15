@@ -211,7 +211,7 @@ export function RestaurantDetailSheet({
       aria-label={labels.title}
       aria-hidden={!open}
       inert={!open}
-      className="fixed inset-x-0 bottom-0 top-(--menu-card-top) z-20 bg-white rounded-t-4xl flex flex-col outline-none"
+      className="fixed fixed-col bottom-0 top-(--menu-card-top) z-20 bg-white rounded-t-4xl flex flex-col outline-none"
       style={{
         transform: dragging ? `translateY(${dragY}px)` : open ? "translateY(0)" : "translateY(100%)",
         visibility: open ? "visible" : "hidden",

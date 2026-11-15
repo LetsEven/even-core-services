@@ -31,7 +31,7 @@ export function MenuFab({ open, onToggle, count = 0, hidden = false, countLabel,
     <div
       id="cart-icon"
       className={cn(
-        "fixed right-5 z-[60] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:right-8",
+        "fixed fixed-fab-end z-[60] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         hidden && "pointer-events-none translate-y-4 opacity-0",
       )}
       style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
@@ -119,7 +119,7 @@ export function OrderFab({ progress, onClick, hidden = false, label, progressLab
   return (
     <div
       className={cn(
-        "fixed right-5 z-[60] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:right-8",
+        "fixed fixed-fab-end z-[60] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         hidden && "pointer-events-none translate-y-4 opacity-0",
       )}
       style={{ bottom: "calc(max(1.25rem, env(safe-area-inset-bottom)) + 4.25rem)" }}

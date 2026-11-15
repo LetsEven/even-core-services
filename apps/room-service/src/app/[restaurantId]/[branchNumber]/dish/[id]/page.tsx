@@ -665,7 +665,7 @@ export default function DishDetailPage() {
 
   if (dishError === "error") {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
           <div className="w-full max-w-md">
             <div className="mb-6 md:mb-8 lg:mb-10 text-center">
@@ -715,7 +715,7 @@ export default function DishDetailPage() {
 
   if (dishError === "not_found" || !dishData) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
           <div className="w-full max-w-md">
             <div className="mb-6 md:mb-8 lg:mb-10 text-center">
@@ -763,7 +763,7 @@ export default function DishDetailPage() {
   const { dish, section } = dishData;
 
   return (
-    <div className="h-dvh bg-white relative overflow-y-auto">
+    <div className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto">
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}
@@ -838,9 +838,9 @@ export default function DishDetailPage() {
       <MenuHeaderDish />
 
       <main
-        className={`${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}
+        className={`app-col ${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}
       >
-        <div className="bg-white rounded-t-4xl flex flex-col px-6 md:px-8 lg:px-10 pb-25 md:pb-30 lg:pb-35">
+        <div className="bg-white rounded-t-4xl flex flex-col min-h-[calc(100dvh-16rem)] md:min-h-[calc(100dvh-20rem)] lg:min-h-[calc(100dvh-24rem)] px-6 md:px-8 lg:px-10 pb-25 md:pb-30 lg:pb-35">
           <div className="mt-8 md:mt-10 lg:mt-12">
             <div className="flex justify-between items-center text-black mb-6 md:mb-7 lg:mb-8">
               {isLoadingReviews ? (
@@ -1304,7 +1304,7 @@ export default function DishDetailPage() {
 
             {/* Bottom bar */}
             <div
-              className="fixed bottom-0 left-0 right-0 z-10 flex items-center gap-3 px-4 md:px-6 lg:px-8 pt-4 md:pt-5"
+              className="fixed fixed-col bottom-0 z-10 flex items-center gap-3 px-4 md:px-6 lg:px-8 pt-4 md:pt-5"
               style={{
                 paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
                 background: "rgba(255, 255, 255, 0.75)",
@@ -1473,7 +1473,7 @@ export default function DishDetailPage() {
           onClick={() => setShowRemoveConfirm(false)}
         >
           <div
-            className="bg-white rounded-t-4xl w-full shadow-xl"
+            className="bg-white rounded-t-4xl w-full max-w-(--app-max-w) mx-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 max-w-2xl mx-auto">
@@ -1513,7 +1513,7 @@ export default function DishDetailPage() {
           onClick={() => setErrorMessage(null)}
         >
           <div
-            className="bg-white rounded-t-4xl w-full shadow-xl"
+            className="bg-white rounded-t-4xl w-full max-w-(--app-max-w) mx-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 max-w-2xl mx-auto">

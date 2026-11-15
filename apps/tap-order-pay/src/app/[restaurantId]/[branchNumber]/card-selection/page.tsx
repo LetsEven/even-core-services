@@ -1384,8 +1384,8 @@ export default function CardSelectionPage() {
 
   if (isLoadingInitial || isLoadingProvider) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
-        <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
+        <div className="fixed fixed-col top-0 z-50">
           <MenuHeaderBack />
         </div>
         <div className="h-20" />
@@ -1415,7 +1415,7 @@ export default function CardSelectionPage() {
           </div>
         </div>
         <div
-          className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+          className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
           <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
@@ -1510,7 +1510,7 @@ export default function CardSelectionPage() {
         </div>
       )}
 
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <MenuHeaderBack />
 
         <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
@@ -1787,7 +1787,7 @@ export default function CardSelectionPage() {
         </div>
 
         {/* Barra inferior fija */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button
             onClick={handleInitiatePayment}
             disabled={

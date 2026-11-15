@@ -252,7 +252,7 @@ function AddCardContent() {
         />
       )}
 
-      <div className="min-h-screen bg-even-evergreen flex flex-col">
+      <div className="min-h-screen bg-even-evergreen flex flex-col app-root">
         <MenuHeader />
 
         <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col justify-end">

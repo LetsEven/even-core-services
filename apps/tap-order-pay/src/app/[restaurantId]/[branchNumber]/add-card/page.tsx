@@ -323,7 +323,7 @@ function AddCardContent() {
         />
       )}
 
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <MenuHeaderBack onBack={handleBack} />
 
         <div className="px-4 w-full flex-1 flex flex-col justify-end">

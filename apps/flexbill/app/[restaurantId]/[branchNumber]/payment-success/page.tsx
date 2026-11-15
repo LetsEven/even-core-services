@@ -424,7 +424,7 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="min-h-dvh overflow-hidden brand-evergreen flex flex-col">
+    <div className="min-h-dvh overflow-hidden brand-evergreen flex flex-col app-root">
       {/* Success Icon */}
       <div className="flex-1 flex justify-center items-center">
         <img

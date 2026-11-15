@@ -33,7 +33,7 @@ export default function MenuCategory({
           {section.name}
         </h2>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 lg:gap-x-10">
+      <div className="grid grid-cols-1 gap-x-6 md:gap-x-8">
         {section.items && section.items.length > 0 ? (
           section.items.map((item) => (
             <MenuItem

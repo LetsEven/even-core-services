@@ -45,7 +45,7 @@ export default function DashboardView({
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
           <div className="w-full max-w-md">
             <div className="mb-6 md:mb-8 lg:mb-10 text-center">

@@ -458,7 +458,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white relative">
+    <div className="min-h-screen bg-white md:bg-even-evergreen relative">
       {restaurant.banner_url ? (
         <img
           src={restaurant.banner_url}
@@ -478,7 +478,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
 
       {/* Logo + bienvenida sobre el banner (no sticky) */}
       <div className="absolute top-0 inset-x-0 z-6 pointer-events-none">
-        <div className="container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9">
+        <div className="app-col px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9">
           <div className="flex items-center gap-2 md:gap-3 min-h-10 md:min-h-12 lg:min-h-14">
             <button
               ref={logoButtonRef}
@@ -516,11 +516,11 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
       </div>
 
       <main
-        className="mt-(--menu-card-gap) relative z-10"
+        className="app-col mt-(--menu-card-gap) relative z-10"
         inert={showDetail || introActive}
         aria-hidden={showDetail || introActive}
       >
-        <div className="bg-white rounded-t-4xl flex flex-col items-center px-6 md:px-8 lg:px-10">
+        <div className="bg-white rounded-t-4xl flex flex-col items-center px-6 md:px-8 lg:px-10 min-h-[calc(100dvh-var(--menu-card-top))]">
           {/* Trigger invisible para IntersectionObserver */}
           <div
             ref={stickyTriggerRef}
@@ -846,7 +846,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             onClick={closeSettingsModal}
           />
           <div
-            className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl shadow-2xl border-t border-white/20"
+            className="fixed fixed-col z-50 flex flex-col rounded-t-3xl shadow-2xl border-t border-white/20"
             style={{
               top: "5%",
               bottom: 0,
@@ -892,7 +892,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             onClick={closePepperChat}
           />
           <div
-            className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/30"
+            className="fixed fixed-col z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/30"
             style={{
               top: "12%",
               bottom: 0,

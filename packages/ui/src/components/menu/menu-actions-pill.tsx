@@ -55,7 +55,7 @@ export type MenuActionsPillProps = {
 export function MenuActionsPill({ visible, children }: MenuActionsPillProps) {
   return (
     <div
-      className="reduce-motion-fade fixed top-0 inset-x-0 z-40 flex justify-center px-4 pt-4 pb-3"
+      className="reduce-motion-fade fixed top-0 fixed-col z-40 flex justify-center px-4 pt-4 pb-3"
       inert={!visible}
       aria-hidden={!visible}
       style={{

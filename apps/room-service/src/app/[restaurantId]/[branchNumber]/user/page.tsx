@@ -129,7 +129,7 @@ export default function UserPage() {
   }
 
   return (
-    <div className="min-h-dvh brand-evergreen flex flex-col">
+    <div className="min-h-dvh brand-evergreen flex flex-col app-root">
       <MenuHeaderBack />
 
       <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
@@ -182,7 +182,7 @@ export default function UserPage() {
       </div>
 
       {/* Fixed bottom button */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center py-4 md:py-5 lg:py-6">
+      <div className="fixed fixed-col bottom-0 z-50 flex justify-center py-4 md:py-5 lg:py-6">
         <div className="mx-4 md:mx-6 lg:mx-8 w-full max-w-full px-4 md:px-6 lg:px-8">
           <button
             onClick={handleProceedToOrder}

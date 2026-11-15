@@ -1524,8 +1524,8 @@ export default function CardSelectionPage() {
 
   if (isLoadingInitial || isLoadingProvider) {
     return (
-      <div className="relative z-10 isolate min-h-dvh flex flex-col">
-        <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="app-col relative z-10 isolate min-h-dvh flex flex-col">
+        <div className="fixed fixed-col top-0 z-50">
           <MenuHeaderBack
             onBack={() =>
               navigateWithRestaurantId("/order-confirm", { replace: true })
@@ -1667,7 +1667,7 @@ export default function CardSelectionPage() {
         </div>
       )}
 
-      <div className="relative z-10 isolate min-h-dvh flex flex-col">
+      <div className="app-col relative z-10 isolate min-h-dvh flex flex-col">
         {/* Header fijo */}
         <MenuHeaderBack
             onBack={() =>
@@ -1958,7 +1958,7 @@ export default function CardSelectionPage() {
         </div>
 
         {/* Barra inferior fija — total + botón pagar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button
             onClick={handleInitiatePayment}
             disabled={isProcessing || !selectedPaymentMethodId}

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SheetCard, SheetFooter, SheetHero, SheetScreen } from "./sheet-screen";
 
 describe("SheetScreen", () => {
-  it("la tarjeta ocupa todo el ancho, sin márgenes laterales", () => {
+  it("la tarjeta ocupa todo el ancho de la columna, sin márgenes laterales", () => {
     render(
       <SheetScreen>
         <SheetHero>Título</SheetHero>
@@ -14,6 +14,11 @@ describe("SheetScreen", () => {
     const card = screen.getByTestId("card");
     expect(card.className).toContain("w-full");
     expect(card.className).not.toMatch(/\bmx-/);
-    expect(screen.getByTestId("footer").className).toContain("inset-x-0");
+    expect(screen.getByTestId("footer").className).toContain("fixed-col");
+  });
+
+  it("limita la pantalla a la columna centrada en pantallas anchas", () => {
+    const { container } = render(<SheetScreen />);
+    expect((container.firstChild as HTMLElement).className).toContain("app-col");
   });
 });

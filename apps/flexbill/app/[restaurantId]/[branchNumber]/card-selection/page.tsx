@@ -1703,7 +1703,7 @@ export default function CardSelectionPage() {
 
   if (isLoadingInitial || isLoadingProvider) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <MenuHeaderBack
           restaurant={restaurantData}
           tableNumber={state.tableNumber}
@@ -1743,7 +1743,7 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija — skeleton */}
         <div
-          className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+          className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
           <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
@@ -1772,7 +1772,7 @@ export default function CardSelectionPage() {
       />
 
       <div
-        className={`min-h-dvh brand-evergreen flex flex-col ${paymentStatus ? "animate-fade-out" : ""}`}
+        className={`min-h-dvh brand-evergreen flex flex-col app-root ${paymentStatus ? "animate-fade-out" : ""}`}
       >
         {/* Header */}
         <MenuHeaderBack
@@ -2046,7 +2046,7 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija — botón pagar */}
         <div
-          className={`fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-opacity duration-200 ${paymentStatus ? "opacity-0 pointer-events-none" : ""}`}
+          className={`fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-opacity duration-200 ${paymentStatus ? "opacity-0 pointer-events-none" : ""}`}
         >
           <button
             onClick={handlePayment}

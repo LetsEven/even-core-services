@@ -39,7 +39,7 @@ export default function DishBottomBar({
   const off = muted || disabled;
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-90 flex items-center gap-3 px-4 md:px-6 lg:px-8 pt-4 md:pt-5"
+      className="fixed fixed-col bottom-0 z-90 flex items-center gap-3 px-4 md:px-6 lg:px-8 pt-4 md:pt-5"
       style={{
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
         background: "rgba(255, 255, 255, 0.75)",

@@ -103,13 +103,13 @@ export default function OrderConfirmPage() {
 
   if (isLoadingInitial) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col">
-        <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
+        <div className="fixed fixed-col top-0 z-50">
           <MenuHeaderBack />
         </div>
         <div className="h-20" />
 
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+        <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
           <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
             <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
               <div className="py-6 px-8 flex flex-col justify-center">
@@ -153,15 +153,15 @@ export default function OrderConfirmPage() {
   }
 
   return (
-    <div className="min-h-dvh brand-evergreen flex flex-col">
+    <div className="min-h-dvh brand-evergreen flex flex-col app-root">
       {/* Header fijo */}
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed fixed-col top-0 z-50">
         <MenuHeaderBack />
       </div>
       <div className="h-20" />
 
       {/* Tarjeta anclada al fondo */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+      <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
         <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
           <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
             <div className="py-6 px-8 flex flex-col justify-center">

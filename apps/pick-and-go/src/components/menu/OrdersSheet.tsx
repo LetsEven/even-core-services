@@ -136,7 +136,7 @@ export default function OrdersSheet({
       <div
         role="dialog"
         aria-label={t("title")}
-        className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/30"
+        className="fixed fixed-col z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/30"
         style={{
           top: "12%",
           bottom: 0,

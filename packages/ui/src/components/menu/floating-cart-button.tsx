@@ -14,7 +14,7 @@ export type FloatingCartButtonProps = {
 export function FloatingCartButton({ count, label, onClick, hidden = false }: FloatingCartButtonProps) {
   if (count <= 0 || hidden) return null;
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center md:bottom-8 lg:bottom-10">
+    <div className="pointer-events-none fixed fixed-col bottom-6 z-50 flex justify-center md:bottom-8 lg:bottom-10">
       <button
         type="button"
         onClick={onClick}

@@ -28,7 +28,7 @@ function Skeleton({ step }: { step: FlowStep }) {
   return (
     <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-even-evergreen" aria-hidden>
       {/* Fondo verde opaco: oculta la vista real que ya se montó debajo mientras sube la tarjeta */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="app-col relative flex min-h-0 flex-1 flex-col">
         <div>
           <MenuHeaderBack onBack={() => {}} />
         </div>

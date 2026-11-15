@@ -266,9 +266,9 @@ export default function TipSelectionPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-even-evergreen flex flex-col">
+      <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
         <div
-          className="fixed top-0 left-0 right-0 z-50"
+          className="fixed fixed-col top-0 z-50"
           style={{ zIndex: 999 }}
         >
           <MenuHeader />
@@ -276,7 +276,7 @@ export default function TipSelectionPage() {
         <div className="h-20"></div>
 
         <div className="w-full flex-1 flex flex-col justify-end">
-          <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+          <div className="fixed fixed-col bottom-0 z-50 flex justify-center">
             <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
               <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
                 <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
@@ -330,7 +330,7 @@ export default function TipSelectionPage() {
 
   return (
     <div
-      className={`min-h-dvh bg-even-evergreen flex flex-col ${
+      className={`min-h-dvh bg-even-evergreen flex flex-col app-root ${
         paymentType === "select-items"
           ? "overflow-y-auto overflow-x-hidden"
           : ""
@@ -340,7 +340,7 @@ export default function TipSelectionPage() {
       {paymentType !== "select-items" && (
         <>
           <div
-            className="fixed top-0 left-0 right-0 z-50"
+            className="fixed fixed-col top-0 z-50"
             style={{ zIndex: 999 }}
           >
             <MenuHeader />
@@ -391,7 +391,7 @@ export default function TipSelectionPage() {
             className={`${
               paymentType === "select-items"
                 ? "flex flex-col relative px-4 md:px-6 lg:px-8"
-                : "fixed bottom-0 left-0 right-0 z-50 flex justify-center"
+                : "fixed fixed-col bottom-0 z-50 flex justify-center"
             }`}
           >
             <div
@@ -764,7 +764,7 @@ export default function TipSelectionPage() {
           {/* Tip Selection Section - Fijo cuando es select-items */}
           {paymentType === "select-items" && (
             <div
-              className="fixed bottom-0 left-0 right-0 bg-white pt-8 md:pt-10 lg:pt-12 mx-4 md:mx-6 lg:mx-8"
+              className="fixed fixed-col bottom-0 bg-white pt-8 md:pt-10 lg:pt-12 mx-4 md:mx-6 lg:mx-8"
               style={{
                 paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                 zIndex: 40,

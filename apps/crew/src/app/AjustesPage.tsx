@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../lib/auth";
 import {
@@ -19,6 +19,9 @@ import {
   type WebPushStatus,
 } from "../lib/webPush";
 import { useSession } from "./session/context";
+
+// Solo se descarga con provider local y permiso de administrar usuarios.
+const LocalUsersAdmin = lazy(() => import("./ajustes/LocalUsersAdmin"));
 
 function Row({
   to,
@@ -49,7 +52,8 @@ function Row({
 }
 
 export default function AjustesPage() {
-  const { getToken, signOut, hasPermission } = useAuth();
+  const { getToken, signOut, kind, hasPermission } = useAuth();
+  const showUsersAdmin = kind === "local" && hasPermission("usuarios.administrar");
   const canPrinters = hasPermission("ajustes.impresoras");
   const { waiterSession, requireWaiterLogin } = useSession();
 
@@ -132,6 +136,12 @@ export default function AjustesPage() {
                 hint="Equipos conectados y Master"
               />
             </>
+          )}
+
+          {showUsersAdmin && (
+            <Suspense fallback={null}>
+              <LocalUsersAdmin />
+            </Suspense>
           )}
 
           {pushStatus === "default" && (

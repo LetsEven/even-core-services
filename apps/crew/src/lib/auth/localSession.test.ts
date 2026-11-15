@@ -5,6 +5,7 @@ import {
   REFRESH_MARGIN_MS,
   SESSION_KEY,
   createLocalAuth,
+  type ChannelLike,
 } from "./localSession";
 import { jsonResponse, makeAccessToken, memoryStorage } from "./testUtils";
 
@@ -284,5 +285,206 @@ describe("storage no disponible", () => {
     expect(auth.getSnapshot().status).toBe("signedIn");
     await auth.signOut();
     expect(auth.getSnapshot().status).toBe("signedOut");
+  });
+});
+
+const stored = (storage: Storage) => JSON.parse(storage.getItem(SESSION_KEY) ?? "null");
+const tokenIn = (ms: number) =>
+  makeAccessToken({ sub: "u1", role: "mesero", expSec: Math.floor((Date.now() + ms) / 1000) });
+
+describe("restaurar sesion sin red", () => {
+  function withStoredSession() {
+    return memoryStorage({
+      [DEVICE_KEY]: JSON.stringify(DEVICE),
+      [SESSION_KEY]: JSON.stringify({ refreshToken: "r-old", name: "Ana" }),
+    });
+  }
+
+  it("reintenta con backoff y restaura la sesion sin pedir PIN", async () => {
+    const storage = withStoredSession();
+    const { auth, fetchMock } = setup({ storage });
+    fetchMock
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockRejectedValueOnce(new TypeError("offline"))
+      .mockResolvedValueOnce(jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r-new" }));
+    const started = auth.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(auth.getSnapshot().status).toBe("loading");
+    await vi.advanceTimersByTimeAsync(500); // 1er reintento
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(auth.getSnapshot().status).toBe("loading");
+    await vi.advanceTimersByTimeAsync(1_000); // 2do reintento
+    await started;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(auth.getSnapshot().status).toBe("signedIn");
+    // Todos los intentos reutilizan el mismo refresh token (nunca se rotó).
+    expect(fetchMock.mock.calls.map((c) => bodyOf(c).refreshToken)).toEqual(["r-old", "r-old", "r-old"]);
+    expect(stored(storage).refreshToken).toBe("r-new");
+    auth.stop();
+  });
+
+  it("agota los reintentos: pide PIN pero conserva el refresh token", async () => {
+    const storage = withStoredSession();
+    const { auth, fetchMock } = setup({ storage });
+    fetchMock.mockRejectedValue(new TypeError("offline"));
+    const started = auth.start();
+    await vi.advanceTimersByTimeAsync(60_000);
+    await started;
+    expect(fetchMock).toHaveBeenCalledTimes(6); // 1 + 5 reintentos
+    expect(auth.getSnapshot().status).toBe("signedOut");
+    expect(stored(storage).refreshToken).toBe("r-old");
+  });
+
+  it("un 5xx tambien se reintenta; un 401 no", async () => {
+    const { auth, fetchMock } = setup({ storage: withStoredSession() });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(jsonResponse({}, 401));
+    const started = auth.start();
+    await vi.advanceTimersByTimeAsync(500);
+    await started;
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(auth.getSnapshot().status).toBe("signedOut");
+  });
+});
+
+describe("varias pestanas", () => {
+  // Bus en memoria: lo que publica un canal lo reciben los demas.
+  function bus() {
+    const chans: (ChannelLike & { id: number })[] = [];
+    return () => {
+      const c: ChannelLike & { id: number } = {
+        id: chans.length,
+        onmessage: null,
+        postMessage(m) {
+          for (const o of chans) if (o !== c) o.onmessage?.({ data: m });
+        },
+        close() {
+          chans.splice(chans.indexOf(c), 1);
+        },
+      };
+      chans.push(c);
+      return c;
+    };
+  }
+  function tabs(storage: Storage, n = 2) {
+    const channel = bus();
+    return Array.from({ length: n }, () => {
+      const fetchMock = vi.fn<typeof fetch>();
+      const client = createLocalClient({ baseUrl: BASE, fetchImpl: fetchMock });
+      return { fetchMock, auth: createLocalAuth({ client, storage, locks: null, channel }) };
+    });
+  }
+  const seeded = (rt = "r1") =>
+    memoryStorage({
+      [DEVICE_KEY]: JSON.stringify(DEVICE),
+      [SESSION_KEY]: JSON.stringify({ refreshToken: rt, name: "Ana" }),
+    });
+
+  it("dos pestanas que recargan a la vez: refrescan en serie con el token guardado, sin reuso", async () => {
+    const storage = seeded("r1");
+    const [a, b] = tabs(storage);
+    let server = "r1"; // el servicio acepta solo el refresh vigente y rota
+    let n = 1;
+    const handler = async (_u: unknown, init?: RequestInit) => {
+      const sent = JSON.parse(String(init?.body)).refreshToken;
+      if (sent !== server) return jsonResponse({}, 401);
+      server = `r${++n}`;
+      return jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: server });
+    };
+    a.fetchMock.mockImplementation(handler as typeof fetch);
+    b.fetchMock.mockImplementation(handler as typeof fetch);
+
+    const both = Promise.all([a.auth.start(), b.auth.start()]);
+    await vi.advanceTimersByTimeAsync(1_000); // la segunda espera el lease de la primera
+    await both;
+    expect(a.auth.getSnapshot().status).toBe("signedIn");
+    expect(b.auth.getSnapshot().status).toBe("signedIn");
+    expect(stored(storage).refreshToken).toBe(server);
+    expect(n).toBe(2); // una sola rotacion: la otra pestana adopto el token difundido
+    a.auth.stop();
+    b.auth.stop();
+  });
+
+  it("la pestana que rota difunde el access token y las demas lo adoptan sin llamar al servicio", async () => {
+    const storage = seeded("r1");
+    const [a, b] = tabs(storage);
+    b.fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r2" }));
+    await b.auth.start();
+    a.fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r2" }));
+    // A arranca con canal abierto pero B ya roto: A adopta el siguiente token de B.
+    await a.auth.start();
+    const bTok = tokenIn(30 * 60_000);
+    b.fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: bTok, refreshToken: "r3" }));
+    await vi.advanceTimersByTimeAsync(15 * 60_000 - REFRESH_MARGIN_MS + 1_000);
+    // Quien dispare primero rota; la otra no llama al servicio con su token viejo.
+    expect(await a.auth.getToken()).toBe(await b.auth.getToken());
+    expect(stored(storage).refreshToken).toBe("r3");
+    a.auth.stop();
+    b.auth.stop();
+  });
+
+  it("cerrar sesion en una pestana cierra las demas y usa el refresh token vigente", async () => {
+    const storage = seeded("r1");
+    const [a, b] = tabs(storage);
+    a.fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r2" }));
+    await a.auth.start();
+    b.fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r3" }));
+    await b.auth.start();
+    // A conserva r2 en memoria pero el guardado es r3 (lo roto B).
+    a.fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await a.auth.signOut();
+    expect(bodyOf(a.fetchMock.mock.calls[1])).toEqual({ refreshToken: "r3" });
+    expect(b.auth.getSnapshot().status).toBe("signedOut");
+    expect(storage.getItem(SESSION_KEY)).toBeNull();
+    a.auth.stop();
+    b.auth.stop();
+  });
+
+  it("si otra pestana cerro sesion no se usa un refresh token revocado", async () => {
+    const storage = seeded("r1");
+    const [a] = tabs(storage);
+    a.fetchMock.mockResolvedValueOnce(jsonResponse({ accessToken: tokenIn(5_000), refreshToken: "r2" }));
+    await a.auth.start();
+    storage.removeItem(SESSION_KEY); // cierre de sesion en otra pestana, sin canal
+    expect(await a.auth.getToken()).toBeNull();
+    expect(a.fetchMock).toHaveBeenCalledTimes(1);
+    expect(a.auth.getSnapshot().status).toBe("signedOut");
+    a.auth.stop();
+  });
+
+  it("sin Web Locks usa el lease: si otra pestana lo tiene no refresca y reintenta", async () => {
+    const storage = seeded("r1");
+    storage.setItem("crew_auth_refresh_lease", JSON.stringify({ owner: "otra", until: Date.now() + 60_000 }));
+    const [a] = tabs(storage, 1);
+    a.fetchMock.mockResolvedValue(jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r2" }));
+    const started = a.auth.start();
+    await vi.advanceTimersByTimeAsync(7_000);
+    expect(a.fetchMock).not.toHaveBeenCalled();
+    storage.removeItem("crew_auth_refresh_lease");
+    await vi.advanceTimersByTimeAsync(2_000);
+    await started;
+    expect(a.auth.getSnapshot().status).toBe("signedIn");
+    expect(storage.getItem("crew_auth_refresh_lease")).toBeNull();
+    a.auth.stop();
+  });
+
+  it("con navigator.locks usa el lock exclusivo", async () => {
+    const storage = seeded("r1");
+    const names: string[] = [];
+    const locks = {
+      request: async <T,>(name: string, _o: unknown, cb: () => Promise<T>) => {
+        names.push(name);
+        return cb();
+      },
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ accessToken: tokenIn(15 * 60_000), refreshToken: "r2" }),
+    );
+    const auth = createLocalAuth({ client: createLocalClient({ baseUrl: BASE, fetchImpl: fetchMock }), storage, locks, channel: null });
+    await auth.start();
+    expect(names).toEqual(["crew-auth-refresh"]);
+    expect(auth.getSnapshot().status).toBe("signedIn");
+    auth.stop();
   });
 });

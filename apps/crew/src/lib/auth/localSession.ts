@@ -1,6 +1,17 @@
 // Sesion local (crew-auth) sin React: access token solo en memoria, refresh
 // token rotativo en localStorage, refresh automatico antes de expirar. El
 // proveedor React (local.tsx) solo expone este controlador.
+//
+// Varias pestanas comparten el mismo refresh token (localStorage) y el servicio
+// lo rota en cada uso: reutilizar uno viejo revoca las sesiones del usuario en
+// el dispositivo, y al rotar tambien deja de valer el access token anterior
+// (su `sid`). Por eso:
+//  - cada refresh corre bajo un lock entre pestanas (navigator.locks; si no
+//    existe, un lease en localStorage; si tampoco, sin coordinacion) y SIEMPRE
+//    parte del refresh token guardado, nunca del que la pestana tiene en memoria;
+//  - la pestana que rota difunde el access token nuevo por BroadcastChannel
+//    (solo memoria, mismo origen) y las demas lo adoptan sin llamar al servicio;
+//  - un cierre de sesion se propaga igual.
 
 import { CrewAuthError, type LocalClient, type SelectorUser } from "./localClient";
 import { decodeAccessClaims } from "./jwt";
@@ -14,6 +25,15 @@ export const REFRESH_MARGIN_MS = 60_000;
 /** Por debajo de este margen, getToken() refresca antes de devolver. */
 const STALE_MARGIN_MS = 10_000;
 const RETRY_MS = 15_000;
+/** Espera entre reintentos del refresh al arrancar sin red, antes de pedir PIN. */
+export const START_RETRY_DELAYS_MS: readonly number[] = [500, 1_000, 2_000, 4_000, 8_000];
+
+const LOCK_NAME = "crew-auth-refresh";
+const LEASE_KEY = "crew_auth_refresh_lease";
+const CHANNEL_NAME = "crew-auth";
+const LEASE_TTL_MS = 20_000;
+const LEASE_WAIT_MS = 8_000;
+const LEASE_POLL_MS = 100;
 
 export interface LocalSnapshot {
   status: AuthStatus;
@@ -74,6 +94,38 @@ function isTransient(e: unknown): boolean {
   );
 }
 
+/** Subconjunto de navigator.locks (inyectable en pruebas). */
+export interface LockManagerLike {
+  request<T>(name: string, options: { mode: "exclusive" }, cb: () => Promise<T>): Promise<T>;
+}
+/** Subconjunto de BroadcastChannel (inyectable en pruebas). */
+export interface ChannelLike {
+  postMessage(message: unknown): void;
+  onmessage: ((ev: { data: unknown }) => void) | null;
+  close(): void;
+}
+
+function defaultLocks(): LockManagerLike | null {
+  try {
+    const l = (globalThis as { navigator?: { locks?: unknown } }).navigator?.locks;
+    return l ? (l as LockManagerLike) : null;
+  } catch {
+    return null;
+  }
+}
+function defaultChannelFactory(): ChannelLike | null {
+  try {
+    return typeof BroadcastChannel === "function"
+      ? (new BroadcastChannel(CHANNEL_NAME) as unknown as ChannelLike)
+      : null;
+  } catch {
+    return null;
+  }
+}
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+type RefreshOutcome = "ok" | "transient" | "rejected";
+
 export interface LocalAuthController {
   getSnapshot(): LocalSnapshot;
   subscribe(listener: () => void): () => void;
@@ -93,10 +145,32 @@ export function createLocalAuth(opts: {
   client: LocalClient;
   storage?: Storage | null;
   now?: () => number;
+  /** Lock entre pestanas; por defecto navigator.locks (null = sin Web Locks). */
+  locks?: LockManagerLike | null;
+  /** Canal entre pestanas; por defecto BroadcastChannel (null = sin canal). */
+  channel?: (() => ChannelLike | null) | null;
+  /** Esperas de los reintentos al restaurar la sesion sin red. */
+  startRetryDelaysMs?: readonly number[];
 }): LocalAuthController {
   const { client } = opts;
   const storage = opts.storage === undefined ? defaultStorage() : opts.storage;
   const now = opts.now ?? Date.now;
+  const locks = opts.locks === undefined ? defaultLocks() : opts.locks;
+  const openChannel = opts.channel === undefined ? defaultChannelFactory : (opts.channel ?? (() => null));
+  const startRetryDelays = opts.startRetryDelaysMs ?? START_RETRY_DELAYS_MS;
+  const ownerId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+  // Con storage inutilizable (privado/bloqueado) no hay nada que compartir.
+  const storageUsable = (() => {
+    if (!storage) return false;
+    try {
+      storage.setItem("crew_auth_probe", "1");
+      storage.removeItem("crew_auth_probe");
+      return true;
+    } catch {
+      return false;
+    }
+  })();
 
   let device = readJson<DeviceRecord>(storage, DEVICE_KEY);
   if (!isDevice(device)) device = null;
@@ -107,7 +181,7 @@ export function createLocalAuth(opts: {
   let accessToken: string | null = null;
   let expiresAt = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let inflight: Promise<boolean> | null = null;
+  let inflight: Promise<RefreshOutcome> | null = null;
   let started: Promise<void> | null = null;
 
   let snapshot: LocalSnapshot = {
@@ -142,54 +216,137 @@ export function createLocalAuth(opts: {
     set({ status: "signedOut", user: null });
   }
 
-  /** Aplica tokens nuevos; false si el access token no trae claims validos. */
-  function apply(access: string, refreshTok: string, name: string): boolean {
+  let channel: ChannelLike | null = null;
+  function broadcast(message: unknown) {
+    try {
+      channel?.postMessage(message);
+    } catch {
+      /* sin canal: las demas pestanas se enteran en su proximo refresh */
+    }
+  }
+
+  function setSignedIn(access: string, name: string): boolean {
     const claims = decodeAccessClaims(access);
     if (!claims) return false;
     accessToken = access;
     expiresAt = claims.expiresAt;
-    session = { refreshToken: refreshTok, name };
-    writeJson(storage, SESSION_KEY, session);
     set({
       status: "signedIn",
-      user: {
-        id: claims.sub,
-        name,
-        role: claims.role,
-        permissions: claims.permissions,
-      },
+      user: { id: claims.sub, name, role: claims.role, permissions: claims.permissions },
     });
     schedule();
     return true;
   }
 
-  async function doRefresh(): Promise<boolean> {
-    if (!device || !session) {
-      dropSession();
-      return false;
+  /** Aplica tokens nuevos; false si el access token no trae claims validos. */
+  function apply(access: string, refreshTok: string, name: string): boolean {
+    if (!setSignedIn(access, name)) return false;
+    session = { refreshToken: refreshTok, name };
+    writeJson(storage, SESSION_KEY, session);
+    broadcast({ t: "token", accessToken: access, name });
+    return true;
+  }
+
+  function storedSession(): SessionRecord | null {
+    const s = readJson<SessionRecord>(storage, SESSION_KEY);
+    return isSession(s) ? s : null;
+  }
+
+  // Otra pestana roto el refresh token y nos paso el access token nuevo: el
+  // nuestro ya no vale (su sesion se revoco al rotar), asi que lo adoptamos.
+  function onPeerMessage(data: unknown) {
+    if (typeof data !== "object" || data === null) return;
+    const m = data as Record<string, unknown>;
+    if (m.t === "signout") {
+      if (session || snapshot.status !== "signedOut") dropSession();
+    } else if (m.t === "token" && typeof m.accessToken === "string" && typeof m.name === "string") {
+      const claims = decodeAccessClaims(m.accessToken);
+      if (!claims || claims.expiresAt <= now()) return;
+      // El lock serializa las rotaciones: lo ultimo difundido es lo vigente. Solo se
+      // descarta lo claramente mas viejo (exp en segundos: mismo segundo = adoptar).
+      if (m.accessToken === accessToken || (accessToken && claims.expiresAt < expiresAt)) return;
+      const stored = storedSession();
+      if (!stored) return;
+      session = stored;
+      setSignedIn(m.accessToken, m.name);
     }
+  }
+
+  // Lease en localStorage para navegadores sin Web Locks. No es atomico, pero
+  // escribe y relee para detectar al otro dueno.
+  async function acquireLease(): Promise<boolean> {
+    const deadline = Date.now() + LEASE_WAIT_MS;
+    for (;;) {
+      const cur = readJson<{ owner: string; until: number }>(storage, LEASE_KEY);
+      if (!cur || cur.until <= Date.now() || cur.owner === ownerId) {
+        writeJson(storage, LEASE_KEY, { owner: ownerId, until: Date.now() + LEASE_TTL_MS });
+        if (readJson<{ owner: string }>(storage, LEASE_KEY)?.owner === ownerId) return true;
+      }
+      if (Date.now() >= deadline) return false;
+      await sleep(LEASE_POLL_MS);
+    }
+  }
+
+  async function withRefreshLock<T>(fn: () => Promise<T>): Promise<{ ran: true; value: T } | { ran: false }> {
+    if (locks) return { ran: true, value: await locks.request(LOCK_NAME, { mode: "exclusive" }, fn) };
+    if (!storageUsable) return { ran: true, value: await fn() };
+    if (!(await acquireLease())) return { ran: false };
     try {
-      const r = await client.refresh(device.deviceToken, session.refreshToken);
-      const name = r.userName ?? session.name;
+      return { ran: true, value: await fn() };
+    } finally {
+      if (readJson<{ owner: string }>(storage, LEASE_KEY)?.owner === ownerId) removeKey(storage, LEASE_KEY);
+    }
+  }
+
+  async function attemptRefresh(): Promise<RefreshOutcome> {
+    if (!device) {
+      dropSession();
+      return "rejected";
+    }
+    // Otra pestana pudo renovar mientras esperabamos el lock (y avisarnos).
+    if (accessToken && expiresAt - now() > REFRESH_MARGIN_MS) return "ok";
+    // La fuente de verdad del refresh token es el storage, no la memoria.
+    const current = storageUsable ? storedSession() : session;
+    if (!current) {
+      // Otra pestana cerro sesion: no se toca el servicio con un token revocado
+      // (reutilizarlo revocaria sesiones vigentes).
+      dropSession();
+      return "rejected";
+    }
+    session = current;
+    try {
+      const r = await client.refresh(device.deviceToken, current.refreshToken);
+      const name = r.userName ?? current.name;
       if (!apply(r.accessToken, r.refreshToken, name)) {
         dropSession();
-        return false;
+        return "rejected";
       }
-      return true;
+      return "ok";
     } catch (e) {
       if (isTransient(e)) {
         // Sigue la sesion en memoria (si el token aun vale); se reintenta.
         if (snapshot.status === "signedIn") schedule(RETRY_MS);
-        return false;
+        return "transient";
       }
       dropSession();
-      return false;
+      return "rejected";
     }
   }
 
-  // Una sola peticion de refresh a la vez: el refresh token rota, dos en
-  // paralelo invalidarian la sesion.
-  function refresh(): Promise<boolean> {
+  async function doRefresh(): Promise<RefreshOutcome> {
+    try {
+      const r = await withRefreshLock(attemptRefresh);
+      if (r.ran) return r.value;
+    } catch {
+      /* lock no disponible: se trata como fallo transitorio */
+    }
+    if (snapshot.status === "signedIn") schedule(RETRY_MS);
+    return "transient";
+  }
+
+  // Una sola peticion de refresh a la vez en esta pestana (y una a la vez entre
+  // pestanas, por el lock).
+  function refresh(): Promise<RefreshOutcome> {
     if (!inflight) {
       inflight = doRefresh().finally(() => {
         inflight = null;
@@ -213,21 +370,37 @@ export function createLocalAuth(opts: {
     },
 
     start() {
+      if (!channel) {
+        channel = openChannel();
+        if (channel) channel.onmessage = (ev) => onPeerMessage(ev.data);
+      }
       if (!started) {
         started = (async () => {
-          if (snapshot.status === "loading") {
-            const ok = await refresh();
-            // Sin red al arrancar: pide PIN de nuevo (el refresh token se
-            // conserva y se reemplaza al iniciar sesion).
-            if (!ok && snapshot.status === "loading") set({ status: "signedOut" });
+          // Sin red al arrancar: reintenta con backoff antes de pedir PIN. Si el
+          // servicio rechaza la sesion (401) se pide PIN de inmediato.
+          for (let i = 0; snapshot.status === "loading"; i++) {
+            const r = await refresh();
+            if (r !== "transient" || snapshot.status !== "loading") break;
+            const wait = startRetryDelays[i];
+            if (wait === undefined) break;
+            await sleep(wait);
           }
+          // El refresh token se conserva y se reemplaza al iniciar sesion.
+          if (snapshot.status === "loading") set({ status: "signedOut" });
         })();
       } else if (accessToken) {
         schedule();
       }
       return started;
     },
-    stop: clearTimer,
+    stop() {
+      clearTimer();
+      if (channel) {
+        channel.onmessage = null;
+        channel.close();
+        channel = null;
+      }
+    },
 
     async pair(pairingCode) {
       const r = await client.pair(pairingCode.trim());
@@ -265,9 +438,11 @@ export function createLocalAuth(opts: {
     },
 
     async signOut() {
-      const rt = session?.refreshToken;
+      // El refresh token vigente puede ser el que roto otra pestana.
+      const rt = (storageUsable ? storedSession() : session)?.refreshToken ?? session?.refreshToken;
       const dt = device?.deviceToken;
       dropSession();
+      broadcast({ t: "signout" });
       if (rt && dt) {
         try {
           await client.logout(dt, rt);

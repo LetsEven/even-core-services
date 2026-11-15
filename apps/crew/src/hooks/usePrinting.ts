@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { getPrinters, type PrinterRecord } from "../services/api";
 import { formatFolio } from "../utils/folio";
-import { isTauri } from "../lib/platform";
+import { canPrintHere } from "../lib/platform";
+import { invokeNative } from "../lib/native";
 import {
   getLocationKind,
   parseLocationCode,
@@ -285,7 +285,7 @@ export async function printTapPayTicket(
   identifier: string,
   qrUrl: string | null,
 ): Promise<void> {
-  if (!isTauri()) {
+  if (!canPrintHere()) {
     throw new Error("La impresión no está disponible en la versión web");
   }
   const allPrinters = await getPrinters(branchId);
@@ -296,12 +296,12 @@ export async function printTapPayTicket(
 
   for (const printer of active) {
     if (printer.connection_type === "usb" && printer.usb_device_name) {
-      await invoke("print_raw_usb", {
+      await invokeNative("print_raw_usb", {
         printerName: printer.usb_device_name,
         data: ticket,
       }).catch((e) => console.error("[PRINT] Error USB:", e));
     } else if (printer.ip && printer.port) {
-      await invoke("print_raw", {
+      await invokeNative("print_raw", {
         ip: printer.ip,
         port: printer.port,
         data: ticket,
@@ -363,7 +363,7 @@ export function usePrinting(branchId: string | null) {
       console.log("[PRINT] Omitido — este dispositivo no es Master");
       return false;
     }
-    if (!isTauri()) {
+    if (!canPrintHere()) {
       console.warn(
         "[PRINT] Omitido — este dispositivo es Master pero la versión web no puede imprimir",
       );
@@ -420,13 +420,13 @@ export function usePrinting(branchId: string | null) {
       try {
         if (printer.connection_type === "usb" && printer.usb_device_name) {
           console.log(`[PRINT] Enviando a USB: ${printer.usb_device_name}`);
-          await invoke("print_raw_usb", {
+          await invokeNative("print_raw_usb", {
             printerName: printer.usb_device_name,
             data: ticket,
           });
         } else if (printer.ip && printer.port) {
           console.log(`[PRINT] Enviando a WiFi: ${printer.ip}:${printer.port}`);
-          await invoke("print_raw", {
+          await invokeNative("print_raw", {
             ip: printer.ip,
             port: printer.port,
             data: ticket,

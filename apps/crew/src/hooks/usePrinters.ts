@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../lib/native";
 
 export interface Printer {
   ip: string;

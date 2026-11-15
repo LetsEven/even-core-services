@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import { saveFcmToken, deleteFcmToken } from "../services/api";
 import { isTauri } from "./platform";
+import { isDemoMode } from "./demoMode";
 
 // Config pública de la app web "Even Crew Web" (proyecto Firebase even-crew)
 const firebaseConfig = {
@@ -26,6 +27,7 @@ export async function getWebPushStatus(): Promise<WebPushStatus> {
   // El SW solo se registra en build de producción (ver main.tsx)
   if (
     isTauri() ||
+    isDemoMode() || // demo: sin service worker ni push
     !import.meta.env.PROD ||
     !("Notification" in window) ||
     !("serviceWorker" in navigator)

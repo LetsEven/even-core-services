@@ -22,7 +22,7 @@ import {
   type PrinterRecord,
 } from "../services/api";
 import type { CrewDevice } from "../hooks/useSocket";
-import { isTauri } from "../lib/platform";
+import { canPrintHere } from "../lib/platform";
 import PrintingBanner from "../features/impresion/PrintingBanner";
 import PrinterEditor from "../features/impresion/PrinterEditor";
 import {
@@ -82,7 +82,7 @@ export default function Printers({
   onPrintersChanged,
 }: Props) {
   const { getToken } = useAuth();
-  const canPrint = isTauri();
+  const canPrint = canPrintHere();
   const { scanning, scan, printTest, usbDevices, scanningUsb, scanUsb, printTestUsb } =
     usePrinters();
 

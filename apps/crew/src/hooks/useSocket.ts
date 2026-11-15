@@ -3,6 +3,8 @@ import { io, Socket } from "socket.io-client";
 import type { DishStatus, Order } from "../types";
 import type { PrintJobData } from "./usePrinting";
 import { isTauri } from "../lib/platform";
+import { isDemoMode } from "../lib/demoMode";
+import type { DemoSocket } from "../demo/socket";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CREW_SECRET =
@@ -88,6 +90,8 @@ export function useSocket({
   });
 
   const socketRef = useRef<Socket | null>(null);
+  // Modo demo: socket simulado sin red (ver src/demo/socket.ts)
+  const demoSocketRef = useRef<DemoSocket | null>(null);
 
   // El socket se conecta/reconecta cuando cambia branchId
   useEffect(() => {
@@ -99,6 +103,27 @@ export function useSocket({
         "[CREW:SOCKET] No branchId configurado, socket no conectado",
       );
       return;
+    }
+
+    if (isDemoMode()) {
+      let cancelled = false;
+      let stop = () => {};
+      void import("../demo/socket").then(({ connectDemoSocket }) => {
+        if (cancelled) return;
+        const demoSocket = connectDemoSocket({ branchId, deviceId }, () => ({
+          onDevicesUpdated: onDevicesUpdatedRef.current,
+          onRefetch: () => onRefetchRef.current(),
+          onPrintJob: onPrintJobRef.current,
+          onFlexbillOrder: onFlexbillOrderRef.current,
+        }));
+        demoSocketRef.current = demoSocket;
+        stop = demoSocket.stop;
+      });
+      return () => {
+        cancelled = true;
+        stop();
+        demoSocketRef.current = null;
+      };
     }
 
     console.log(`[CREW:SOCKET] Conectando a ${BASE_URL}`);
@@ -266,6 +291,10 @@ export function useSocket({
   }, [branchId, deviceId]); // reconecta si cambia la sucursal
 
   const setMaster = useCallback((targetDeviceId: string) => {
+    if (demoSocketRef.current) {
+      demoSocketRef.current.emit("crew:set-master", { deviceId: targetDeviceId });
+      return;
+    }
     socketRef.current?.emit("crew:set-master", { deviceId: targetDeviceId });
   }, []);
 

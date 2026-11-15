@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Monitor, Printer } from "lucide-react";
 import { Badge, Button, Card } from "@even/ui";
 import type { CrewDevice } from "../hooks/useSocket";
-import { isTauri } from "../lib/platform";
+import { canPrintHere } from "../lib/platform";
 import PrintingBanner from "../features/impresion/PrintingBanner";
 
 interface Props {
@@ -21,7 +21,7 @@ export default function DevicesPanel({
   masterDeviceId,
   setMaster,
 }: Props) {
-  const canPrint = isTauri();
+  const canPrint = canPrintHere();
 
   // Siempre incluye este dispositivo para que "Este dispositivo" no desaparezca
   // durante reconexiones del socket o si la lista del servidor llega tarde.

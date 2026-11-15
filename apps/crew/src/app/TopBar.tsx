@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Printer, RefreshCw, UserRound } from "lucide-react";
 import { Badge, IconButton, cn } from "@even/ui";
 import ServiceSwitcher from "../components/ServiceSwitcher";
-import { isTauri } from "../lib/platform";
+import { canPrintHere } from "../lib/platform";
+import { isDemoMode } from "../lib/demoMode";
 import { useBridgeStatus } from "../features/impresion/bridgeStatus";
 import { getPrintingStatus } from "../features/impresion/printingStatus";
 import { useSession } from "./session/context";
@@ -19,14 +20,14 @@ function usePrintStatus() {
     deviceId,
     masterDeviceId,
     connectedDevices,
-    canPrint: isTauri(),
+    canPrint: canPrintHere(),
     bridge,
   });
   switch (status.kind) {
     case "bridge":
       return { label: "Imprime el bridge", ok: true };
     case "este-equipo":
-      return { label: "Imprime aquí", ok: true };
+      return { label: isDemoMode() ? "Imprime aquí (demo)" : "Imprime aquí", ok: true };
     case "otro-equipo":
       return { label: "Imprime otro equipo", ok: true };
     default:

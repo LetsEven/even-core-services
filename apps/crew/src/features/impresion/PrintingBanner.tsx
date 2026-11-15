@@ -1,7 +1,8 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button, cn } from "@even/ui";
 import type { CrewDevice } from "../../hooks/useSocket";
-import { isTauri } from "../../lib/platform";
+import { canPrintHere } from "../../lib/platform";
+import { isDemoMode } from "../../lib/demoMode";
 import { useBridgeStatus } from "./bridgeStatus";
 import { getPrintingStatus, type PrintingStatus } from "./printingStatus";
 
@@ -29,7 +30,9 @@ export function printingOkText(status: PrintingStatus): string | null {
     case "bridge":
       return "Los tickets salen por el bridge de impresión.";
     case "este-equipo":
-      return "Este dispositivo imprime los tickets.";
+      return isDemoMode()
+        ? "Imprime aquí (demo): los tickets se simulan, no sale nada a una impresora."
+        : "Este dispositivo imprime los tickets.";
     case "otro-equipo":
       return "Otro dispositivo imprime los tickets.";
     default:
@@ -49,7 +52,7 @@ export default function PrintingBanner({
     deviceId,
     masterDeviceId,
     connectedDevices,
-    canPrint: isTauri(),
+    canPrint: canPrintHere(),
     bridge,
   });
 

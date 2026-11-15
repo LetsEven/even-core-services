@@ -68,13 +68,13 @@ describe("login local", () => {
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ userId: "u1", pin: "1234" });
   });
 
-  it("lockout del servicio: avisa con cuenta regresiva y deshabilita el teclado", async () => {
+  it("rate limit del servicio (429): avisa con cuenta regresiva y deshabilita el teclado", async () => {
     pair();
     fetchMock.mockResolvedValueOnce(jsonResponse({ users }));
     mount();
     fireEvent.click(await screen.findByText("Ana"));
     tapPin("9999");
-    fetchMock.mockResolvedValueOnce(jsonResponse({}, 423, { "Retry-After": "900" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({}, 429, { "Retry-After": "900" }));
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/Espera 15:00/));
     expect((screen.getByRole("button", { name: "5" }) as HTMLButtonElement).disabled).toBe(true);

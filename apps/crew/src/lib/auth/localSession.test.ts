@@ -50,7 +50,8 @@ describe("emparejamiento", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ users: [{ id: "u1", name: "Ana", role: "mesero" }] }));
     expect(await auth.listUsers()).toEqual([{ id: "u1", name: "Ana", role: "mesero" }]);
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/v1/users?branchId=b1`);
-    expect(headerOf(fetchMock.mock.calls[0], "Authorization")).toBe("Bearer dev-tok");
+    expect(headerOf(fetchMock.mock.calls[0], "X-Device-Token")).toBe("dev-tok");
+    expect(headerOf(fetchMock.mock.calls[0], "Authorization")).toBeUndefined();
   });
 
   it("dispositivo revocado (401 en la lista) vuelve a pedir emparejamiento", async () => {
@@ -81,7 +82,8 @@ describe("login", () => {
 
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/v1/login`);
     expect(bodyOf(fetchMock.mock.calls[0])).toEqual({ userId: "u1", pin: "1234" });
-    expect(headerOf(fetchMock.mock.calls[0], "Authorization")).toBe("Bearer dev-tok");
+    expect(headerOf(fetchMock.mock.calls[0], "X-Device-Token")).toBe("dev-tok");
+    expect(headerOf(fetchMock.mock.calls[0], "Authorization")).toBeUndefined();
 
     const snap = auth.getSnapshot();
     expect(snap.status).toBe("signedIn");
@@ -109,11 +111,11 @@ describe("login", () => {
     expect(await auth.getToken()).toBeNull();
   });
 
-  it("lockout: 423 con Retry-After llega como error de bloqueo", async () => {
+  it("rate limit: 429 con Retry-After llega como error de bloqueo (el lockout por PIN es un 401 generico)", async () => {
     const { auth, fetchMock } = paired();
-    fetchMock.mockResolvedValueOnce(jsonResponse({}, 423, { "Retry-After": "900" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({}, 429, { "Retry-After": "900" }));
     await expect(auth.login("u1", "0000")).rejects.toMatchObject({
-      status: 423,
+      status: 429,
       retryAfter: 900,
       isLocked: true,
     });
@@ -158,6 +160,7 @@ describe("refresh", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/v1/refresh`);
     expect(bodyOf(fetchMock.mock.calls[1])).toEqual({ refreshToken: "r1" });
+    expect(headerOf(fetchMock.mock.calls[1], "X-Device-Token")).toBe("dev-tok");
     expect(await auth.getToken()).toBe(next);
     expect(await auth.getToken()).not.toBe(access);
     expect(storage!.getItem(SESSION_KEY)).toContain("r2");
@@ -239,6 +242,7 @@ describe("logout", () => {
 
     const call = fetchMock.mock.calls[1];
     expect(call[0]).toBe(`${BASE}/v1/logout`);
+    expect(headerOf(call, "X-Device-Token")).toBe("dev-tok");
     expect(bodyOf(call)).toEqual({ refreshToken: "r1" });
     expect(auth.getSnapshot()).toMatchObject({ status: "signedOut", user: null, paired: true });
     expect(storage.getItem(SESSION_KEY)).toBeNull();

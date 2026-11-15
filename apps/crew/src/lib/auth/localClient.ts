@@ -1,16 +1,18 @@
 // Cliente tipado del servicio crew-auth (contrato API v1). Solo habla con
 // VITE_CREW_AUTH_URL; el modo demo jamas lo usa.
 //
-// El contrato fija rutas, cuerpos de entrada y la forma de login/pair. Donde
-// no fija la forma exacta de la respuesta (listas, admin) el cliente acepta
-// variantes comunes y normaliza; los supuestos estan marcados con SUPUESTO y
-// hay que confirmarlos contra apps/crew-auth.
+// Alineado con las rutas reales de apps/crew-auth (src/routes/*):
+//  - token de dispositivo (pair -> login/refresh/logout/lista): cabecera
+//    `X-Device-Token`; access token JWT: `Authorization: Bearer`.
+//  - listas y entidades llegan envueltas ({ users }, { user }).
+//  - el lockout del usuario responde 401 generico (igual que un PIN malo); solo
+//    el rate limit por IP/dispositivo responde 429 con Retry-After.
 
 import { isRole, type Role } from "./roles";
 
 export class CrewAuthError extends Error {
   readonly status: number;
-  /** Segundos sugeridos por Retry-After (lockout / rate limit), si vino. */
+  /** Segundos sugeridos por Retry-After (rate limit), si vino. */
   readonly retryAfter: number | null;
   constructor(status: number, retryAfter: number | null = null) {
     // Mensaje generico a proposito: nunca se propaga texto del servidor.
@@ -22,9 +24,9 @@ export class CrewAuthError extends Error {
   get isNetwork(): boolean {
     return this.status === 0;
   }
-  /** Lockout (423) o rate limit (429). */
+  /** Rate limit (429). El lockout por PIN llega como 401 generico y no se distingue. */
   get isLocked(): boolean {
-    return this.status === 423 || this.status === 429;
+    return this.status === 429;
   }
   get isUnauthorized(): boolean {
     return this.status === 401 || this.status === 403;
@@ -60,11 +62,14 @@ export interface AdminUser {
   name: string;
   role: Role;
   active: boolean;
+  branchId: string;
+  cocinaOperar: boolean;
 }
 
 export interface PairingCode {
   code: string;
-  expiresAt: string | null;
+  /** ms epoch (el servicio lo devuelve numerico). */
+  expiresAt: number | null;
 }
 
 export interface LocalClient {
@@ -74,6 +79,7 @@ export interface LocalClient {
   refresh(deviceToken: string, refreshToken: string): Promise<RefreshResult>;
   logout(deviceToken: string, refreshToken: string): Promise<void>;
   // Administracion (solo super; access token).
+  /** Todos los usuarios del restaurante (activos e inactivos), filtrados por sucursal. */
   adminListUsers(accessToken: string, branchId: string): Promise<AdminUser[]>;
   adminCreateUser(
     accessToken: string,
@@ -110,14 +116,23 @@ function parseSelectorUser(v: unknown): SelectorUser {
 
 function parseAdminUser(v: unknown): AdminUser {
   const u = parseSelectorUser(v);
-  return { ...u, active: isObj(v) && v.active === false ? false : true };
+  if (!isObj(v) || typeof v.active !== "boolean") return bad();
+  return {
+    ...u,
+    active: v.active,
+    branchId: str(v.branchId) ?? "",
+    cocinaOperar: v.cocinaOperar === true,
+  };
 }
 
-// SUPUESTO: la lista llega como arreglo o como { users: [...] }.
-function listOf(body: unknown, key = "users"): unknown[] {
-  if (Array.isArray(body)) return body;
-  if (isObj(body) && Array.isArray(body[key])) return body[key] as unknown[];
+// El servicio siempre envuelve: { users: [...] }.
+function listOf(body: unknown): unknown[] {
+  if (isObj(body) && Array.isArray(body.users)) return body.users;
   return bad();
+}
+
+function userOf(body: unknown): unknown {
+  return isObj(body) ? body.user : bad();
 }
 
 export function createLocalClient(opts: {
@@ -129,10 +144,11 @@ export function createLocalClient(opts: {
   async function call(
     method: string,
     path: string,
-    o: { bearer?: string; body?: unknown } = {},
+    o: { bearer?: string; device?: string; body?: unknown } = {},
   ): Promise<unknown> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (o.bearer) headers.Authorization = `Bearer ${o.bearer}`;
+    if (o.device) headers["X-Device-Token"] = o.device;
     if (o.body !== undefined) headers["Content-Type"] = "application/json";
     let res: Response;
     try {
@@ -172,14 +188,14 @@ export function createLocalClient(opts: {
       const b = await call(
         "GET",
         `/v1/users?branchId=${encodeURIComponent(branchId)}`,
-        { bearer: deviceToken },
+        { device: deviceToken },
       );
       return listOf(b).map(parseSelectorUser);
     },
 
     async login(deviceToken, userId, pin) {
       const b = await call("POST", "/v1/login", {
-        bearer: deviceToken,
+        device: deviceToken,
         body: { userId, pin },
       });
       if (!isObj(b) || !isObj(b.user)) return bad();
@@ -198,11 +214,11 @@ export function createLocalClient(opts: {
       };
     },
 
-    // SUPUESTO: refresh/logout llevan el token del dispositivo como Bearer
-    // (igual que login) y el refresh token en el cuerpo.
+    // El servicio valida el refresh token del cuerpo (no exige el dispositivo);
+    // se envia X-Device-Token por consistencia.
     async refresh(deviceToken, refreshToken) {
       const b = await call("POST", "/v1/refresh", {
-        bearer: deviceToken,
+        device: deviceToken,
         body: { refreshToken },
       });
       if (!isObj(b)) return bad();
@@ -218,25 +234,23 @@ export function createLocalClient(opts: {
 
     async logout(deviceToken, refreshToken) {
       await call("POST", "/v1/logout", {
-        bearer: deviceToken,
+        device: deviceToken,
         body: { refreshToken },
       });
     },
 
-    // SUPUESTO: el admin lista todos los usuarios (activos o no) con
-    // GET /v1/users?branchId=&includeInactive=true y access token de super.
+    // GET /v1/admin/users (super): activos e inactivos de todo el restaurante;
+    // se filtra por sucursal aqui.
     async adminListUsers(accessToken, branchId) {
-      const b = await call(
-        "GET",
-        `/v1/users?branchId=${encodeURIComponent(branchId)}&includeInactive=true`,
-        { bearer: accessToken },
-      );
-      return listOf(b).map(parseAdminUser);
+      const b = await call("GET", "/v1/admin/users", { bearer: accessToken });
+      return listOf(b)
+        .map(parseAdminUser)
+        .filter((u) => u.branchId === branchId);
     },
 
     async adminCreateUser(accessToken, input) {
       const b = await call("POST", "/v1/users", { bearer: accessToken, body: input });
-      return parseAdminUser(isObj(b) && isObj(b.user) ? b.user : b);
+      return parseAdminUser(userOf(b));
     },
 
     async adminUpdateUser(accessToken, id, patch) {
@@ -244,10 +258,9 @@ export function createLocalClient(opts: {
         bearer: accessToken,
         body: patch,
       });
-      return parseAdminUser(isObj(b) && isObj(b.user) ? b.user : b);
+      return parseAdminUser(userOf(b));
     },
 
-    // SUPUESTO: POST /v1/users/:id/reset-pin { pin }.
     async adminResetPin(accessToken, id, pin) {
       await call("POST", `/v1/users/${encodeURIComponent(id)}/reset-pin`, {
         bearer: accessToken,
@@ -255,16 +268,19 @@ export function createLocalClient(opts: {
       });
     },
 
-    // SUPUESTO: cuerpo { branchId }; respuesta { code | pairingCode, expiresAt }.
+    // POST /v1/devices/pairing-codes { branchId } -> 201 { pairingCode, branchId, expiresAt }.
     async adminCreatePairingCode(accessToken, branchId) {
       const b = await call("POST", "/v1/devices/pairing-codes", {
         bearer: accessToken,
         body: { branchId },
       });
       if (!isObj(b)) return bad();
-      const code = str(b.code) ?? str(b.pairingCode);
+      const code = str(b.pairingCode);
       if (!code) return bad();
-      return { code, expiresAt: str(b.expiresAt) };
+      return {
+        code,
+        expiresAt: typeof b.expiresAt === "number" ? b.expiresAt : null,
+      };
     },
   };
 }

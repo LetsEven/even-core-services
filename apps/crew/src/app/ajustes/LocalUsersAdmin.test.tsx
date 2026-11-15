@@ -47,19 +47,29 @@ function mountAdmin() {
     </AuthContext.Provider>,
   );
 }
+const adminUser = (id: string, name: string, role: Role, active = true) => ({
+  id, name, role, active, branchId: "b1", restaurantId: "r1", cocinaOperar: false, lockedUntil: null, createdAt: 1, updatedAt: 1,
+});
 const bodyOf = (i: number) => JSON.parse(fetchMock.mock.calls[i][1].body);
 
 describe("administracion de usuarios locales", () => {
   it("lista, crea, cambia rol, desactiva, resetea PIN y genera codigo", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ users: [{ id: "u1", name: "Ana", role: "mesero", active: true }, { id: "me", name: "Gerente", role: "super", active: true }] }),
+      jsonResponse({
+        users: [
+          adminUser("u1", "Ana", "mesero"),
+          adminUser("me", "Gerente", "super"),
+          { ...adminUser("x9", "Otra sucursal", "mesero"), branchId: "b2" },
+        ],
+      }),
     );
     mountAdmin();
     expect(await screen.findByText("Ana")).toBeTruthy();
-    expect(fetchMock.mock.calls[0][0]).toBe("https://auth.test/v1/users?branchId=b1&includeInactive=true");
+    expect(screen.queryByText("Otra sucursal")).toBeNull(); // filtra por sucursal
+    expect(fetchMock.mock.calls[0][0]).toBe("https://auth.test/v1/admin/users");
 
     // Cambiar rol
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "u1", name: "Ana", role: "cajero", active: true }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: adminUser("u1", "Ana", "cajero") }));
     fireEvent.change(screen.getByLabelText("Rol de Ana"), { target: { value: "cajero" } });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(fetchMock.mock.calls[1][0]).toBe("https://auth.test/v1/users/u1");
@@ -67,7 +77,7 @@ describe("administracion de usuarios locales", () => {
     expect(bodyOf(1)).toEqual({ role: "cajero" });
 
     // Desactivar (a si mismo no se puede)
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "u1", name: "Ana", role: "cajero", active: false }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: adminUser("u1", "Ana", "cajero", false) }));
     const buttons = screen.getAllByRole("button", { name: "Desactivar" }) as HTMLButtonElement[];
     expect(buttons[1].disabled).toBe(true);
     fireEvent.click(buttons[0]);
@@ -86,15 +96,15 @@ describe("administracion de usuarios locales", () => {
     // Crear usuario
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Beto" } });
     fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "4321" } });
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "u3", name: "Beto", role: "mesero", active: true }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: adminUser("u3", "Beto", "mesero") }, 201));
     fireEvent.click(screen.getByRole("button", { name: /Crear usuario/ }));
     expect(await screen.findByText("Beto")).toBeTruthy();
     expect(bodyOf(4)).toEqual({ branchId: "b1", name: "Beto", role: "mesero", pin: "4321" });
 
     // Codigo de emparejamiento
-    fetchMock.mockResolvedValueOnce(jsonResponse({ code: "K7Q2-XM", expiresAt: "2030-01-01T00:00:00Z" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ pairingCode: "K7Q2XMAB", branchId: "b1", expiresAt: 1_900_000_000_000 }, 201));
     fireEvent.click(screen.getByRole("button", { name: /Generar código/ }));
-    expect(await screen.findByText("K7Q2-XM")).toBeTruthy();
+    expect(await screen.findByText("K7Q2XMAB")).toBeTruthy();
   });
 
   it("un PIN invalido no se envia", async () => {

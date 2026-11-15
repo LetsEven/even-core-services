@@ -6,6 +6,7 @@ import { LoginGate, RequireAuth } from "./guards";
 import LoginPage from "./LoginPage";
 import AppShell from "./AppShell";
 import CajaLayout from "./CajaLayout";
+import ResumenPage from "../routes/caja/ResumenPage";
 import AjustesPage from "./AjustesPage";
 import ComandaPage from "../routes/mesas/ComandaPage";
 import CuentaPage from "../routes/mesas/CuentaPage";
@@ -59,6 +60,7 @@ export const routes: RouteObject[] = [
                 children: [
                   { index: true, element: <HistorialPage /> },
                   { path: "comprobantes", element: <ComprobantesPage /> },
+                  { path: "resumen", element: <ResumenPage /> },
                 ],
               },
               { path: "ajustes", element: <AjustesPage /> },

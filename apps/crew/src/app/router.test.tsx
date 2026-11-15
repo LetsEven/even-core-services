@@ -107,3 +107,20 @@ describe("redirección inicial", () => {
     expect(router.state.location.pathname).toBe("/mesas");
   });
 });
+
+describe("rutas de Caja", () => {
+  it("Órdenes, Comprobantes y Resumen son vistas hijas independientes", async () => {
+    const { routes } = await import("./router");
+    const find = (rs: typeof routes, path: string): (typeof routes)[number] | undefined => {
+      for (const r of rs) {
+        if (r.path === path) return r;
+        const hit = r.children && find(r.children, path);
+        if (hit) return hit;
+      }
+    };
+    const caja = find(routes, "caja");
+    const kids = caja?.children ?? [];
+    expect(kids.some((c) => c.index)).toBe(true);
+    expect(kids.map((c) => c.path).filter(Boolean)).toEqual(["comprobantes", "resumen"]);
+  });
+});

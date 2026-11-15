@@ -3,6 +3,8 @@ import { Check, ChevronDown, Printer, RefreshCw, UserRound } from "lucide-react"
 import { Badge, IconButton, cn } from "@even/ui";
 import ServiceSwitcher from "../components/ServiceSwitcher";
 import { isTauri } from "../lib/platform";
+import { useBridgeStatus } from "../features/impresion/bridgeStatus";
+import { getPrintingStatus } from "../features/impresion/printingStatus";
 import { useSession } from "./session/context";
 
 interface Props {
@@ -12,16 +14,24 @@ interface Props {
 
 function usePrintStatus() {
   const { masterDeviceId, deviceId, connectedDevices } = useSession();
-  if (!masterDeviceId) return { label: "Sin impresión", ok: false };
-  if (masterDeviceId === deviceId) {
-    return isTauri()
-      ? { label: "Imprime aquí", ok: true }
-      : { label: "Master sin impresión", ok: false };
+  const bridge = useBridgeStatus();
+  const status = getPrintingStatus({
+    deviceId,
+    masterDeviceId,
+    connectedDevices,
+    canPrint: isTauri(),
+    bridge,
+  });
+  switch (status.kind) {
+    case "bridge":
+      return { label: "Imprime el bridge", ok: true };
+    case "este-equipo":
+      return { label: "Imprime aquí", ok: true };
+    case "otro-equipo":
+      return { label: "Imprime otro equipo", ok: true };
+    default:
+      return { label: "Nadie imprime", ok: false };
   }
-  const master = connectedDevices.find((d) => d.deviceId === masterDeviceId);
-  return master && !master.online
-    ? { label: "Master offline", ok: false }
-    : { label: "Imprime otro equipo", ok: true };
 }
 
 export default function TopBar({ onRefresh, refreshing }: Props) {

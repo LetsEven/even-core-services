@@ -10,7 +10,7 @@ Contrato: `crew-auth-spec.md` (Crew Auth independiente e intercambiable). Los pe
 npm install                                   # en la raiz del monorepo
 cp apps/crew-auth/.env.example apps/crew-auth/.env   # opcional; exporta las variables en tu shell
 npm run dev -w @even/crew-auth                # tsx watch, puerto 8787
-npm run test -w @even/crew-auth               # vitest, SQLite en memoria
+npm run test -w @even/crew-auth               # vitest, SQLite en memoria (incluye test/: integracion con el cliente real de apps/crew)
 npx turbo run typecheck lint test build --filter=@even/crew-auth
 ```
 
@@ -66,6 +66,10 @@ Auth: `Authorization: Bearer <accessToken>` (JWT) y/o `X-Device-Token: <deviceTo
 | `GET /v1/audit?limit=&before=&action=` | super | Eventos recientes primero. |
 
 JWT de acceso (EdDSA, 15 min): `iss`, `aud=even-crew`, `sub`, `role`, `permissions[]`, `branchId`, `restaurantId`, `deviceId`, y `sid` (id de sesion). El servicio valida ademas que la sesion siga vigente en cada llamada admin; otros verificadores (p. ej. el backend con JWKS) solo ven la firma y la expiracion, por lo que un logout corta el access token en este servicio pero no en otros hasta que vence (max. 15 min).
+
+Al rotar el refresh token se revoca la sesion anterior (y con ella su access token, por `sid`): quien comparta el refresh token entre pestanas debe difundir el access token nuevo (lo hace el cliente de Crew). El lockout por PIN responde 401 `invalid_credentials`, no 423.
+
+Pruebas: `test/local.integration.test.ts` arranca esta app en un puerto efimero y la usa con `apps/crew/src/lib/auth/localClient.ts` y `localSession.ts`; `test/tsconfig.json` las tipa con resolucion `bundler` (el cliente usa imports sin extension).
 
 PIN: 4 a 8 digitos, scrypt con sal unica, comparacion en tiempo constante. Errores de validacion: `400 {error:"invalid_request"}`.
 

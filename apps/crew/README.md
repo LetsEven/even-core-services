@@ -92,10 +92,10 @@ Rutas protegidas con `RequirePermission` (pantalla "Sin acceso"): `/mesas` → `
 ### Provider `local` (crew-auth)
 
 - **Primera vez en el dispositivo**: pantalla de código de emparejamiento (lo genera un `super` en Ajustes → Usuarios, vale 10 min y es de un uso). El token del dispositivo queda en `localStorage`.
-- **Uso diario**: selector de empleados y teclado numérico grande para el PIN (4 a 8 dígitos). Errores genéricos ("Usuario o PIN incorrecto"); lockout con cuenta regresiva (423/429 del servicio, o 5 fallos seguidos, 15 min). Tocar el usuario en la barra superior cierra la sesión y vuelve al selector.
-- **Tokens**: el access token (15 min) vive solo en memoria; el refresh token (rotativo, 12 h) en `localStorage` (con `try/catch`: sin storage la sesión dura lo que la pestaña). Se refresca solo ~1 min antes de expirar (una petición a la vez) y `signOut` lo revoca en el servicio.
+- **Uso diario**: selector de empleados y teclado numérico grande para el PIN (4 a 8 dígitos). Errores genéricos ("Usuario o PIN incorrecto"); bloqueo con cuenta regresiva (429 del servicio con `Retry-After`, o 5 fallos seguidos, 15 min; el lockout por PIN del servicio responde 401 genérico, igual que un PIN malo). Tocar el usuario en la barra superior cierra la sesión y vuelve al selector.
+- **Tokens**: el access token (15 min) vive solo en memoria; el refresh token (rotativo, 12 h) en `localStorage` (con `try/catch`: sin storage la sesión dura lo que la pestaña). Se refresca solo ~1 min antes de expirar (una petición a la vez) y `signOut` lo revoca en el servicio. Al recargar con sesión guardada y sin red se reintenta el refresh con backoff (0,5 → 8 s) antes de pedir PIN; un 401 pide PIN de inmediato. Entre pestañas, cada refresh corre bajo `navigator.locks` (o un lease en `localStorage` si no existe), parte siempre del refresh token guardado y difunde el access token nuevo por `BroadcastChannel`; el servicio revoca la sesión anterior al rotar, así que las demás pestañas lo adoptan en vez de usar el suyo.
 - **Administración** (Ajustes, solo con provider local y `usuarios.administrar`): listar, crear, cambiar rol, activar/desactivar, resetear PIN y generar código de emparejamiento.
-- El cliente tipado está en `src/lib/auth/localClient.ts` (los supuestos de forma de respuesta que el contrato no fija están marcados `SUPUESTO`).
+- El cliente tipado está en `src/lib/auth/localClient.ts`, alineado con las rutas reales de `apps/crew-auth` (token de dispositivo en `X-Device-Token`, access token en `Authorization: Bearer`). La prueba de integración `apps/crew-auth/test/local.integration.test.ts` levanta el servicio real y ejercita el flujo completo con este cliente.
 
 ### Cambiar entre clerk y local
 

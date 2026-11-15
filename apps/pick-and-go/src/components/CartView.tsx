@@ -167,13 +167,10 @@ export default function CartView({
       <div className="w-full flex-1 flex flex-col">
         <SheetHero className={onClose ? "bg-transparent p-0" : "p-0"} style={fadeStyle}>
           {state.items.length === 0 ? (
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
+            <div className="pt-6 md:pt-8 lg:pt-10 pb-2 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                 Pick & Go
               </h1>
-              <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("emptyCartHero")}
-              </h2>
             </div>
           ) : (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">

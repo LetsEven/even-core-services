@@ -1,0 +1,306 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import { ChevronDown, Check } from "lucide-react";
+import OrderCarousel from "../components/OrderCarousel";
+import AppHeader from "../components/AppHeader";
+import { syncTapPayOrderFromPOS, saveFcmToken } from "../services/api";
+import type { Branch } from "../services/api";
+import type { DishStatus, CookingStatus, Order } from "../types";
+import { isTauri } from "../lib/platform";
+
+async function showWindow() {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("show_main_window");
+  } catch {}
+}
+
+async function syncHasOrders(hasOrders: boolean) {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("set_has_orders", { hasOrders });
+  } catch {}
+}
+
+async function registerFcmToken(authToken: string) {
+  const MAX_ATTEMPTS = 6;
+  const DELAY_MS = 3000;
+
+  for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const token = await invoke<string | null>("get_fcm_token");
+      if (token) {
+        await saveFcmToken(authToken, token, "android");
+        return;
+      }
+    } catch {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, DELAY_MS));
+  }
+}
+
+async function requestNotificationPermission() {
+  try {
+    const { isPermissionGranted, requestPermission } = await import(
+      "@tauri-apps/plugin-notification"
+    );
+    const granted = await isPermissionGranted();
+    if (!granted) await requestPermission();
+  } catch {
+    if ("Notification" in window && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+  }
+}
+
+const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
+
+interface Props {
+  onOpenPrinters: () => void;
+  onOpenHistorial: () => void;
+  onOpenComprobantes: () => void;
+  orders: Order[];
+  loading: boolean;
+  error: string | null;
+  fetchOrders: (showSpinner?: boolean) => Promise<unknown>;
+  updateDish: (
+    orderId: string,
+    orderType: string,
+    dishId: string,
+    status: DishStatus,
+  ) => Promise<void>;
+  updateOrderCookingStatus: (
+    orderId: string,
+    status: CookingStatus,
+  ) => Promise<void>;
+  updatePrepTimeExtraMinutes: (
+    orderId: string,
+    extraMinutes: number,
+  ) => Promise<void>;
+  branches: Branch[];
+  branchesLoading: boolean;
+  branchId: string | null;
+  onBranchChange: (id: string) => void;
+  availableWaiters: { id: string; name: string }[];
+  waiterSession: { id: string; name: string } | null;
+  requireWaiterLogin: (
+    onSuccess: (waiter: { id: string; name: string }) => void,
+    options?: { forcePicker?: boolean },
+  ) => void;
+}
+
+export default function Kitchen({
+  onOpenPrinters,
+  onOpenHistorial,
+  onOpenComprobantes,
+  orders,
+  loading,
+  error,
+  fetchOrders,
+  updateDish,
+  updateOrderCookingStatus,
+  updatePrepTimeExtraMinutes,
+  branches,
+  branchesLoading,
+  branchId,
+  onBranchChange,
+  availableWaiters,
+  waiterSession,
+  requireWaiterLogin,
+}: Props) {
+  const [branchOpen, setBranchOpen] = useState(false);
+  const branchRef = useRef<HTMLDivElement>(null);
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (branchRef.current && !branchRef.current.contains(e.target as Node)) {
+        setBranchOpen(false);
+      }
+    };
+    if (branchOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [branchOpen]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    requestNotificationPermission();
+    getToken().then((t) => {
+      if (t) registerFcmToken(t);
+    });
+  }, [getToken]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import("@tauri-apps/plugin-notification")
+      .then(({ onAction }) => onAction(() => showWindow()))
+      .then((listener) => {
+        unlisten = () => listener.unregister();
+      })
+      .catch(() => {});
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    syncHasOrders(orders.length > 0);
+  }, [orders.length]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import("@tauri-apps/api/window")
+      .then(({ getCurrentWindow }) =>
+        getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+          if (focused) fetchOrders();
+        }),
+      )
+      .then((fn) => {
+        unlisten = fn;
+      })
+      .catch(() => {});
+    return () => {
+      unlisten?.();
+    };
+  }, [fetchOrders]);
+
+  const handleActualizar = useCallback(
+    async (showSpinner = true) => {
+      const tapPayOrders = orders.filter((o) => o.orderType === "tap_pay");
+      if (tapPayOrders.length > 0) {
+        const token = await getToken();
+        if (token) {
+          await Promise.allSettled(
+            tapPayOrders.map((o) =>
+              syncTapPayOrderFromPOS(o.id, token).catch(() => {}),
+            ),
+          );
+        }
+      }
+      fetchOrders(showSpinner);
+    },
+    [orders, getToken, fetchOrders],
+  );
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible" && !loading) {
+        handleActualizar(false);
+      }
+    }, 45_000);
+    return () => clearInterval(id);
+  }, [handleActualizar, loading]);
+
+  return (
+    <div
+      className="relative flex-1 min-h-0 flex flex-col"
+      style={{ background: "#023828" }}
+    >
+      <AppHeader
+        onOpenPrinters={onOpenPrinters}
+        onOpenHistorial={onOpenHistorial}
+        onOpenComprobantes={onOpenComprobantes}
+        onRefresh={() => handleActualizar(true)}
+        refreshing={loading}
+      />
+
+      {/* Logo central */}
+      <div className="flex flex-col items-center pb-6 gap-1">
+        <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
+          {APP_LABEL}
+        </h1>
+        {!branchesLoading && branches.length > 0 && (
+          <div className="relative" ref={branchRef}>
+            <button
+              onClick={() => setBranchOpen((v) => !v)}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
+            >
+              <span>
+                {branches.find((b) => b.id === branchId)?.name ??
+                  "Seleccionar sucursal"}
+              </span>
+              {branches.length > 1 && (
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
+                />
+              )}
+            </button>
+            {branchOpen && branches.length > 1 && (
+              <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
+                {branches.map((b) => (
+                  <li key={b.id}>
+                    <button
+                      onClick={() => {
+                        onBranchChange(b.id);
+                        setBranchOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <span>{b.name}</span>
+                      {b.id === branchId && (
+                        <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Panel claro inferior (Offwhite body) */}
+      <div
+        className="flex-1 rounded-t-lg px-5 pt-5 pb-6 flex flex-col min-h-0 text-even-evergreen"
+        style={{ background: "#FEFEEB" }}
+      >
+        {branchesLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-even-evergreen/15 border-t-even-grass rounded-full animate-spin" />
+          </div>
+        ) : !branchId ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-even-evergreen/70">
+            <p className="font-medium text-even-evergreen">
+              Selecciona una sucursal
+            </p>
+            <p className="text-sm text-center">
+              Usa el selector de arriba para elegir la sucursal que deseas
+              monitorear.
+            </p>
+          </div>
+        ) : loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-even-evergreen/15 border-t-even-grass rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-even-evergreen/70">
+            <p className="font-medium text-even-evergreen">
+              Error al cargar órdenes
+            </p>
+            <p className="text-sm">{error}</p>
+            <button
+              onClick={() => fetchOrders(true)}
+              className="px-4 py-2 bg-even-grass text-even-evergreen rounded-md text-xs uppercase tracking-wider font-medium hover:bg-even-grass/90 cursor-pointer"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : (
+          <OrderCarousel
+            orders={orders}
+            onDishStatusChange={updateDish}
+            onOrderCookingStatusChange={updateOrderCookingStatus}
+            onPrepTimeExtraChange={updatePrepTimeExtraMinutes}
+            currentBranch={branches.find((b) => b.id === branchId) ?? null}
+            onOrdersRefresh={() => fetchOrders()}
+            availableWaiters={availableWaiters}
+            waiterSession={waiterSession}
+            requireWaiterLogin={requireWaiterLogin}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

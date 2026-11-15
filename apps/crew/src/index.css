@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-even-grass: #82e657; /* Radioactive Grass — primary brand color */
+  --color-even-evergreen: #023828; /* Evergreen — dark bg / text */
+  --color-even-black: #000000;
+  --color-even-shamrock: #299e66; /* mid accent */
+  --color-even-aqua: #c3feff; /* Icy Aqua — highlights */
+  --color-even-aquapastel: #e0f5f5;
+  --color-even-offwhite: #fefeeb; /* light neutral bg */
+
+  --color-even-ink: #141512;
+  --color-even-accent-light: #f0c8f3;
+  --color-even-accent-dark: #d690dc;
+
+  --font-display: "DM Mono", ui-monospace, monospace;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
+}
+
+body {
+  font-family: var(--font-mono);
+  background: #023828;
+  color: #fefeeb;
+  -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* Tablets táctiles (iPad, tablets Android): todo está en rem, así que escala completo. Desktop con mouse no cambia */
+@media (pointer: coarse) and (min-width: 768px) {
+  html {
+    font-size: 125%;
+  }
+}
+
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Anillo tipo sonar para mesas/habitaciones con algo nuevo por ver — sobre
+   un elemento circular (rounded-full) el box-shadow ya sale circular. */
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(130, 230, 87, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(130, 230, 87, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(130, 230, 87, 0);
+  }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

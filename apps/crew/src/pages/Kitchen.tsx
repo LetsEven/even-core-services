@@ -84,6 +84,8 @@ interface Props {
     onSuccess: (waiter: { id: string; name: string }) => void,
     options?: { forcePicker?: boolean },
   ) => void;
+  /** Solo lectura: sin controles de cambio de estado (falta cocina.operar). */
+  readOnly?: boolean;
 }
 
 export default function Kitchen({
@@ -100,6 +102,7 @@ export default function Kitchen({
   availableWaiters,
   waiterSession,
   requireWaiterLogin,
+  readOnly = false,
 }: Props) {
   const { getToken } = useAuth();
 
@@ -228,6 +231,7 @@ export default function Kitchen({
             onDishStatusChange={updateDish}
             onOrderCookingStatusChange={updateOrderCookingStatus}
             onPrepTimeExtraChange={updatePrepTimeExtraMinutes}
+            readOnly={readOnly}
             currentBranch={branches.find((b) => b.id === branchId) ?? null}
             onOrdersRefresh={() => fetchOrders()}
             availableWaiters={availableWaiters}

@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { DemoAuthContext } from "../lib/auth";
+import { DemoAuthContext } from "./demoAuthContext";
 import DemoBanner from "./DemoBanner";
 
 const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";

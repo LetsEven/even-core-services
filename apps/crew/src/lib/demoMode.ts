@@ -12,6 +12,8 @@ export const PRODUCTION_API_HOSTS = [
 
 export interface DemoModeEnv {
   VITE_DEMO_MODE?: string;
+  /** `demo` equivale a VITE_DEMO_MODE=true (mismas salvaguardas). */
+  VITE_AUTH_PROVIDER?: string;
   VITE_API_BASE_URL?: string;
 }
 
@@ -23,7 +25,10 @@ export interface DemoModeStatus {
 }
 
 export function evaluateDemoMode(env: DemoModeEnv): DemoModeStatus {
-  if (env.VITE_DEMO_MODE !== "true") return { active: false, error: null };
+  const requested =
+    env.VITE_DEMO_MODE === "true" ||
+    (env.VITE_AUTH_PROVIDER ?? "").trim().toLowerCase() === "demo";
+  if (!requested) return { active: false, error: null };
 
   const apiUrl = (env.VITE_API_BASE_URL ?? "").trim().toLowerCase();
   const prodHost = PRODUCTION_API_HOSTS.find((h) => apiUrl.includes(h));

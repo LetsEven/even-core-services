@@ -12,9 +12,10 @@ import {
 // SERVICE_REGISTRY y la config de cada SpatialGrid viven en registry.ts /
 // homeScreenShared.ts.
 
-export function PickAndGoHome(props: HomeScreenProps) {
+export function PickAndGoHome(props: HomeScreenProps & { readOnly?: boolean }) {
   return (
     <Kitchen
+      readOnly={props.readOnly}
       orders={props.orders.filter((o) => o.orderType === "pick_and_go")}
       loading={props.ordersLoading}
       error={props.ordersError}

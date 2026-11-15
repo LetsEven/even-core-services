@@ -37,4 +37,18 @@ describe("evaluateDemoMode", () => {
       evaluateDemoMode({ VITE_API_BASE_URL: "https://api.letseven.io" }),
     ).toEqual({ active: false, error: null });
   });
+
+  it("VITE_AUTH_PROVIDER=demo pide demo con las mismas salvaguardas", () => {
+    expect(evaluateDemoMode({ VITE_AUTH_PROVIDER: "demo" })).toEqual({
+      active: true,
+      error: null,
+    });
+    expect(
+      evaluateDemoMode({
+        VITE_AUTH_PROVIDER: "demo",
+        VITE_API_BASE_URL: "https://api.letseven.io",
+      }).error,
+    ).toMatch(/MODO DEMO rechazado/);
+    expect(evaluateDemoMode({ VITE_AUTH_PROVIDER: "local" }).active).toBe(false);
+  });
 });

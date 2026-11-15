@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useAuth, useSignOut } from "../lib/auth";
+import { useAuth } from "../lib/auth";
 import {
   Bell,
   ChevronRight,
@@ -49,8 +49,8 @@ function Row({
 }
 
 export default function AjustesPage() {
-  const { getToken } = useAuth();
-  const signOut = useSignOut();
+  const { getToken, signOut, hasPermission } = useAuth();
+  const canPrinters = hasPermission("ajustes.impresoras");
   const { waiterSession, requireWaiterLogin } = useSession();
 
   const [pushStatus, setPushStatus] = useState<WebPushStatus>("unsupported");
@@ -117,18 +117,22 @@ export default function AjustesPage() {
             <ChevronRight className="w-4 h-4 text-even-evergreen/30" />
           </button>
 
-          <Row
-            to="/ajustes/impresoras"
-            icon={Printer}
-            label="Impresoras"
-            hint="Escanear, nombrar y asignar rol"
-          />
-          <Row
-            to="/ajustes/dispositivos"
-            icon={Monitor}
-            label="Dispositivos"
-            hint="Equipos conectados y Master"
-          />
+          {canPrinters && (
+            <>
+              <Row
+                to="/ajustes/impresoras"
+                icon={Printer}
+                label="Impresoras"
+                hint="Escanear, nombrar y asignar rol"
+              />
+              <Row
+                to="/ajustes/dispositivos"
+                icon={Monitor}
+                label="Dispositivos"
+                hint="Equipos conectados y Master"
+              />
+            </>
+          )}
 
           {pushStatus === "default" && (
             <button

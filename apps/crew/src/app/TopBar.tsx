@@ -5,11 +5,13 @@ import {
   Printer,
   RefreshCw,
   UserRound,
+  LogOut,
 } from "lucide-react";
 import { Badge, IconButton, cn } from "@even/ui";
 import ServiceSwitcher from "../components/ServiceSwitcher";
 import { canPrintHere } from "../lib/platform";
 import { isDemoMode } from "../lib/demoMode";
+import { ROLE_LABELS, useAuth } from "../lib/auth";
 import { useBridgeStatus } from "../features/impresion/bridgeStatus";
 import { getPrintingStatus } from "../features/impresion/printingStatus";
 import { useSession } from "./session/context";
@@ -58,6 +60,7 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
     requireWaiterLogin,
   } = useSession();
   const print = usePrintStatus();
+  const { kind, user, signOut } = useAuth();
 
   const [branchOpen, setBranchOpen] = useState(false);
   const branchRef = useRef<HTMLDivElement>(null);
@@ -143,16 +146,34 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
         <div className="hidden sm:block sm:order-2 sm:flex-1" />
 
         <div className="flex items-center gap-2 min-w-0 sm:contents">
-          <button
-            onClick={() => requireWaiterLogin(() => {}, { forcePicker: true })}
-            title="Cambiar mesero"
-            className="flex items-center gap-1.5 min-w-0 max-w-44 sm:max-w-36 sm:order-3 text-even-offwhite/80 hover:text-even-offwhite bg-white/10 hover:bg-white/15 rounded-full px-3 min-h-11 text-xs transition-colors cursor-pointer"
-          >
-            <UserRound className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">
-              {waiterSession?.name ?? "Invitado"}
-            </span>
-          </button>
+          {kind === "local" && user ? (
+            // Auth local: usuario y rol de Crew (el mesero de Soft Restaurant se
+            // sigue pidiendo al operar una cuenta, ver requireWaiterLogin). Tocar
+            // cierra la sesion y vuelve al selector de empleados.
+            <button
+              onClick={() => void signOut()}
+              title="Cambiar de usuario"
+              aria-label={`${user.name}, ${ROLE_LABELS[user.role]}. Cambiar de usuario`}
+              className="flex items-center gap-1.5 min-w-0 max-w-44 sm:max-w-48 sm:order-3 text-even-offwhite/80 hover:text-even-offwhite bg-white/10 hover:bg-white/15 rounded-full px-3 min-h-11 text-xs transition-colors cursor-pointer"
+            >
+              <UserRound className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">
+                {user.name} · {ROLE_LABELS[user.role]}
+              </span>
+              <LogOut className="w-3.5 h-3.5 shrink-0 text-even-offwhite/50" />
+            </button>
+          ) : (
+            <button
+              onClick={() => requireWaiterLogin(() => {}, { forcePicker: true })}
+              title="Cambiar mesero"
+              className="flex items-center gap-1.5 min-w-0 max-w-44 sm:max-w-36 sm:order-3 text-even-offwhite/80 hover:text-even-offwhite bg-white/10 hover:bg-white/15 rounded-full px-3 min-h-11 text-xs transition-colors cursor-pointer"
+            >
+              <UserRound className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">
+                {waiterSession?.name ?? "Invitado"}
+              </span>
+            </button>
+          )}
 
           <Badge
             size="sm"

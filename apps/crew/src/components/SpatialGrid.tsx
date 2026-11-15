@@ -150,10 +150,55 @@ function SortableCircle({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm cursor-grab active:cursor-grabbing touch-none disabled:cursor-default ${circleClass(unit, active, pulsing)} ${isDragging ? "opacity-75 shadow-lg z-10" : ""}`}
+      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm disabled:cursor-default ${dragDisabled ? "cursor-pointer" : "cursor-grab active:cursor-grabbing touch-none"} ${circleClass(unit, active, pulsing)} ${isDragging ? "opacity-75 shadow-lg z-10" : ""}`}
     >
       {isChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : unit.number}
     </button>
+  );
+}
+
+function StatusLegend({
+  reorderMode,
+  unitPlural,
+  showPos,
+}: {
+  reorderMode: boolean;
+  unitPlural: string;
+  showPos: boolean;
+}) {
+  if (reorderMode) {
+    return (
+      <p className="mb-4 rounded-lg bg-even-grass/20 px-3 py-2 text-center text-xs text-even-evergreen">
+        Modo reordenar: arrastra para cambiar el orden de las {unitPlural} y
+        toca &quot;Listo&quot; al terminar.
+      </p>
+    );
+  }
+  const items: { label: string; swatch: string }[] = [
+    { label: "Libre", swatch: "bg-white border-even-evergreen/25" },
+    { label: "Ocupada", swatch: "bg-even-grass border-even-grass/60" },
+    { label: "Por cobrar", swatch: "bg-even-evergreen border-even-evergreen" },
+    ...(showPos
+      ? [
+          {
+            label: "Cuenta en POS",
+            swatch: "bg-even-grass border-even-grass/60 animate-pulse-ring",
+          },
+        ]
+      : []),
+  ];
+  return (
+    <ul
+      aria-label="Leyenda de estados"
+      className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-even-evergreen/80"
+    >
+      {items.map((i) => (
+        <li key={i.label} className="flex items-center gap-1.5">
+          <span className={`size-3 rounded-full border ${i.swatch}`} />
+          {i.label}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -474,15 +519,17 @@ export default function SpatialGrid({
           <div className="flex items-center gap-2">
             {units.length > 0 && !loading && (
               <button
+                type="button"
                 onClick={() => setReorderMode((v) => !v)}
-                title={reorderMode ? "Listo" : "Mover"}
-                className={`p-1.5 rounded-md border transition-colors cursor-pointer ${
+                aria-pressed={reorderMode}
+                className={`flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer ${
                   reorderMode
                     ? "bg-even-grass text-even-evergreen border-even-grass"
                     : "bg-white/10 hover:bg-white/15 text-even-offwhite/80 border-white/15"
                 }`}
               >
                 <Move className="w-3.5 h-3.5" />
+                {reorderMode ? "Listo" : "Reordenar"}
               </button>
             )}
           </div>
@@ -535,6 +582,16 @@ export default function SpatialGrid({
               No hay {config.pluralLabel.toLowerCase()} registradas para esta
               sucursal.
             </p>
+          )}
+
+          {branchId && !loading && !error && units.length > 0 && (
+            <StatusLegend
+              reorderMode={reorderMode}
+              unitPlural={config.pluralLabel.toLowerCase()}
+              showPos={
+                config.orderType === "tap_pay" || config.orderType === "flex_bill"
+              }
+            />
           )}
 
           {branchId && !loading && !error && units.length > 0 && (

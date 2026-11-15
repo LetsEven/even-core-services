@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { Button, Input, Modal } from "@even/ui";
 import { useAuth } from "@clerk/clerk-react";
 import {
-  X,
   Banknote,
   CreditCard,
   ChevronRight,
@@ -456,63 +455,66 @@ export default function CashPaymentModal({
     }
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-white/8 px-4 py-3 text-sm text-even-offwhite/80 placeholder-white/20 focus:outline-none focus:border-white/20";
-  const inputStyle = { background: "rgba(255,255,255,0.04)" };
-  const cardClass = "rounded-lg border border-white/8 px-4 py-4";
-  const cardStyle = { background: "rgba(255,255,255,0.04)" };
+  const cardClass = "rounded-lg border border-stroke-soft px-4 py-4";
+  const optionClass = (active: boolean) =>
+    active
+      ? "border-even-evergreen bg-even-grass/20 text-even-evergreen"
+      : "border-stroke-soft text-tone-600 hover:bg-black/5";
+  const sectionLabel =
+    "text-xs font-medium uppercase tracking-widest text-tone-600";
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-sm rounded-lg overflow-hidden flex flex-col border border-white/10 shadow-2xl"
-        style={{ background: "#023828", maxHeight: "90vh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8 shrink-0"
-          style={{ background: "rgba(255,255,255,0.03)" }}
-        >
-          <div>
-            <p className="text-even-offwhite/40 text-xs uppercase tracking-widest mb-0.5">
-              {order.identifier}
-            </p>
-            <h2 className="text-even-offwhite font-bold text-xl leading-none">
-              Registrar pago
-            </h2>
-            <p className="text-xs text-even-offwhite/30 mt-0.5">
-              {STEP_LABELS[step]} · {step + 1}/{STEP_LABELS.length}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-md text-even-offwhite/30 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Registrar pago"
+      description={`${order.identifier} · ${STEP_LABELS[step]} · ${step + 1}/${STEP_LABELS.length}`}
+      footer={
+        <div className="flex gap-3">
+          {step > 0 && (
+            <Button
+              variant="outline"
+              disabled={submitting}
+              onClick={() => setStep((s) => s - 1)}
+            >
+              Atrás
+            </Button>
+          )}
+
+          {step < 2 ? (
+            <Button
+              fullWidth
+              disabled={step === 0 && !canProceedStep0()}
+              onClick={() => setStep((s) => s + 1)}
+            >
+              Continuar
+              <ChevronRight className="size-4" />
+            </Button>
+          ) : (
+            <Button
+              fullWidth
+              loading={submitting}
+              disabled={!canConfirm()}
+              onClick={handleConfirm}
+            >
+              {!submitting && <Check className="size-4" />}
+              {submitting ? "Registrando..." : "Confirmar pago"}
+            </Button>
+          )}
         </div>
-
-        <div className="overflow-y-auto flex-1 px-5 py-5 flex flex-col gap-4">
+      }
+    >
+      <div className="flex flex-col gap-4">
           {/* ── Step 0: Tipo de cobro ── */}
           {step === 0 && (
             <>
               {loadingData && !tableSummary ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-even-offwhite/40 animate-spin" />
+                  <Loader2 className="size-6 animate-spin text-tone-500" />
                 </div>
               ) : (
                 <>
-                  <div
-                    className="rounded-lg border border-white/8 overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.03)" }}
-                  >
+                  <div className="overflow-hidden rounded-lg border border-stroke-soft">
                     {(
                       [
                         {
@@ -538,23 +540,22 @@ export default function CashPaymentModal({
                     ).map(({ type, label, desc }, idx) => (
                       <button
                         key={type}
+                        type="button"
                         onClick={() => setPayType(type)}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors cursor-pointer ${
-                          idx > 0 ? "border-t border-white/8" : ""
-                        } ${payType === type ? "bg-even-grass/10" : "hover:bg-white/5"}`}
+                        className={`flex min-h-11 w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors ${
+                          idx > 0 ? "border-t border-stroke-soft" : ""
+                        } ${payType === type ? "bg-even-grass/20" : "hover:bg-black/5"}`}
                       >
                         <div>
                           <p
-                            className={`text-sm font-medium ${payType === type ? "text-even-grass" : "text-even-offwhite/80"}`}
+                            className={`text-sm font-medium ${payType === type ? "text-even-evergreen" : "text-tone-700"}`}
                           >
                             {label}
                           </p>
-                          <p className="text-xs text-even-offwhite/30 mt-0.5">
-                            {desc}
-                          </p>
+                          <p className="mt-0.5 text-xs text-tone-500">{desc}</p>
                         </div>
                         {payType === type && (
-                          <Check className="w-4 h-4 text-even-grass shrink-0" />
+                          <Check className="size-4 shrink-0 text-even-evergreen" />
                         )}
                       </button>
                     ))}
@@ -564,20 +565,18 @@ export default function CashPaymentModal({
                     <div className="flex flex-col gap-2">
                       {loadingData ? (
                         <div className="flex justify-center py-4">
-                          <Loader2 className="w-5 h-5 text-even-offwhite/40 animate-spin" />
+                          <Loader2 className="size-5 animate-spin text-tone-500" />
                         </div>
                       ) : dishOrders.length === 0 ? (
-                        <p className="text-sm text-even-offwhite/30 text-center py-3">
+                        <p className="py-3 text-center text-sm text-tone-500">
                           Sin platillos pendientes
                         </p>
                       ) : (
-                        <div
-                          className="rounded-lg border border-white/8 overflow-hidden"
-                          style={{ background: "rgba(255,255,255,0.03)" }}
-                        >
+                        <div className="overflow-hidden rounded-lg border border-stroke-soft">
                           {dishOrders.map((dish, idx) => (
                             <button
                               key={dish.dish_order_id}
+                              type="button"
                               onClick={() =>
                                 setSelectedDishes((prev) => {
                                   const next = new Set(prev);
@@ -587,16 +586,16 @@ export default function CashPaymentModal({
                                   return next;
                                 })
                               }
-                              className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer ${
-                                idx > 0 ? "border-t border-white/8" : ""
-                              } ${selectedDishes.has(dish.dish_order_id) ? "bg-even-grass/10" : "hover:bg-white/5"}`}
+                              className={`flex min-h-11 w-full cursor-pointer items-center justify-between px-4 py-3 text-left transition-colors ${
+                                idx > 0 ? "border-t border-stroke-soft" : ""
+                              } ${selectedDishes.has(dish.dish_order_id) ? "bg-even-grass/20" : "hover:bg-black/5"}`}
                             >
                               <span
-                                className={`text-sm ${selectedDishes.has(dish.dish_order_id) ? "text-even-offwhite" : "text-even-offwhite/70"}`}
+                                className={`text-sm ${selectedDishes.has(dish.dish_order_id) ? "font-medium text-black" : "text-tone-700"}`}
                               >
                                 {dish.quantity}× {dish.item}
                               </span>
-                              <span className="text-sm text-even-grass font-medium shrink-0 ml-2">
+                              <span className="ml-2 shrink-0 text-sm font-medium text-even-evergreen">
                                 $
                                 {(
                                   dish.total_display_price ?? dish.total_price
@@ -610,28 +609,21 @@ export default function CashPaymentModal({
                   )}
 
                   {payType === "choose-amount" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                        Monto a cobrar
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value)}
-                        placeholder="0.00"
-                        className={inputClass}
-                        style={inputStyle}
-                      />
-                      <p
-                        className={`text-xs ${overpaying ? "text-rose-400" : "text-even-offwhite/40"}`}
-                      >
-                        {overpaying
+                    <Input
+                      label="Monto a cobrar"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      placeholder="0.00"
+                      error={
+                        overpaying
                           ? `El monto excede el restante ($${(isTapPay ? remaining : displayRemaining).toFixed(2)}).`
-                          : `Restante: $${(isTapPay ? remaining : displayRemaining).toFixed(2)}`}
-                      </p>
-                    </div>
+                          : undefined
+                      }
+                      hint={`Restante: $${(isTapPay ? remaining : displayRemaining).toFixed(2)}`}
+                    />
                   )}
                 </>
               )}
@@ -641,95 +633,73 @@ export default function CashPaymentModal({
           {/* ── Step 1: Propina ── */}
           {step === 1 && (
             <>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex flex-wrap gap-2">
                 {TIP_OPTIONS.map((pct) => (
                   <button
                     key={pct}
+                    type="button"
                     onClick={() => {
                       setTipPct(pct);
                       setShowCustomTip(false);
                       setCustomTip("");
                     }}
-                    className={`flex-1 min-w-16 py-2.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
-                      !showCustomTip && tipPct === pct
-                        ? "border-even-grass/40 bg-even-grass/10 text-even-grass"
-                        : "border-white/8 text-even-offwhite/50 hover:bg-white/5"
-                    }`}
-                    style={
-                      !showCustomTip && tipPct === pct
-                        ? {}
-                        : { background: "rgba(255,255,255,0.03)" }
-                    }
+                    className={`min-h-11 min-w-16 flex-1 cursor-pointer rounded-lg border py-2.5 text-sm font-medium transition-all ${optionClass(
+                      !showCustomTip && tipPct === pct,
+                    )}`}
                   >
                     {pct === 0 ? "Sin propina" : `${pct}%`}
                   </button>
                 ))}
                 <button
+                  type="button"
                   onClick={() => setShowCustomTip(true)}
-                  className={`flex-1 min-w-16 py-2.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
-                    showCustomTip
-                      ? "border-even-grass/40 bg-even-grass/10 text-even-grass"
-                      : "border-white/8 text-even-offwhite/50 hover:bg-white/5"
-                  }`}
-                  style={
-                    showCustomTip
-                      ? {}
-                      : { background: "rgba(255,255,255,0.03)" }
-                  }
+                  className={`min-h-11 min-w-16 flex-1 cursor-pointer rounded-lg border py-2.5 text-sm font-medium transition-all ${optionClass(
+                    showCustomTip,
+                  )}`}
                 >
                   Otro
                 </button>
               </div>
 
               {showCustomTip && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                    Monto de propina
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={customTip}
-                    onChange={(e) => setCustomTip(e.target.value)}
-                    placeholder="0.00"
-                    className={inputClass}
-                    style={inputStyle}
-                  />
-                </div>
+                <Input
+                  label="Monto de propina"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={customTip}
+                  onChange={(e) => setCustomTip(e.target.value)}
+                  placeholder="0.00"
+                />
               )}
 
-              <div className={cardClass} style={cardStyle}>
-                <p className="text-xs uppercase tracking-widest text-even-offwhite/50 font-medium mb-3">
-                  Desglose
-                </p>
+              <div className={cardClass}>
+                <p className={`mb-3 ${sectionLabel}`}>Desglose</p>
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-even-offwhite/50">Subtotal</span>
-                    <span className="text-even-offwhite/80">
+                    <span className="text-tone-600">Subtotal</span>
+                    <span className="text-tone-700">
                       ${displaySubtotal.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-even-offwhite/50">Propina</span>
-                    <span className="text-even-offwhite/80">
+                    <span className="text-tone-600">Propina</span>
+                    <span className="text-tone-700">
                       +${displayPropina.toFixed(2)}
                     </span>
                   </div>
                   {isTapPay && commissions.evenClientCharge > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-even-offwhite/50">
-                        Comisión Even
-                      </span>
-                      <span className="text-even-offwhite/80">
+                      <span className="text-tone-600">Comisión Even</span>
+                      <span className="text-tone-700">
                         +${commissions.evenClientCharge.toFixed(2)}
                       </span>
                     </div>
                   )}
-                  <div className="h-px bg-white/8 my-1" />
+                  <div className="my-1 h-px bg-stroke-soft" />
                   <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-even-offwhite">Total a cobrar</span>
-                    <span className="text-even-offwhite text-base">
+                    <span className="text-black">Total a cobrar</span>
+                    <span className="text-base text-black">
                       ${totalAmount.toFixed(2)}
                     </span>
                   </div>
@@ -742,49 +712,33 @@ export default function CashPaymentModal({
           {step === 2 && (
             <>
               {/* Total */}
-              <div
-                className={`${cardClass} text-center`}
-                style={{
-                  background: "rgba(52,211,153,0.08)",
-                  borderColor: "rgba(52,211,153,0.2)",
-                }}
-              >
-                <p className="text-xs uppercase tracking-widest text-even-grass/60 font-medium mb-1">
-                  Total a cobrar
-                </p>
-                <p className="text-3xl font-bold text-even-grass">
+              <div className={`${cardClass} bg-even-grass/20 text-center`}>
+                <p className={`mb-1 ${sectionLabel}`}>Total a cobrar</p>
+                <p className="text-3xl font-bold text-even-evergreen">
                   ${totalAmount.toFixed(2)}
                 </p>
               </div>
 
               {/* Método */}
               <div className="flex flex-col gap-2">
-                <p className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                  Método de pago
-                </p>
+                <p className={sectionLabel}>Método de pago</p>
                 <div className="flex gap-3">
                   {(["cash", "terminal"] as ManualPaymentMethod[]).map((m) => (
                     <button
                       key={m}
+                      type="button"
                       onClick={() => {
                         setMethod(m);
                         setManualCardType(null);
                       }}
-                      className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-lg border transition-all cursor-pointer ${
-                        method === m
-                          ? "border-even-grass/40 bg-even-grass/10 text-even-grass"
-                          : "border-white/8 text-even-offwhite/40 hover:bg-white/5"
-                      }`}
-                      style={
-                        method !== m
-                          ? { background: "rgba(255,255,255,0.03)" }
-                          : {}
-                      }
+                      className={`flex min-h-11 flex-1 cursor-pointer flex-col items-center gap-2 rounded-lg border py-4 transition-all ${optionClass(
+                        method === m,
+                      )}`}
                     >
                       {m === "cash" ? (
-                        <Banknote className="w-5 h-5" />
+                        <Banknote className="size-5" />
                       ) : (
-                        <CreditCard className="w-5 h-5" />
+                        <CreditCard className="size-5" />
                       )}
                       <span className="text-sm font-medium">
                         {m === "cash" ? "Efectivo" : "Terminal"}
@@ -796,9 +750,7 @@ export default function CashPaymentModal({
 
               {method === "terminal" && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                    Tipo de tarjeta *
-                  </p>
+                  <p className={sectionLabel}>Tipo de tarjeta *</p>
                   <div className="flex gap-3">
                     {(
                       [
@@ -809,17 +761,11 @@ export default function CashPaymentModal({
                     ).map(({ type, label }) => (
                       <button
                         key={type}
+                        type="button"
                         onClick={() => setManualCardType(type)}
-                        className={`flex-1 py-3 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
-                          manualCardType === type
-                            ? "border-even-grass/40 bg-even-grass/10 text-even-grass"
-                            : "border-white/8 text-even-offwhite/40 hover:bg-white/5"
-                        }`}
-                        style={
-                          manualCardType !== type
-                            ? { background: "rgba(255,255,255,0.03)" }
-                            : {}
-                        }
+                        className={`min-h-11 flex-1 cursor-pointer rounded-lg border py-3 text-sm font-medium transition-all ${optionClass(
+                          manualCardType === type,
+                        )}`}
                       >
                         {label}
                       </button>
@@ -829,52 +775,13 @@ export default function CashPaymentModal({
               )}
 
               {submitError && (
-                <p className="text-sm text-rose-400 bg-rose-500/10 border border-rose-400/20 rounded-lg px-4 py-3 text-center">
+                <p className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-center text-sm text-danger">
                   {submitError}
                 </p>
               )}
             </>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 pb-6 pt-3 border-t border-white/8 shrink-0 flex gap-3">
-          {step > 0 && (
-            <button
-              onClick={() => setStep((s) => s - 1)}
-              disabled={submitting}
-              className="px-5 py-3 rounded-md border border-white/15 text-even-offwhite/60 text-xs font-medium uppercase tracking-wider hover:bg-white/5 transition-colors disabled:opacity-40 cursor-pointer"
-            >
-              Atrás
-            </button>
-          )}
-
-          {step < 2 ? (
-            <button
-              onClick={() => setStep((s) => s + 1)}
-              disabled={step === 0 && !canProceedStep0()}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs font-medium uppercase tracking-wider disabled:opacity-40 transition-colors cursor-pointer disabled:cursor-default"
-            >
-              Continuar
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={handleConfirm}
-              disabled={!canConfirm() || submitting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs font-medium uppercase tracking-wider disabled:opacity-40 transition-colors cursor-pointer disabled:cursor-default"
-            >
-              {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4" />
-              )}
-              {submitting ? "Registrando..." : "Confirmar pago"}
-            </button>
-          )}
-        </div>
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

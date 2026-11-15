@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
-import { X, ChevronLeft, Check } from "lucide-react";
+import { ChevronLeft, Check } from "lucide-react";
+import { Button, Modal } from "@even/ui";
 
 interface Props {
   customerName: string;
@@ -31,94 +31,64 @@ export default function ContactCustomerModal({
 }: Props) {
   const [reason, setReason] = useState<string | null>(null);
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Contactar cliente"
+      description={customerName}
+      footer={
+        <Button variant="outline" fullWidth onClick={onClose}>
+          Cerrar
+        </Button>
+      }
     >
-      <div
-        className="w-full max-w-sm rounded-lg overflow-hidden flex flex-col border border-white/10 shadow-2xl"
-        style={{ background: "#023828", maxHeight: "90vh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8 shrink-0"
-          style={{ background: "rgba(255,255,255,0.03)" }}
-        >
-          <div>
-            <p className="text-even-offwhite/40 text-xs uppercase tracking-widest mb-0.5">
-              {customerName}
+      <div className="flex flex-col gap-4">
+        {!reason ? (
+          <>
+            <p className="text-xs font-medium uppercase tracking-widest text-tone-600">
+              ¿Cuál es el motivo?
             </p>
-            <h2 className="text-even-offwhite font-bold text-xl leading-none">
-              Contactar cliente
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-md text-even-offwhite/30 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+            <div className="overflow-hidden rounded-lg border border-stroke-soft">
+              {CONTACT_REASONS.map((r, idx) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setReason(r)}
+                  className={`min-h-11 w-full cursor-pointer px-4 py-3.5 text-left text-sm text-tone-700 transition-colors hover:bg-black/5 ${
+                    idx > 0 ? "border-t border-stroke-soft" : ""
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-fit"
+              onClick={() => setReason(null)}
+            >
+              <ChevronLeft className="size-3.5" />
+              Cambiar motivo
+            </Button>
 
-        <div className="overflow-y-auto flex-1 px-5 py-5 flex flex-col gap-4">
-          {!reason ? (
-            <>
-              <p className="text-xs uppercase tracking-widest text-even-offwhite/60 font-medium">
-                ¿Cuál es el motivo?
+            <div className="flex items-center gap-2 rounded-lg border border-stroke-soft px-4 py-3">
+              <Check className="size-4 shrink-0 text-even-evergreen" />
+              <span className="text-sm text-tone-700">{reason}</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 rounded-lg bg-even-grass/20 py-6">
+              <p className="text-2xl font-bold tracking-wide text-even-evergreen">
+                {formatPhone(phone)}
               </p>
-              <div
-                className="rounded-lg border border-white/8 overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.03)" }}
-              >
-                {CONTACT_REASONS.map((r, idx) => (
-                  <button
-                    key={r}
-                    onClick={() => setReason(r)}
-                    className={`w-full text-left px-4 py-3.5 text-sm text-even-offwhite/80 hover:bg-white/5 transition-colors cursor-pointer ${
-                      idx > 0 ? "border-t border-white/8" : ""
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setReason(null)}
-                className="flex items-center gap-1 text-xs text-even-offwhite/40 hover:text-even-offwhite/70 transition-colors cursor-pointer w-fit"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                Cambiar motivo
-              </button>
-
-              <div
-                className="rounded-lg border border-white/8 px-4 py-3 flex items-center gap-2"
-                style={{ background: "rgba(255,255,255,0.03)" }}
-              >
-                <Check className="w-4 h-4 text-even-grass shrink-0" />
-                <span className="text-sm text-even-offwhite/80">{reason}</span>
-              </div>
-
-              <div
-                className="rounded-lg border border-even-grass/20 py-6 flex flex-col items-center gap-2"
-                style={{ background: "rgba(52,211,153,0.08)" }}
-              >
-                <p className="text-2xl font-bold text-even-grass tracking-wide">
-                  {formatPhone(phone)}
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

@@ -31,28 +31,11 @@ export function CocinaPage() {
 }
 
 export function HistorialPage() {
-  const s = useSession();
-  const navigate = useNavigate();
-  return (
-    <Historial
-      onBack={() => navigate(-1)}
-      branchesLoading={s.branchesLoading}
-      branchId={s.branchId}
-    />
-  );
+  return <Historial />;
 }
 
 export function ComprobantesPage() {
-  const s = useSession();
-  const navigate = useNavigate();
-  return (
-    <Comprobantes
-      onBack={() => navigate(-1)}
-      branches={s.branches}
-      branchesLoading={s.branchesLoading}
-      branchId={s.branchId}
-    />
-  );
+  return <Comprobantes />;
 }
 
 export function PrintersPage() {

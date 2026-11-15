@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useAuth, useSignOut } from "../lib/auth";
+import { useAuth } from "../lib/auth";
 import {
   Bell,
   ChevronRight,
@@ -19,6 +19,9 @@ import {
   type WebPushStatus,
 } from "../lib/webPush";
 import { useSession } from "./session/context";
+
+// Solo se descarga con provider local y permiso de administrar usuarios.
+const LocalUsersAdmin = lazy(() => import("./ajustes/LocalUsersAdmin"));
 
 function Row({
   to,
@@ -49,8 +52,9 @@ function Row({
 }
 
 export default function AjustesPage() {
-  const { getToken } = useAuth();
-  const signOut = useSignOut();
+  const { getToken, signOut, kind, hasPermission } = useAuth();
+  const showUsersAdmin = kind === "local" && hasPermission("usuarios.administrar");
+  const canPrinters = hasPermission("ajustes.impresoras");
   const { waiterSession, requireWaiterLogin } = useSession();
 
   const [pushStatus, setPushStatus] = useState<WebPushStatus>("unsupported");
@@ -117,18 +121,28 @@ export default function AjustesPage() {
             <ChevronRight className="w-4 h-4 text-even-evergreen/30" />
           </button>
 
-          <Row
-            to="/ajustes/impresoras"
-            icon={Printer}
-            label="Impresoras"
-            hint="Escanear, nombrar y asignar rol"
-          />
-          <Row
-            to="/ajustes/dispositivos"
-            icon={Monitor}
-            label="Dispositivos"
-            hint="Equipos conectados y Master"
-          />
+          {canPrinters && (
+            <>
+              <Row
+                to="/ajustes/impresoras"
+                icon={Printer}
+                label="Impresoras"
+                hint="Escanear, nombrar y asignar rol"
+              />
+              <Row
+                to="/ajustes/dispositivos"
+                icon={Monitor}
+                label="Dispositivos"
+                hint="Equipos conectados y Master"
+              />
+            </>
+          )}
+
+          {showUsersAdmin && (
+            <Suspense fallback={null}>
+              <LocalUsersAdmin />
+            </Suspense>
+          )}
 
           {pushStatus === "default" && (
             <button

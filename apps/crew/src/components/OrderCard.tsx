@@ -66,6 +66,8 @@ interface OrderCardProps {
   ) => Promise<void>;
   onOrderCookingStatusChange?: (orderId: string, status: CookingStatus) => void;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
+  /** Solo lectura: deshabilita los controles de cambio de estado (Cocina sin cocina.operar). */
+  readOnly?: boolean;
   currentBranch?: Branch | null;
   onPaymentRegistered?: () => void;
   availableWaiters?: { id: string; name: string }[];
@@ -112,6 +114,7 @@ export default function OrderCard({
   onDishQuantityChange,
   onOrderCookingStatusChange,
   onPrepTimeExtraChange,
+  readOnly = false,
   currentBranch,
   onPaymentRegistered,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
@@ -151,7 +154,7 @@ export default function OrderCard({
   const prepTimePickerRef = useRef<HTMLDivElement>(null);
   const prepTimeBtnRef = useRef<HTMLButtonElement>(null);
 
-  const { getToken } = useAuth();
+  const { getToken, hasPermission } = useAuth();
 
   // La orden queda "reclamada" (waiter_name distinto de EVEN) una sola vez —
   // a partir de ahí, solo el mesero de la sesión actual del dispositivo (si
@@ -258,6 +261,7 @@ export default function OrderCard({
   };
 
   const canAddDish =
+    !readOnly &&
     order.orderType === "flex_bill" &&
     currentBranch != null &&
     order.status !== "paid";
@@ -266,6 +270,7 @@ export default function OrderCard({
   // puede, igual que con "Desasignar" arriba.
   const canEditDishes = canAddDish && (isEven || isMine);
   const canRegisterPayment =
+    hasPermission("cuenta.cobrar") &&
     (order.orderType === "flex_bill" || order.orderType === "tap_pay") &&
     (order.remainingAmount ?? 0) > 0 &&
     currentBranch != null;
@@ -369,7 +374,8 @@ export default function OrderCard({
                       ref={prepTimeBtnRef}
                       type="button"
                       onClick={handleTogglePrepTimePicker}
-                      className="px-1.5 py-0.5 rounded border bg-even-grass/20 border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer"
+                      disabled={readOnly}
+                      className="px-1.5 py-0.5 rounded border bg-even-grass/20 border-even-grass/45 text-even-evergreen hover:bg-even-grass/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
                       aria-label="Editar minutos extra"
                     >
                       <Plus className="w-3 h-3" strokeWidth={2.5} />
@@ -488,6 +494,7 @@ export default function OrderCard({
               )
             }
             hideStatusButtons={isPickAndGo || order.orderType === "tap_pay"}
+            statusReadOnly={readOnly}
             hideStatusBadge={order.orderType === "flex_bill"}
             onQuantityChange={
               canEditDishes && onDishQuantityChange
@@ -513,7 +520,7 @@ export default function OrderCard({
               <button
                 key={s}
                 onClick={() => onOrderCookingStatusChange?.(order.id, s)}
-                disabled={currentCookingStatus === s}
+                disabled={readOnly || currentCookingStatus === s}
                 className={`flex-1 py-1.5 text-xs rounded-md font-medium uppercase tracking-wider border transition-all active:scale-95 cursor-pointer disabled:cursor-default ${
                   currentCookingStatus === s
                     ? COOKING_BUTTON_ACTIVE[s]

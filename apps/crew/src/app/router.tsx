@@ -7,6 +7,7 @@ import LoginPage from "./LoginPage";
 import AppShell from "./AppShell";
 import CajaLayout from "./CajaLayout";
 import AjustesPage from "./AjustesPage";
+import CuentaPage from "../routes/mesas/CuentaPage";
 import {
   CocinaPage,
   ComprobantesPage,
@@ -46,10 +47,7 @@ export const routes: RouteObject[] = [
             children: [
               { index: true, element: <HomeRedirect /> },
               { path: "mesas", element: <MesasPage /> },
-              {
-                path: "mesas/:unidad",
-                element: <ProximamentePage title="Cuenta de mesa" />,
-              },
+              { path: "mesas/:unidad", element: <CuentaPage /> },
               {
                 path: "mesas/:unidad/comanda",
                 element: <ProximamentePage title="Comanda" />,

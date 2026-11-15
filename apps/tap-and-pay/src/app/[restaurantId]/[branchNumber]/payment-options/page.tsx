@@ -186,7 +186,7 @@ export default function PaymentOptionsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-even-evergreen flex flex-col">
+      <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
         <MenuHeader />
 
         <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
@@ -222,7 +222,7 @@ export default function PaymentOptionsPage() {
               </div>
 
               {/* Skeleton del total */}
-              <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+              <div className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="py-4 md:py-8 lg:py-12 space-y-2 md:space-y-3 animate-pulse">
                   <div className="flex justify-between items-center">
                     <div className="h-6 bg-tone-200 rounded w-32"></div>
@@ -242,7 +242,7 @@ export default function PaymentOptionsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-even-evergreen flex flex-col">
+    <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
       <MenuHeader />
 
       <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
@@ -366,7 +366,7 @@ export default function PaymentOptionsPage() {
 
             {/* Total - Fixed to bottom */}
             {unpaidAmount > 0 && (
-              <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+              <div className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="py-4 md:py-8 lg:py-12 space-y-2 md:space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-lg md:text-2xl lg:text-3xl font-medium text-black">

@@ -89,7 +89,7 @@ export function TermsUpdateToast({ needsAck, onAcknowledge, title, body, errorTe
   };
 
   return createPortal(
-    <div className="fixed top-0 inset-x-0 z-[999999] flex justify-center px-4 pt-4 pointer-events-none">
+    <div className="fixed top-0 fixed-col z-[999999] flex justify-center px-4 pt-4 pointer-events-none">
       <div
         role="status"
         className={`pointer-events-auto w-full max-w-md flex items-center gap-4 bg-even-evergreen text-white rounded-2xl shadow-xl px-5 py-4 transition-[transform,opacity] duration-500 ease-out ${

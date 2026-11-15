@@ -309,7 +309,7 @@ export default function OrderPage() {
       : null;
 
   return (
-    <div className="min-h-dvh bg-even-evergreen flex flex-col">
+    <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
       <MenuHeader
         restaurant={restaurant || undefined}
         tableNumber={state.tableNumber}
@@ -587,7 +587,7 @@ export default function OrderPage() {
                 {/* Sección inferior fija */}
                 {unpaidDishes.length > 0 && remainingAmount > 0 && (
                   <div
-                    className="fixed bottom-0 left-0 right-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+                    className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
                     style={{
                       paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                     }}

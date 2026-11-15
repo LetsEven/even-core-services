@@ -48,7 +48,7 @@ export default function DashboardView({
   if (!isAuthenticated || !user) {
     return (
       <div
-        className={`flex flex-col ${onClose ? "h-full" : "min-h-dvh brand-evergreen"}`}
+        className={`flex flex-col app-root ${onClose ? "h-full" : "min-h-dvh brand-evergreen"}`}
       >
         <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
           <div className="w-full max-w-md">
@@ -116,7 +116,7 @@ export default function DashboardView({
 
   return (
     <div
-      className={`flex flex-col ${onClose ? "h-full" : "min-h-dvh brand-evergreen"}`}
+      className={`flex flex-col app-root ${onClose ? "h-full" : "min-h-dvh brand-evergreen"}`}
     >
       <DashboardHeader onClose={onClose} />
 

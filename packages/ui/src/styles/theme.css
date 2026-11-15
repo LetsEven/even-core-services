@@ -286,6 +286,44 @@
   }
 }
 
+/*
+ * Columna de contenido. Las apps son mobile-first: en pantallas anchas el contenido se queda en una
+ * columna centrada de --app-max-w (el banner y el fondo siguen a todo el ancho). Alto de tablet
+ * (768 px) intacto: la columna solo recorta a partir de ahí.
+ *   app-col       : bloque en flujo centrado (width 100%, max --app-max-w)
+ *   app-root      : raíz de pantalla con fondo full-bleed; limita a los hijos a la columna
+ *   fixed-col     : para elementos `fixed` que antes usaban left-0/right-0/inset-x-0
+ *   fixed-fab-end : para elementos `fixed` anclados abajo a la derecha (FAB), con su margen de 1.25rem (2rem en md)
+ */
+:root {
+  --app-max-w: 48rem;
+}
+
+@utility app-col {
+  width: 100%;
+  max-width: var(--app-max-w);
+  margin-inline: auto;
+}
+
+/* Raíz de pantalla con fondo a todo el ancho: el contenido se limita a la columna con padding lateral
+   (respeta los márgenes de los hijos y no afecta a `fixed`/`absolute`). */
+@utility app-root {
+  padding-inline: max(0px, calc((100% - var(--app-max-w)) / 2));
+}
+
+@utility fixed-col {
+  left: max(0px, calc((100% - var(--app-max-w)) / 2));
+  right: max(0px, calc((100% - var(--app-max-w)) / 2));
+}
+
+@utility fixed-fab-end {
+  right: calc(max(0px, calc((100% - var(--app-max-w)) / 2)) + 1.25rem);
+
+  @media (min-width: 768px) {
+    right: calc(max(0px, calc((100% - var(--app-max-w)) / 2)) + 2rem);
+  }
+}
+
 /* Highlight tipo marcador (recurso de marca): texto Evergreen sobre Icy Aqua. */
 @utility even-highlight {
   background-color: var(--color-even-aqua);

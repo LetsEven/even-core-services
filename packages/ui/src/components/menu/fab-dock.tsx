@@ -87,7 +87,7 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
   return (
     <MotionProvider>
       <m.div
-        className="fixed right-5 z-[60] flex flex-col items-center gap-3 md:right-8"
+        className="fixed fixed-fab-end z-[60] flex flex-col items-center gap-3"
         style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
         initial={false}
         animate={hidden ? { opacity: 0, y: 16 } : { opacity: 1, y: 0 }}

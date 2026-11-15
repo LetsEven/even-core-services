@@ -123,7 +123,7 @@ export default function OrderStatus() {
   }, [state.tableNumber]); // Removed loadTableData from dependencies
 
   return (
-    <div className="min-h-dvh brand-evergreen flex flex-col">
+    <div className="min-h-dvh brand-evergreen flex flex-col app-root">
       <MenuHeaderBackOrder
         restaurant={restaurantData}
         tableNumber={state.tableNumber}
@@ -510,7 +510,7 @@ export default function OrderStatus() {
                 {/* Fixed bottom section */}
                 {unpaidDishes.length > 0 && tableRemainingAmount > 0 && (
                   <div
-                    className="fixed bottom-0 left-0 right-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+                    className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
                     style={{
                       paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                     }}

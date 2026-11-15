@@ -1211,9 +1211,9 @@ export default function CardSelectionPage() {
 
   if (isLoadingInitial || authLoading) {
     return (
-      <div className="min-h-dvh bg-even-evergreen flex flex-col">
+      <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
         <div
-          className="fixed top-0 left-0 right-0 z-50"
+          className="fixed fixed-col top-0 z-50"
           style={{ zIndex: 999 }}
         >
           <MenuHeader />
@@ -1275,7 +1275,7 @@ export default function CardSelectionPage() {
         </div>
       )}
 
-      <div className="min-h-dvh bg-even-evergreen flex flex-col">
+      <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
         {/* Header */}
         <div className={isAnimatingOut ? "animate-fade-out" : ""}>
           <MenuHeader />
@@ -1503,7 +1503,7 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija — botón pagar */}
         <div
-          className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+          className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
           <button

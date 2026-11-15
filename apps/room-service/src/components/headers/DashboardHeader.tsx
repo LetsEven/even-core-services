@@ -21,7 +21,7 @@ export default function DashboardHeader({
   };
 
   return (
-    <header className="container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-1">
+    <header className="app-col px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-1">
       <div className="relative flex items-center justify-between z-1">
         {/* Back Button */}
         <div className="flex items-center z-10">

@@ -53,7 +53,7 @@ export default function ValidationError({ errorType }: ValidationErrorProps) {
   const errorInfo = errorMessages[errorType];
 
   return (
-    <div className="min-h-dvh brand-evergreen flex flex-col">
+    <div className="min-h-dvh brand-evergreen flex flex-col app-root">
       <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
         <div className="w-full max-w-md">
           {/* Logo */}

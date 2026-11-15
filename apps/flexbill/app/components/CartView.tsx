@@ -284,7 +284,7 @@ export default function CartView() {
   };
 
   return (
-    <div className="min-h-screen brand-evergreen flex flex-col">
+    <div className="min-h-screen brand-evergreen flex flex-col app-root">
       <MenuHeaderBack
         restaurant={restaurantData}
         tableNumber={tableState.tableNumber}
@@ -577,7 +577,7 @@ export default function CartView() {
             {/* Fixed bottom section */}
             {cartState.items.length > 0 && (
               <div
-                className="fixed bottom-0 left-0 bg-white right-0 mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+                className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
                 style={{
                   paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                 }}

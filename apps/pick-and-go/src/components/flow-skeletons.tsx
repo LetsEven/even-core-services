@@ -123,7 +123,7 @@ export function CartBody() {
         ))}
       </div>
       {/* Barra inferior fija: 100 px como la real */}
-      <div className="fixed inset-x-0 bottom-0 z-10 bg-white px-6 pt-6 pb-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
+      <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 pt-6 pb-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
         <div className="flex h-[52px] items-center justify-between gap-3">
           <Ghost className="w-24">2 artículos</Ghost>
           <div className="h-full w-36 animate-pulse rounded-full bg-even-grass/40" />
@@ -154,7 +154,7 @@ export function CardSelectionBody() {
         <div className="h-[46px] w-full animate-pulse rounded-full bg-tone-100" />
         <div className="h-[46px] w-full animate-pulse rounded-full bg-tone-100" />
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-10 bg-white px-6 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
+      <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
         <div className="h-12 w-full animate-pulse rounded-full bg-even-grass/40" />
       </div>
     </div>

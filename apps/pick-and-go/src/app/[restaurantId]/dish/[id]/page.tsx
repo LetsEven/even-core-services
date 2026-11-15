@@ -729,7 +729,7 @@ export default function DishDetailPage() {
   const { dish, section } = dishData;
 
   return (
-    <m.div layoutRoot className="h-dvh bg-white relative overflow-y-auto">
+    <m.div layoutRoot className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto">
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}
@@ -811,9 +811,9 @@ export default function DishDetailPage() {
 
       <m.main
         data-dish-sheet
-        className={`${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}
+        className={`app-col ${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}
       >
-        <div className="bg-white rounded-t-4xl flex flex-col px-6 md:px-8 lg:px-10 pb-[100px] md:pb-[120px] lg:pb-[140px]">
+        <div className="bg-white rounded-t-4xl flex flex-col min-h-[calc(100dvh-16rem)] md:min-h-[calc(100dvh-20rem)] lg:min-h-[calc(100dvh-24rem)] px-6 md:px-8 lg:px-10 pb-[100px] md:pb-[120px] lg:pb-[140px]">
           <div className="mt-8 md:mt-10 lg:mt-12">
             {/* Rating row */}
             <div className="flex justify-between items-center text-black mb-6 md:mb-7 lg:mb-8">
@@ -1404,7 +1404,7 @@ export default function DishDetailPage() {
           onClick={() => setShowRemoveConfirm(false)}
         >
           <div
-            className="bg-white rounded-t-4xl w-full shadow-xl"
+            className="bg-white rounded-t-4xl w-full max-w-(--app-max-w) mx-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 max-w-2xl mx-auto">
@@ -1444,7 +1444,7 @@ export default function DishDetailPage() {
           onClick={() => setErrorMessage(null)}
         >
           <div
-            className="bg-white rounded-t-4xl w-full shadow-xl"
+            className="bg-white rounded-t-4xl w-full max-w-(--app-max-w) mx-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 max-w-2xl mx-auto">

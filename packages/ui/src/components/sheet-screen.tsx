@@ -24,7 +24,7 @@ const SHEET_PADDING_X = "px-6 md:px-8 lg:px-10";
  * tarjetas ancladas al fondo) que no pueden usar los componentes.
  */
 export const sheetClasses = {
-  screen: "relative z-10 isolate flex min-h-dvh flex-col",
+  screen: "app-col relative z-10 isolate flex min-h-dvh flex-col",
   hero: "sheet-hero z-0 mx-4 translate-y-7 rounded-t-4xl md:mx-6 lg:mx-8",
   card: cn("sheet-card relative z-10 flex w-full flex-1 flex-col rounded-t-4xl bg-white", SHEET_PADDING_X),
 } as const;
@@ -100,7 +100,7 @@ export function SheetFooter({ className, style, ...props }: SheetFooterProps) {
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-0 z-20 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]",
+        "fixed fixed-col bottom-0 z-20 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]",
         SHEET_PADDING_X,
         className,
       )}

@@ -8,6 +8,7 @@ import AppShell from "./AppShell";
 import CajaLayout from "./CajaLayout";
 import AjustesPage from "./AjustesPage";
 import ComandaPage from "../routes/mesas/ComandaPage";
+import CuentaPage from "../routes/mesas/CuentaPage";
 import {
   CocinaPage,
   ComprobantesPage,
@@ -16,7 +17,6 @@ import {
   HomeRedirect,
   MesasPage,
   PrintersPage,
-  ProximamentePage,
 } from "./pages";
 
 function SessionLayout() {
@@ -47,10 +47,7 @@ export const routes: RouteObject[] = [
             children: [
               { index: true, element: <HomeRedirect /> },
               { path: "mesas", element: <MesasPage /> },
-              {
-                path: "mesas/:unidad",
-                element: <ProximamentePage title="Cuenta de mesa" />,
-              },
+              { path: "mesas/:unidad", element: <CuentaPage /> },
               {
                 path: "mesas/:unidad/comanda",
                 element: <ComandaPage />,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
+import { useNavigate } from "react-router";
 import {
   DndContext,
   closestCenter,
@@ -16,7 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Loader2, ArrowLeft, Move } from "lucide-react";
+import { Loader2, Move } from "lucide-react";
 import {
   peekTablePOS,
   peekTablePOSBatch,
@@ -27,8 +28,6 @@ import {
 } from "../services/api";
 import type { Order, DishStatus, CookingStatus, OrderType } from "../types";
 import { parseLocationCode } from "../utils/identifier";
-import OrderCard from "./OrderCard";
-import OpenTableWithDishesModal from "./OpenTableWithDishesModal";
 import { useRegisterRefresh } from "../app/refresh";
 
 // Pantalla principal ("croquis") reusada por Tap & Pay, Tap Order & Pay,
@@ -164,16 +163,10 @@ export default function SpatialGrid({
   branches,
   branchesLoading,
   orders,
-  onDishStatusChange,
-  onOrderCookingStatusChange,
-  onPrepTimeExtraChange,
-  onDishQuantityChange,
   onOrdersRefresh,
-  availableWaiters = [{ id: "EVEN", name: "EVEN" }],
-  waiterSession,
-  requireWaiterLogin,
 }: Props) {
   const { getToken } = useAuth();
+  const navigate = useNavigate();
 
   // Distance de activación mínima para el mouse — evita que un click normal
   // (tap corto) se interprete como el inicio de un drag. Touch usa un delay
@@ -191,20 +184,11 @@ export default function SpatialGrid({
   const [error, setError] = useState<string | null>(null);
   const [posUnits, setPosUnits] = useState<Set<string>>(new Set());
 
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  // Derivado de `orders` (no una copia congelada) para que el OrderCard del
-  // modal refleje cambios de estado en vivo (socket/poll) mientras está abierto.
-  const selectedOrder = selectedOrderId
-    ? (orders.find((o) => o.id === selectedOrderId) ?? null)
-    : null;
   const [checkingUnitId, setCheckingUnitId] = useState<string | null>(null);
   const [confirmUnit, setConfirmUnit] = useState<SpatialUnit | null>(null);
   const [openingAccount, setOpeningAccount] = useState(false);
   const [serviceChoiceUnit, setServiceChoiceUnit] =
     useState<SpatialUnit | null>(null);
-  const [openDishesUnit, setOpenDishesUnit] = useState<SpatialUnit | null>(
-    null,
-  );
 
   // Evita que el refresco periódico pise un drag en curso — no es un "modo",
   // solo se activa mientras el usuario tiene el dedo/mouse abajo arrastrando.
@@ -368,10 +352,8 @@ export default function SpatialGrid({
     if (reorderMode || unit.status === "maintenance" || checkingUnitId) return;
 
     if (isUnitActive(unit)) {
-      const order = findOrderForUnit(unit.number);
-      if (order) {
-        setSelectedOrderId(order.id);
-      }
+      // La cuenta abierta vive en su propia ruta.
+      navigate(`/mesas/${encodeURIComponent(unit.number)}`);
       return;
     }
 
@@ -399,7 +381,7 @@ export default function SpatialGrid({
     }
 
     if (config.orderType === "flex_bill" && config.freeUnitClickable) {
-      setOpenDishesUnit(unit);
+      navigate(`/mesas/${encodeURIComponent(unit.number)}/comanda`);
     }
   }
 
@@ -483,164 +465,115 @@ export default function SpatialGrid({
       className="relative flex-1 min-h-0 flex flex-col"
       style={{ background: "#023828" }}
     >
-      {/* Title + stats — no se muestra al ver el detalle de una orden */}
-      {!selectedOrder && (
-        <div className="flex flex-col items-center pb-5 gap-1">
-          <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
-            {config.pluralLabel}
-          </h1>
-          {(branches.length > 0 || (units.length > 0 && !loading)) && (
-            <div className="flex items-center gap-2">
-              {units.length > 0 && !loading && (
-                <button
-                  onClick={() => setReorderMode((v) => !v)}
-                  title={reorderMode ? "Listo" : "Mover"}
-                  className={`p-1.5 rounded-md border transition-colors cursor-pointer ${
-                    reorderMode
-                      ? "bg-even-grass text-even-evergreen border-even-grass"
-                      : "bg-white/10 hover:bg-white/15 text-even-offwhite/80 border-white/15"
-                  }`}
-                >
-                  <Move className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          )}
-          {units.length > 0 && !loading && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
-              {tapPayCount > 0 && (
-                <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
-                  {tapPayCount} en cobro
-                </span>
-              )}
-              {activeCount > 0 && (
-                <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
-                  {activeCount}{" "}
-                  {activeCount === 1 ? "cuenta activa" : "cuentas activas"}
-                </span>
-              )}
-              <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
-                {availableCount} {availableCount === 1 ? "libre" : "libres"}
+      {/* Title + stats */}
+      <div className="flex flex-col items-center pb-5 gap-1">
+        <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
+          {config.pluralLabel}
+        </h1>
+        {(branches.length > 0 || (units.length > 0 && !loading)) && (
+          <div className="flex items-center gap-2">
+            {units.length > 0 && !loading && (
+              <button
+                onClick={() => setReorderMode((v) => !v)}
+                title={reorderMode ? "Listo" : "Mover"}
+                className={`p-1.5 rounded-md border transition-colors cursor-pointer ${
+                  reorderMode
+                    ? "bg-even-grass text-even-evergreen border-even-grass"
+                    : "bg-white/10 hover:bg-white/15 text-even-offwhite/80 border-white/15"
+                }`}
+              >
+                <Move className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+        {units.length > 0 && !loading && (
+          <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
+            {tapPayCount > 0 && (
+              <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
+                {tapPayCount} en cobro
               </span>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {activeCount > 0 && (
+              <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
+                {activeCount}{" "}
+                {activeCount === 1 ? "cuenta activa" : "cuentas activas"}
+              </span>
+            )}
+            <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
+              {availableCount} {availableCount === 1 ? "libre" : "libres"}
+            </span>
+          </div>
+        )}
+      </div>
 
-      {/* Glass panel — croquis o, si hay una orden seleccionada, su detalle */}
+      {/* Glass panel — croquis */}
       <div
         className="flex-1 rounded-t-lg px-6 py-6 flex flex-col min-h-0 overflow-y-auto text-even-evergreen"
         style={{ background: "#FEFEEB" }}
       >
-        {selectedOrder ? (
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={() => setSelectedOrderId(null)}
-              className="self-start flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-even-evergreen/60 hover:text-even-evergreen transition-colors cursor-pointer"
+        <>
+          {!branchId && (
+            <p className="text-even-evergreen/50 text-center mt-10">
+              Selecciona una sucursal para ver{" "}
+              {config.pluralLabel.toLowerCase()}.
+            </p>
+          )}
+
+          {branchId && (loading || branchesLoading) && (
+            <div className="flex justify-center mt-16">
+              <Loader2 className="w-8 h-8 text-even-evergreen/40 animate-spin" />
+            </div>
+          )}
+
+          {branchId && !loading && error && (
+            <p className="text-rose-600 text-center mt-10 text-sm">{error}</p>
+          )}
+
+          {branchId && !loading && !error && units.length === 0 && (
+            <p className="text-even-evergreen/50 text-center mt-10 text-sm">
+              No hay {config.pluralLabel.toLowerCase()} registradas para esta
+              sucursal.
+            </p>
+          )}
+
+          {branchId && !loading && !error && units.length > 0 && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={() => setIsReordering(true)}
+              onDragCancel={() => setIsReordering(false)}
+              onDragEnd={handleDragEnd}
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Volver a {config.pluralLabel.toLowerCase()}
-            </button>
-            <OrderCard
-              order={selectedOrder}
-              onDishStatusChange={async (dishId, status, waiterName, waiterId) => {
-                // Esperar a que el PATCH se confirme en el backend antes de
-                // refrescar `units` — si no, el GET de mesas puede llegar
-                // antes de que el estado del platillo se haya guardado y
-                // seguir mostrando la mesa ocupada hasta un refresh manual.
-                await onDishStatusChange(
-                  selectedOrder.id,
-                  selectedOrder.orderType,
-                  dishId,
-                  status,
-                  waiterName,
-                  waiterId,
-                );
-                // Entregar el último platillo puede cerrar la cuenta —
-                // refresca `units` para que el círculo del croquis deje de
-                // mostrarse ocupado/verde sin necesitar un refresh manual.
-                if (status === "delivered") fetchData(false);
-              }}
-              onOrderCookingStatusChange={async (orderId, status) => {
-                await onOrderCookingStatusChange?.(orderId, status);
-                if (status === "delivered") fetchData(false);
-              }}
-              onPrepTimeExtraChange={onPrepTimeExtraChange}
-              onDishQuantityChange={onDishQuantityChange}
-              currentBranch={branch}
-              onPaymentRegistered={() => {
-                onOrdersRefresh();
-                fetchData(false);
-              }}
-              availableWaiters={availableWaiters}
-              waiterSession={waiterSession}
-              requireWaiterLogin={requireWaiterLogin}
-            />
-          </div>
-        ) : (
-          <>
-            {!branchId && (
-              <p className="text-even-evergreen/50 text-center mt-10">
-                Selecciona una sucursal para ver{" "}
-                {config.pluralLabel.toLowerCase()}.
-              </p>
-            )}
-
-            {branchId && (loading || branchesLoading) && (
-              <div className="flex justify-center mt-16">
-                <Loader2 className="w-8 h-8 text-even-evergreen/40 animate-spin" />
-              </div>
-            )}
-
-            {branchId && !loading && error && (
-              <p className="text-rose-600 text-center mt-10 text-sm">{error}</p>
-            )}
-
-            {branchId && !loading && !error && units.length === 0 && (
-              <p className="text-even-evergreen/50 text-center mt-10 text-sm">
-                No hay {config.pluralLabel.toLowerCase()} registradas para esta
-                sucursal.
-              </p>
-            )}
-
-            {branchId && !loading && !error && units.length > 0 && (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={() => setIsReordering(true)}
-                onDragCancel={() => setIsReordering(false)}
-                onDragEnd={handleDragEnd}
+              <SortableContext
+                items={units.map((u) => u.id)}
+                strategy={rectSortingStrategy}
               >
-                <SortableContext
-                  items={units.map((u) => u.id)}
-                  strategy={rectSortingStrategy}
-                >
-                  <div className="grid grid-cols-4 gap-4 justify-items-center">
-                    {units.map((unit) => {
-                      const active = isUnitActive(unit);
-                      return (
-                        <SortableCircle
-                          key={unit.id}
-                          unit={unit}
-                          active={active}
-                          pulsing={isPulsing(unit, active)}
-                          dragDisabled={!reorderMode}
-                          disabled={
-                            reorderMode ||
-                            unit.status === "maintenance" ||
-                            !!checkingUnitId
-                          }
-                          isChecking={checkingUnitId === unit.id}
-                          onClick={() => handleUnitClick(unit)}
-                        />
-                      );
-                    })}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            )}
-          </>
-        )}
+                <div className="grid grid-cols-4 gap-4 justify-items-center">
+                  {units.map((unit) => {
+                    const active = isUnitActive(unit);
+                    return (
+                      <SortableCircle
+                        key={unit.id}
+                        unit={unit}
+                        active={active}
+                        pulsing={isPulsing(unit, active)}
+                        dragDisabled={!reorderMode}
+                        disabled={
+                          reorderMode ||
+                          unit.status === "maintenance" ||
+                          !!checkingUnitId
+                        }
+                        isChecking={checkingUnitId === unit.id}
+                        onClick={() => handleUnitClick(unit)}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </>
       </div>
 
       {/* Confirmación traer cuenta — hay un ticket abierto directo en el POS
@@ -744,21 +677,6 @@ export default function SpatialGrid({
             </button>
           </div>
         </div>
-      )}
-
-      {/* Flex Bill — mesa libre: elegir platillos y abrir */}
-      {openDishesUnit && branch && (
-        <OpenTableWithDishesModal
-          branch={branch}
-          tableNumber={openDishesUnit.number}
-          requireWaiterLogin={requireWaiterLogin}
-          onClose={() => setOpenDishesUnit(null)}
-          onSuccess={() => {
-            setOpenDishesUnit(null);
-            fetchData(false);
-            onOrdersRefresh();
-          }}
-        />
       )}
     </div>
   );

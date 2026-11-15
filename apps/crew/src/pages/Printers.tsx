@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router";
 import { useAuth } from "@clerk/clerk-react";
 import {
   ArrowLeft,
-  Wifi,
-  PrinterIcon,
-  Loader2,
-  Play,
-  Check,
-  X,
   Cable,
-  Trash2,
+  ChevronRight,
+  Loader2,
+  Monitor,
+  Pencil,
+  Play,
+  PrinterIcon,
+  Wifi,
 } from "lucide-react";
-import { usePrinters } from "../hooks/usePrinters";
+import { Badge, Button, Card } from "@even/ui";
+import { usePrinters, type UsbPrinterDevice } from "../hooks/usePrinters";
 import {
   getPrinters,
   syncPrinters,
@@ -21,47 +23,14 @@ import {
 } from "../services/api";
 import type { CrewDevice } from "../hooks/useSocket";
 import { isTauri } from "../lib/platform";
-import DevicesPanel from "../components/DevicesPanel";
-
-const ROLES = [
-  {
-    value: "bar",
-    label: "Bar",
-    color: "bg-sky-500/15 text-sky-700 ring-sky-500/30",
-  },
-  {
-    value: "kitchen",
-    label: "Cocina",
-    color: "bg-orange-500/15 text-orange-700 ring-orange-500/30",
-  },
-  {
-    value: "other",
-    label: "Otro",
-    color: "bg-purple-500/15 text-purple-700 ring-purple-500/30",
-  },
-  {
-    value: "all",
-    label: "Todos",
-    color: "bg-even-grass/25 text-even-evergreen ring-even-grass/40",
-  },
-  {
-    value: "payment",
-    label: "Pagos",
-    color: "bg-amber-500/15 text-amber-700 ring-amber-500/30",
-  },
-] as const;
-
-function RoleBadge({ role }: { role: string }) {
-  const r = ROLES.find((r) => r.value === role);
-  if (!r) return null;
-  return (
-    <span
-      className={`mt-1 self-start inline-flex items-center px-2 py-0.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 ${r.color}`}
-    >
-      {r.label}
-    </span>
-  );
-}
+import PrintingBanner from "../features/impresion/PrintingBanner";
+import PrinterEditor from "../features/impresion/PrinterEditor";
+import {
+  ROLES,
+  groupByStation,
+  printerAddress,
+  roleLabel,
+} from "../features/impresion/stations";
 
 interface Props {
   onBack: () => void;
@@ -74,9 +43,32 @@ interface Props {
   onPrintersChanged?: () => void;
 }
 
-interface EditState {
-  name: string;
-  role: string;
+// Lo que se está editando: una impresora guardada o un USB detectado sin guardar.
+type Editing =
+  | { kind: "saved"; id: string }
+  | { kind: "new-usb"; deviceName: string };
+
+type Testable = Pick<PrinterRecord, "connection_type" | "ip" | "port" | "usb_device_name">;
+
+function errMsg(e: unknown, fallback = ""): string {
+  if (e instanceof Error && e.message) return e.message;
+  return typeof e === "string" && e ? e : fallback || String(e);
+}
+
+function RoleBadge({ role }: { role: string | null }) {
+  const r = ROLES.find((x) => x.value === role);
+  if (!r) {
+    return (
+      <Badge variant="neutral" size="sm">
+        Sin estación
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="neutral" size="sm" className={`ring-1 ${r.badge}`}>
+      {r.label}
+    </Badge>
+  );
 }
 
 export default function Printers({
@@ -91,46 +83,28 @@ export default function Printers({
 }: Props) {
   const { getToken } = useAuth();
   const canPrint = isTauri();
-  const {
-    scanning,
-    testingIp,
-    scan,
-    printTest,
-    usbDevices,
-    scanningUsb,
-    testingUsbDevice,
-    scanUsb,
-    printTestUsb,
-  } = usePrinters();
+  const { scanning, scan, printTest, usbDevices, scanningUsb, scanUsb, printTestUsb } =
+    usePrinters();
 
   const [printers, setPrinters] = useState<PrinterRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editState, setEditState] = useState<EditState>({ name: "", role: "" });
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // Estado para edición de impresoras USB (pending — no tienen ID aún)
-  const [editingUsbDevice, setEditingUsbDevice] = useState<string | null>(null);
-  const [editUsbState, setEditUsbState] = useState<EditState>({
-    name: "",
-    role: "",
-  });
-  const [savingUsbDevice, setSavingUsbDevice] = useState<string | null>(null);
-  const [usbError, setUsbError] = useState<string | null>(null);
-
-  // Load printers when branch changes
   const loadPrinters = useCallback(
-    async (branchId: string) => {
+    async (id: string) => {
       const token = await getToken();
-      if (!token || !branchId) return;
+      if (!token || !id) return;
       setLoading(true);
       setError(null);
       try {
-        const list = await getPrinters(branchId);
-        setPrinters(list);
-      } catch (e: any) {
-        setError(e?.message || "Error al cargar impresoras");
+        setPrinters(await getPrinters(id));
+      } catch (e) {
+        setError(errMsg(e, "Error al cargar impresoras"));
       } finally {
         setLoading(false);
       }
@@ -142,726 +116,379 @@ export default function Printers({
     if (branchId) loadPrinters(branchId);
   }, [branchId, loadPrinters]);
 
-  // WiFi scan
-  const handleScan = useCallback(async () => {
+  // Buscar WiFi: detecta en la red y sincroniza con el servidor.
+  const handleScanWifi = useCallback(async () => {
     if (!branchId) return;
+    setNotice(null);
     const found = await scan();
-    if (found.length === 0) return;
+    if (found.length === 0) {
+      setNotice("No se encontraron impresoras WiFi en la red.");
+      return;
+    }
     const token = await getToken();
     if (!token) return;
     try {
-      const updated = await syncPrinters(token, branchId, found);
-      setPrinters(updated);
+      setPrinters(await syncPrinters(token, branchId, found));
       onPrintersChanged?.();
-    } catch (e: any) {
-      setError(e?.message || "Error al sincronizar impresoras");
+    } catch (e) {
+      setError(errMsg(e, "Error al sincronizar impresoras"));
     }
   }, [scan, getToken, branchId, onPrintersChanged]);
 
-  // USB scan — solo detecta localmente, NO guarda en DB todavía
+  // USB: solo detecta localmente; no guarda hasta asignar estación.
   const handleScanUsb = useCallback(async () => {
-    setUsbError(null);
+    setNotice(null);
     try {
       await scanUsb();
-    } catch (e: any) {
-      setUsbError(e?.message || String(e));
+    } catch (e) {
+      setNotice(errMsg(e));
     }
   }, [scanUsb]);
 
-  // WiFi edit
-  const startEdit = (p: PrinterRecord) => {
-    setEditingId(p.id);
-    setEditState({ name: p.name ?? "", role: p.role ?? "" });
-  };
-  const cancelEdit = () => {
-    setEditingId(null);
-    setConfirmDeleteId(null);
-  };
-  const saveEdit = async (printerId: string) => {
-    const token = await getToken();
-    if (!token) return;
-    setSavingId(printerId);
-    try {
-      const updated = await updatePrinter(token, printerId, {
-        name: editState.name || undefined,
-        role: editState.role || undefined,
-      });
-      setPrinters((prev) =>
-        prev.map((p) => (p.id === updated.id ? updated : p)),
-      );
-      setEditingId(null);
-      onPrintersChanged?.();
-    } catch (e: any) {
-      setError(e?.message || "Error al guardar");
-    } finally {
-      setSavingId(null);
-    }
+  // Una sola función de prueba para WiFi y USB.
+  const runTest = useCallback(
+    async (p: Testable) => {
+      if (p.connection_type === "usb" && p.usb_device_name) {
+        await printTestUsb(p.usb_device_name);
+      } else if (p.ip && p.port) {
+        await printTest(p.ip, p.port);
+      }
+    },
+    [printTest, printTestUsb],
+  );
+
+  const testMany = useCallback(
+    async (key: string, targets: Testable[], okMessage: string) => {
+      setTesting(key);
+      setNotice(null);
+      try {
+        for (const t of targets) await runTest(t);
+        setNotice(okMessage);
+      } catch (e) {
+        const msg = errMsg(e);
+        setNotice(
+          msg.includes("USB_PERMISSION_REQUESTED")
+            ? "Permiso USB solicitado: acepta el diálogo y prueba de nuevo."
+            : `La prueba falló: ${msg}`,
+        );
+      } finally {
+        setTesting(null);
+      }
+    },
+    [runTest],
+  );
+
+  const savedUsbNames = new Set(
+    printers.filter((p) => p.connection_type === "usb").map((p) => p.usb_device_name),
+  );
+  const newUsbDevices = usbDevices.filter((d) => !savedUsbNames.has(d.device_name));
+  const stations = groupByStation(printers);
+
+  const closeEditor = () => {
+    setEditing(null);
+    setEditorError(null);
   };
 
-  // USB edit — impresoras ya guardadas en DB
-  const startEditUsb = (p: PrinterRecord) => {
-    setEditingUsbDevice(p.usb_device_name!);
-    setEditUsbState({ name: p.name ?? "", role: p.role ?? "" });
-  };
-  const cancelEditUsb = () => {
-    setEditingUsbDevice(null);
-    setConfirmDeleteId(null);
-  };
-  const saveEditUsb = async (printerId: string) => {
+  const handleSave = async (
+    target: Editing,
+    values: { name: string; role: string },
+  ) => {
     const token = await getToken();
-    if (!token) return;
-    setSavingUsbDevice(printerId);
+    if (!token || !branchId) return;
+    setSaving(true);
+    setEditorError(null);
     try {
-      const updated = await updatePrinter(token, printerId, {
-        name: editUsbState.name || undefined,
-        role: editUsbState.role || undefined,
+      let id: string | undefined;
+      if (target.kind === "saved") {
+        id = target.id;
+      } else {
+        const synced = await syncPrinters(token, branchId, [
+          { usb_device_name: target.deviceName, connection_type: "usb" },
+        ]);
+        id = synced.find((p) => p.usb_device_name === target.deviceName)?.id;
+      }
+      if (!id) throw new Error("No se pudo crear la impresora");
+      const updated = await updatePrinter(token, id, {
+        name: values.name || undefined,
+        role: values.role || undefined,
       });
       setPrinters((prev) =>
-        prev.map((p) => (p.id === updated.id ? updated : p)),
+        prev.some((p) => p.id === updated.id)
+          ? prev.map((p) => (p.id === updated.id ? updated : p))
+          : [...prev, updated],
       );
-      setEditingUsbDevice(null);
+      closeEditor();
       onPrintersChanged?.();
-    } catch (e: any) {
-      setUsbError(e?.message || "Error al guardar");
+    } catch (e) {
+      setEditorError(errMsg(e, "Error al guardar"));
     } finally {
-      setSavingUsbDevice(null);
+      setSaving(false);
     }
   };
-
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleDelete = async (printerId: string) => {
     const token = await getToken();
     if (!token) return;
-    setDeletingId(printerId);
     try {
       await deletePrinter(token, printerId);
       setPrinters((prev) => prev.filter((p) => p.id !== printerId));
-      setEditingId(null);
-      setEditingUsbDevice(null);
-      setConfirmDeleteId(null);
+      closeEditor();
       onPrintersChanged?.();
-    } catch (e: any) {
-      setError(e?.message || "Error al eliminar");
-    } finally {
-      setDeletingId(null);
+    } catch (e) {
+      setEditorError(errMsg(e, "Error al eliminar"));
     }
   };
 
-  // USB nuevo — dispositivo detectado localmente, aún no en DB
-  const [editingNewUsb, setEditingNewUsb] = useState<string | null>(null);
-  const [editNewUsbState, setEditNewUsbState] = useState<EditState>({
-    name: "",
-    role: "",
-  });
-  const [savingNewUsb, setSavingNewUsb] = useState<string | null>(null);
-
-  const saveNewUsb = async (deviceName: string) => {
-    if (!editNewUsbState.role) {
-      setUsbError("Asigna un rol antes de guardar.");
-      return;
-    }
-    const token = await getToken();
-    if (!token || !branchId) return;
-    setSavingNewUsb(deviceName);
-    setUsbError(null);
-    try {
-      const updated = await syncPrinters(token, branchId, [
-        {
-          usb_device_name: deviceName,
-          connection_type: "usb",
-        },
-      ]);
-      // Ahora actualizar nombre y rol del registro recién creado
-      const created = updated.find((p) => p.usb_device_name === deviceName);
-      if (created) {
-        const final = await updatePrinter(token, created.id, {
-          name: editNewUsbState.name || undefined,
-          role: editNewUsbState.role,
-        });
-        setPrinters((prev) => {
-          const exists = prev.find((p) => p.id === final.id);
-          return exists
-            ? prev.map((p) => (p.id === final.id ? final : p))
-            : [...prev, final];
-        });
-      }
-      setEditingNewUsb(null);
-      onPrintersChanged?.();
-    } catch (e: any) {
-      setUsbError(e?.message || "Error al guardar");
-    } finally {
-      setSavingNewUsb(null);
-    }
-  };
-
-  // Handle USB test — show friendly message on permission request
-  const handleTestUsb = useCallback(
-    async (deviceName: string) => {
-      try {
-        await printTestUsb(deviceName);
-      } catch (e: any) {
-        const msg = e?.message || String(e);
-        if (msg.includes("USB_PERMISSION_REQUESTED")) {
-          setUsbError(
-            "Permiso USB solicitado — acepta el diálogo y toca Test de nuevo.",
-          );
-        } else {
-          setUsbError(msg);
-        }
-      }
-    },
-    [printTestUsb],
+  const testButton = (key: string, label: string, targets: Testable[], ok: string) => (
+    <Button
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      disabled={!canPrint || (testing !== null && testing !== key)}
+      loading={testing === key}
+      onClick={() => testMany(key, targets, ok)}
+      title={canPrint ? undefined : "La versión web no puede imprimir"}
+    >
+      {testing !== key && <Play className="size-3.5" />}
+      {label}
+    </Button>
   );
 
-  const wifiPrinters = printers.filter((p) => p.connection_type !== "usb");
-  const usbPrinters = printers.filter((p) => p.connection_type === "usb");
+  const renderSaved = (p: PrinterRecord) => {
+    if (editing?.kind === "saved" && editing.id === p.id) {
+      return (
+        <li key={p.id}>
+          <PrinterEditor
+            address={printerAddress(p)}
+            connection={p.connection_type === "usb" ? "usb" : "wifi"}
+            initialName={p.name ?? ""}
+            initialRole={p.role ?? ""}
+            saving={saving}
+            error={editorError}
+            onSave={(v) => handleSave(editing, v)}
+            onCancel={closeEditor}
+            onDelete={() => handleDelete(p.id)}
+          />
+        </li>
+      );
+    }
+    return (
+      <li key={p.id}>
+        <Card padding="sm" className="flex items-center justify-between gap-3 px-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="flex items-center gap-2 text-sm font-medium text-even-evergreen">
+              {p.connection_type === "usb" ? (
+                <Cable className="size-3.5 shrink-0 opacity-50" />
+              ) : (
+                <Wifi className="size-3.5 shrink-0 opacity-50" />
+              )}
+              <span className="truncate">{p.name || "Sin nombre"}</span>
+            </span>
+            <span className="truncate font-mono text-xs text-even-evergreen/50">
+              {printerAddress(p)}
+            </span>
+            <RoleBadge role={p.role} />
+          </div>
+          <div className="flex shrink-0 gap-2">
+            {testButton(`p:${p.id}`, "Probar", [p], `Prueba enviada a ${p.name || printerAddress(p)}.`)}
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Editar impresora"
+              onClick={() => {
+                setEditorError(null);
+                setEditing({ kind: "saved", id: p.id });
+              }}
+            >
+              <Pencil className="size-4" />
+            </Button>
+          </div>
+        </Card>
+      </li>
+    );
+  };
+
+  const renderNewUsb = (d: UsbPrinterDevice) => {
+    if (editing?.kind === "new-usb" && editing.deviceName === d.device_name) {
+      return (
+        <li key={d.device_name}>
+          <PrinterEditor
+            address={d.device_name}
+            connection="usb"
+            initialName=""
+            initialRole=""
+            saving={saving}
+            error={editorError}
+            onSave={(v) => handleSave(editing, v)}
+            onCancel={closeEditor}
+          />
+        </li>
+      );
+    }
+    const asTestable: Testable = {
+      connection_type: "usb",
+      ip: null,
+      port: null,
+      usb_device_name: d.device_name,
+    };
+    return (
+      <li key={d.device_name}>
+        <Card padding="sm" className="flex items-center justify-between gap-3 px-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="flex items-center gap-2 text-sm font-medium text-even-evergreen">
+              <Cable className="size-3.5 shrink-0 opacity-50" />
+              <span className="truncate">{d.device_name}</span>
+            </span>
+            <Badge variant="soft" size="sm">
+              Detectada, sin guardar
+            </Badge>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            {testButton(`u:${d.device_name}`, "Probar", [asTestable], `Prueba enviada a ${d.device_name}.`)}
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditorError(null);
+                setEditing({ kind: "new-usb", deviceName: d.device_name });
+              }}
+            >
+              Configurar
+            </Button>
+          </div>
+        </Card>
+      </li>
+    );
+  };
 
   return (
-    <div
-      className="flex-1 flex flex-col"
-      style={{ background: "#023828" }}
-    >
-      {/* Header */}
-      <header className="px-5 pt-5 pb-2 flex items-center justify-between">
+    <div className="flex flex-1 flex-col" style={{ background: "#023828" }}>
+      <header className="flex items-center gap-2 px-5 pt-5 pb-2">
         <button
           onClick={onBack}
-          className="p-2 rounded-lg text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer"
+          aria-label="Volver a Ajustes"
+          className="cursor-pointer rounded-lg p-2 text-even-offwhite/60 transition-colors hover:bg-white/10 hover:text-even-offwhite"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-even-offwhite font-medium text-base uppercase tracking-widest">
+        <h1 className="text-base font-medium uppercase tracking-widest text-even-offwhite">
           Impresoras
         </h1>
-        {canPrint ? (
-          <button
-            onClick={handleScan}
-            disabled={scanning || !branchId}
-            className="p-2 rounded-lg text-even-offwhite/60 hover:text-even-offwhite hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {scanning ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Wifi className="w-4 h-4" />
-            )}
-          </button>
-        ) : (
-          <div className="w-8" />
-        )}
       </header>
 
-      {/* Panel */}
       <div
-        className="flex-1 rounded-t-lg px-5 pt-6 pb-6 flex flex-col gap-4 mt-4 text-even-evergreen"
+        className="mt-4 flex flex-1 flex-col gap-5 rounded-t-lg px-5 pt-6 pb-6 text-even-evergreen"
         style={{ background: "#FEFEEB" }}
       >
-
-        <DevicesPanel
+        <PrintingBanner
           deviceId={deviceId}
           connectedDevices={connectedDevices}
           masterDeviceId={masterDeviceId}
           setMaster={setMaster}
         />
 
-        {/* Content */}
-        {branchesLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-even-evergreen/50" />
+        <Link
+          to="/ajustes/dispositivos"
+          className="flex items-center justify-between rounded-xl bg-even-evergreen/5 px-4 py-3 text-sm text-even-evergreen hover:bg-even-evergreen/10"
+        >
+          <span className="flex items-center gap-2">
+            <Monitor className="size-4" />
+            Dispositivos: elige cuál imprime los tickets
+          </span>
+          <ChevronRight className="size-4" />
+        </Link>
+
+        {notice && (
+          <p role="status" className="rounded-lg bg-even-evergreen/5 px-3 py-2 text-xs">
+            {notice}
+          </p>
+        )}
+
+        {branchesLoading || loading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <Loader2 className="size-6 animate-spin text-even-evergreen/50" />
           </div>
         ) : !branchId ? (
-          <div className="flex-1 flex items-center justify-center text-even-evergreen/40 text-sm">
+          <div className="flex flex-1 items-center justify-center text-sm text-even-evergreen/40">
             Selecciona una sucursal para ver sus impresoras
           </div>
-        ) : loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-even-evergreen/50" />
-          </div>
         ) : error ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-even-evergreen/70">
-            <p className="text-sm text-center">{error}</p>
-            <button
-              onClick={() => loadPrinters(branchId)}
-              className="px-4 py-2 bg-even-evergreen/20 text-even-evergreen rounded-md text-xs uppercase tracking-wider font-medium hover:bg-even-evergreen/30 cursor-pointer"
-            >
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-even-evergreen/70">
+            <p className="text-center text-sm">{error}</p>
+            <Button size="sm" onClick={() => loadPrinters(branchId)}>
               Reintentar
-            </button>
+            </Button>
           </div>
         ) : (
           <>
-            {/* ── Sección WiFi ── */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-even-evergreen/50 text-xs uppercase tracking-wide px-1">
-                  WiFi · {wifiPrinters.length} impresora(s)
-                </p>
+            {stations.length > 0 && (
+              <section>
+                <h2 className="mb-2 px-1 text-xs uppercase tracking-wide text-even-evergreen/50">
+                  Estaciones
+                </h2>
+                <ul className="flex flex-col gap-2">
+                  {stations.map((s) => (
+                    <li key={s.role}>
+                      <Card padding="sm" className="flex items-center justify-between gap-3 px-4">
+                        <div>
+                          <p className="text-sm font-medium">{s.label}</p>
+                          <p className="text-xs text-even-evergreen/50">
+                            {s.printers.length} impresora{s.printers.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        {testButton(
+                          `s:${s.role}`,
+                          "Probar estación",
+                          s.printers,
+                          `Prueba enviada a la estación ${s.label}.`,
+                        )}
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="px-1 text-xs uppercase tracking-wide text-even-evergreen/50">
+                  Impresoras · {printers.length}
+                </h2>
                 {canPrint && (
-                  <button
-                    onClick={handleScan}
-                    disabled={scanning}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {scanning ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Wifi className="w-3 h-3" />
-                    )}
-                    Escanear
-                  </button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleScanWifi} loading={scanning}>
+                      {!scanning && <Wifi className="size-3.5" />}
+                      Buscar WiFi
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleScanUsb} loading={scanningUsb}>
+                      {!scanningUsb && <Cable className="size-3.5" />}
+                      Detectar USB
+                    </Button>
+                  </div>
                 )}
               </div>
 
-              {wifiPrinters.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-4 text-even-evergreen/40">
-                  <PrinterIcon className="w-8 h-8 opacity-30" />
-                  <p className="text-xs">
+              {printers.length === 0 && newUsbDevices.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-6 text-even-evergreen/40">
+                  <PrinterIcon className="size-8 opacity-30" />
+                  <p className="text-center text-xs">
                     {canPrint
-                      ? "No hay impresoras WiFi. Toca Escanear."
-                      : "No hay impresoras WiFi."}
+                      ? "No hay impresoras. Usa Buscar WiFi o Detectar USB."
+                      : "No hay impresoras configuradas."}
                   </p>
                 </div>
               ) : (
                 <ul className="flex flex-col gap-3">
-                  {wifiPrinters.map((p) =>
-                    editingId === p.id ? (
-                      <li
-                        key={p.id}
-                        className="bg-white border border-even-evergreen/20 shadow-sm rounded-lg px-4 py-3 flex flex-col gap-3"
-                      >
-                        <p className="text-even-evergreen/50 text-xs font-mono">
-                          {p.ip}:{p.port}
-                        </p>
-                        <input
-                          value={editState.name}
-                          onChange={(e) =>
-                            setEditState((s) => ({
-                              ...s,
-                              name: e.target.value,
-                            }))
-                          }
-                          placeholder="Nombre (ej. Barra, Cocina 1)"
-                          className="w-full px-3 py-2 bg-white border border-even-evergreen/20 rounded-md text-even-evergreen text-sm placeholder:text-even-evergreen/30 focus:outline-none focus:ring-1 focus:ring-even-evergreen/30"
-                        />
-                        <div className="flex gap-2 flex-wrap">
-                          {ROLES.map((r) => (
-                            <button
-                              key={r.value}
-                              onClick={() =>
-                                setEditState((s) => ({ ...s, role: r.value }))
-                              }
-                              className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
-                                editState.role === r.value
-                                  ? r.color
-                                  : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
-                              }`}
-                            >
-                              {r.label}
-                            </button>
-                          ))}
-                        </div>
-                        {confirmDeleteId === p.id ? (
-                          <div className="flex items-center justify-between">
-                            <span className="text-even-evergreen/40 text-xs">
-                              ¿Eliminar impresora?
-                            </span>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen/60 text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer"
-                              >
-                                No
-                              </button>
-                              <button
-                                onClick={() => handleDelete(p.id)}
-                                disabled={deletingId === p.id}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 text-rose-700 hover:bg-rose-500/25 text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {deletingId === p.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : null}
-                                Eliminar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
-                              <button
-                                onClick={cancelEdit}
-                                className="p-2 rounded-lg text-even-evergreen/50 hover:bg-even-evergreen/10 transition-colors cursor-pointer"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(p.id)}
-                                className="p-2 rounded-lg text-even-evergreen/25 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <button
-                              onClick={() => saveEdit(p.id)}
-                              disabled={savingId === p.id}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {savingId === p.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Check className="w-3 h-3" />
-                              )}
-                              Guardar
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    ) : (
-                      <li
-                        key={p.id}
-                        className="flex items-center justify-between bg-white border border-even-evergreen/20 shadow-sm rounded-lg px-4 py-3"
-                      >
-                        <button
-                          className="flex flex-col gap-0.5 text-left flex-1 min-w-0 cursor-pointer"
-                          onClick={() => startEdit(p)}
-                        >
-                          {p.name ? (
-                            <span className="text-even-evergreen text-sm font-medium truncate">
-                              {p.name}
-                            </span>
-                          ) : (
-                            <span className="text-even-evergreen/30 text-sm italic">
-                              Sin nombre — toca para editar
-                            </span>
-                          )}
-                          <span className="text-even-evergreen/50 text-xs font-mono">
-                            {p.ip}:{p.port}
-                          </span>
-                          {p.role && <RoleBadge role={p.role} />}
-                        </button>
-                        {canPrint && (
-                          <button
-                            onClick={() => printTest(p.ip!, p.port!)}
-                            disabled={testingIp === p.ip}
-                            className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                          >
-                            {testingIp === p.ip ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Play className="w-3 h-3" />
-                            )}
-                            Test
-                          </button>
-                        )}
-                      </li>
-                    ),
-                  )}
+                  {printers.map(renderSaved)}
+                  {newUsbDevices.map(renderNewUsb)}
                 </ul>
               )}
-            </div>
-
-            {/* ── Sección USB ── */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-even-evergreen/50 text-xs uppercase tracking-wide px-1">
-                  USB · {usbPrinters.length} impresora(s)
+              {!canPrint && (
+                <p className="mt-3 px-1 text-xs text-even-evergreen/50">
+                  La versión web no puede buscar ni probar impresoras. Hazlo desde la app de
+                  Windows o Android ({roleLabel("kitchen")}, {roleLabel("bar")}...).
                 </p>
-                {canPrint && (
-                  <button
-                    onClick={handleScanUsb}
-                    disabled={scanningUsb}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {scanningUsb ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Cable className="w-3 h-3" />
-                    )}
-                    Detectar USB
-                  </button>
-                )}
-              </div>
-
-              {usbError && (
-                <p className="text-amber-600 text-xs px-1 mb-2">{usbError}</p>
               )}
-
-              {/* Impresoras USB ya guardadas en DB */}
-              {usbPrinters.length > 0 && (
-                <ul className="flex flex-col gap-3 mb-3">
-                  {usbPrinters.map((p) =>
-                    editingUsbDevice === p.usb_device_name ? (
-                      <li
-                        key={p.id}
-                        className="bg-white border border-even-evergreen/20 shadow-sm rounded-lg px-4 py-3 flex flex-col gap-3"
-                      >
-                        <p className="text-even-evergreen/50 text-xs font-mono truncate">
-                          {p.usb_device_name}
-                        </p>
-                        <input
-                          value={editUsbState.name}
-                          onChange={(e) =>
-                            setEditUsbState((s) => ({
-                              ...s,
-                              name: e.target.value,
-                            }))
-                          }
-                          placeholder="Nombre (ej. Barra USB)"
-                          className="w-full px-3 py-2 bg-white border border-even-evergreen/20 rounded-md text-even-evergreen text-sm placeholder:text-even-evergreen/30 focus:outline-none focus:ring-1 focus:ring-even-evergreen/30"
-                        />
-                        <div className="flex gap-2 flex-wrap">
-                          {ROLES.map((r) => (
-                            <button
-                              key={r.value}
-                              onClick={() =>
-                                setEditUsbState((s) => ({
-                                  ...s,
-                                  role: r.value,
-                                }))
-                              }
-                              className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
-                                editUsbState.role === r.value
-                                  ? r.color
-                                  : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
-                              }`}
-                            >
-                              {r.label}
-                            </button>
-                          ))}
-                        </div>
-                        {confirmDeleteId === p.id ? (
-                          <div className="flex items-center justify-between">
-                            <span className="text-even-evergreen/40 text-xs">
-                              ¿Eliminar impresora?
-                            </span>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen/60 text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer"
-                              >
-                                No
-                              </button>
-                              <button
-                                onClick={() => handleDelete(p.id)}
-                                disabled={deletingId === p.id}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 text-rose-700 hover:bg-rose-500/25 text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {deletingId === p.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : null}
-                                Eliminar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
-                              <button
-                                onClick={cancelEditUsb}
-                                className="p-2 rounded-lg text-even-evergreen/50 hover:bg-even-evergreen/10 transition-colors cursor-pointer"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(p.id)}
-                                className="p-2 rounded-lg text-even-evergreen/25 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <button
-                              onClick={() => saveEditUsb(p.id)}
-                              disabled={savingUsbDevice === p.id}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {savingUsbDevice === p.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Check className="w-3 h-3" />
-                              )}
-                              Guardar
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    ) : (
-                      <li
-                        key={p.id}
-                        className="flex items-center justify-between bg-white border border-even-evergreen/20 shadow-sm rounded-lg px-4 py-3"
-                      >
-                        <button
-                          className="flex flex-col gap-0.5 text-left flex-1 min-w-0 cursor-pointer"
-                          onClick={() => startEditUsb(p)}
-                        >
-                          {p.name ? (
-                            <span className="text-even-evergreen text-sm font-medium truncate">
-                              {p.name}
-                            </span>
-                          ) : (
-                            <span className="text-even-evergreen/30 text-sm italic">
-                              Sin nombre — toca para editar
-                            </span>
-                          )}
-                          <span className="text-even-evergreen/40 text-xs font-mono truncate">
-                            {p.usb_device_name}
-                          </span>
-                          {p.role && <RoleBadge role={p.role} />}
-                        </button>
-                        {canPrint && (
-                          <button
-                            onClick={() => handleTestUsb(p.usb_device_name!)}
-                            disabled={testingUsbDevice === p.usb_device_name}
-                            className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                          >
-                            {testingUsbDevice === p.usb_device_name ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Play className="w-3 h-3" />
-                            )}
-                            Test
-                          </button>
-                        )}
-                      </li>
-                    ),
-                  )}
-                </ul>
-              )}
-
-              {/* Dispositivos detectados localmente, aún no guardados */}
-              {(() => {
-                const savedDeviceNames = new Set(
-                  usbPrinters.map((p) => p.usb_device_name),
-                );
-                const newDevices = usbDevices.filter(
-                  (d) => !savedDeviceNames.has(d.device_name),
-                );
-                if (newDevices.length === 0 && usbPrinters.length === 0) {
-                  if (!canPrint) {
-                    return (
-                      <p className="text-xs text-center py-4 text-even-evergreen/40">
-                        No hay impresoras USB.
-                      </p>
-                    );
-                  }
-                  return (
-                    <div className="flex flex-col items-center justify-center gap-2 py-4 text-even-evergreen/40">
-                      <Cable className="w-8 h-8 opacity-30" />
-                      <p className="text-xs text-center">
-                        No hay impresoras USB detectadas.{"\n"}Asegúrate de que
-                        la impresora aparezca en{"\n"}Configuración → Impresoras
-                        y escáneres.
-                      </p>
-                    </div>
-                  );
-                }
-                if (newDevices.length === 0) return null;
-                return (
-                  <>
-                    <p className="text-even-evergreen/30 text-xs px-1 mb-2">
-                      Detectadas — asigna un rol para guardar
-                    </p>
-                    <ul className="flex flex-col gap-3">
-                      {newDevices.map((d) =>
-                        editingNewUsb === d.device_name ? (
-                          <li
-                            key={d.device_name}
-                            className="bg-white border border-even-evergreen/20 shadow-sm rounded-lg px-4 py-3 flex flex-col gap-3 ring-1 ring-even-evergreen/20"
-                          >
-                            <p className="text-even-evergreen/50 text-xs font-mono truncate">
-                              {d.device_name}
-                            </p>
-                            <input
-                              value={editNewUsbState.name}
-                              onChange={(e) =>
-                                setEditNewUsbState((s) => ({
-                                  ...s,
-                                  name: e.target.value,
-                                }))
-                              }
-                              placeholder="Nombre (ej. Barra USB)"
-                              className="w-full px-3 py-2 bg-white border border-even-evergreen/20 rounded-md text-even-evergreen text-sm placeholder:text-even-evergreen/30 focus:outline-none focus:ring-1 focus:ring-even-evergreen/30"
-                            />
-                            <div className="flex gap-2 flex-wrap">
-                              {ROLES.map((r) => (
-                                <button
-                                  key={r.value}
-                                  onClick={() =>
-                                    setEditNewUsbState((s) => ({
-                                      ...s,
-                                      role: r.value,
-                                    }))
-                                  }
-                                  className={`px-3 py-1.5 rounded text-[0.6875rem] uppercase tracking-wider font-medium ring-1 transition-colors cursor-pointer ${
-                                    editNewUsbState.role === r.value
-                                      ? r.color
-                                      : "bg-even-evergreen/5 text-even-evergreen/40 ring-even-evergreen/10 hover:bg-even-evergreen/10 hover:text-even-evergreen/70"
-                                  }`}
-                                >
-                                  {r.label}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                              <button
-                                onClick={() => setEditingNewUsb(null)}
-                                className="p-2 rounded-lg text-even-evergreen/50 hover:bg-even-evergreen/10 cursor-pointer"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => saveNewUsb(d.device_name)}
-                                disabled={
-                                  savingNewUsb === d.device_name ||
-                                  !editNewUsbState.role
-                                }
-                                className="flex items-center gap-1.5 px-4 py-2 bg-even-grass hover:bg-even-grass/90 text-even-evergreen text-xs uppercase tracking-wider rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {savingNewUsb === d.device_name ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <Check className="w-3 h-3" />
-                                )}
-                                Guardar
-                              </button>
-                            </div>
-                          </li>
-                        ) : (
-                          <li
-                            key={d.device_name}
-                            className="flex items-center justify-between bg-white rounded-lg px-4 py-3 ring-1 ring-even-evergreen/20 shadow-sm"
-                          >
-                            <button
-                              className="flex flex-col gap-0.5 text-left flex-1 min-w-0 cursor-pointer"
-                              onClick={() => {
-                                setEditingNewUsb(d.device_name);
-                                setEditNewUsbState({ name: "", role: "" });
-                              }}
-                            >
-                              <span className="text-even-evergreen/50 text-sm italic">
-                                Sin configurar — toca para asignar rol
-                              </span>
-                              <span className="text-even-evergreen/30 text-xs font-mono truncate">
-                                {d.device_name}
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => handleTestUsb(d.device_name)}
-                              disabled={testingUsbDevice === d.device_name}
-                              className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                            >
-                              {testingUsbDevice === d.device_name ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Play className="w-3 h-3" />
-                              )}
-                              Test
-                            </button>
-                          </li>
-                        ),
-                      )}
-                    </ul>
-                  </>
-                );
-              })()}
-            </div>
+            </section>
           </>
         )}
       </div>

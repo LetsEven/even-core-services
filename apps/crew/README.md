@@ -40,7 +40,19 @@ Antes de un PR: `npx turbo run typecheck lint test build --filter=@even/crew`.
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clave pública de Clerk para el login del restaurante. |
 | `VITE_CREW_SOCKET_SECRET` | Secreto del socket de Crew (si falta usa un valor por defecto de desarrollo). |
 | `VITE_APP_LABEL` | Nombre mostrado en la vista de Cocina (por defecto "Even Crew"). |
+| `VITE_DEMO_MODE` | `true` activa el **modo demo** (datos ficticios, sin backend ni Clerk). Solo para revisar la UI en dev; nunca activo por defecto. Ver "Modo demo". |
 | `VITE_ENABLE_REPRINT` | Habilita la reimpresión de comandas desde la cuenta. Dejar apagada hasta que exista el endpoint (ver pendientes). |
+
+## Modo demo
+
+Para revisar la UI sin acceso a Clerk dev ni al backend (el backend exige un JWT de Clerk en cada request, así que no se puede simular solo el login). Todo ocurre en el frontend y se pierde al recargar.
+
+- **Activar**: construir con `VITE_DEMO_MODE=true` (build-time, como el resto de `VITE_*`). En Railway/Docker es el `ARG VITE_DEMO_MODE` del `Dockerfile`. En local: `VITE_DEMO_MODE=true npm run dev -w @even/crew`. No hace falta `VITE_CLERK_PUBLISHABLE_KEY`.
+- **Seguridad**: se niega a activarse (pantalla de error y mensaje en consola) si `VITE_API_BASE_URL` contiene `api.letseven.io` o `even-backend-production`. Nunca está activo si la variable falta o vale otra cosa. No usar en el despliegue de producción.
+- **Qué se ve**: banner permanente "MODO DEMO: datos ficticios", login con el botón "Entrar al modo demo" y el restaurante "Mariscos Mazatlán" (id 26, una sucursal con Flex Bill y Tap Order & Pay), 12 mesas, órdenes en distintos estados, menú con extras y un platillo agotado, tres meseros con contraseña vacía (basta elegir el nombre), impresoras (cocina, barra, pagos), historial y comprobantes (PDF ficticio).
+- **Cómo funciona**: un wrapper de `window.fetch` (instalado solo en demo) responde todo lo que va a `/api/...` desde un store en memoria; las mutaciones (abrir mesa, comanda, estado de platillo, cobro, mesero, reordenar, impresoras) actualizan ese store. Un endpoint sin fixture responde 404 y avisa en consola `demo: endpoint sin fixture`. El socket es un stub sin red y la impresión es un no-op ("Impresión simulada" + ticket en consola; la TopBar muestra "Imprime aquí (demo)").
+- **Código**: todo en `src/demo/**` (fixtures, store, handlers, fetch, socket, impresión), cargado con `import()` dinámico solo si el demo está activo. Los componentes no importan Clerk directo: usan `src/lib/auth.ts`, que en modo normal delega en Clerk y en demo devuelve una sesión falsa.
+- **Tests**: `src/demo/*.test.ts` y `src/lib/demoMode.test.ts` (se niega con API de producción).
 
 ## Pendientes de backend
 

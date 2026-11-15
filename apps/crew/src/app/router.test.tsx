@@ -7,6 +7,12 @@ const auth = vi.hoisted(() => ({
   state: { isLoaded: true, isSignedIn: false },
 }));
 vi.mock("@clerk/clerk-react", () => ({ useAuth: () => auth.state }));
+// Estos guards se prueban contra Clerk: aunque el build corra con
+// VITE_DEMO_MODE=true, aqui el modo demo va apagado.
+vi.mock("../lib/demoMode", () => ({
+  isDemoMode: () => false,
+  demoStatus: { active: false, error: null },
+}));
 
 import { LoginGate, RequireAuth } from "./guards";
 import { HomeRedirect } from "./pages";

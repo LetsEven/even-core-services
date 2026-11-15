@@ -3,7 +3,7 @@
 import { m } from "motion/react";
 import DishHeroImage from "@/components/DishHeroImage";
 import DishBottomBar from "@/components/UI/DishBottomBar";
-import DishSkeleton from "@/components/UI/DishSkeleton";
+import DishLoadingShell from "@/components/UI/DishLoadingShell";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useCart } from "@/context/CartContext";
@@ -665,11 +665,11 @@ export default function DishDetailPage() {
     }
   };
 
-  // Esqueleto con la foto; ya se puede cerrar arrastrando hacia abajo mientras carga.
+  // Sin esqueleto: pantalla blanca (la foto en vuelo hace de portada); ya se puede cerrar arrastrando.
   if (loading || dishLoading)
     return (
       <PullToDismiss onDismiss={dismiss}>
-        <DishSkeleton />
+        <DishLoadingShell />
       </PullToDismiss>
     );
 

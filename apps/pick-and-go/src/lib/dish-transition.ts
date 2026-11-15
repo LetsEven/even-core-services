@@ -54,19 +54,14 @@ export function useDishFlight(): DishFlightState | null {
 
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Foto del producto tocado (para el esqueleto del detalle, que aparece antes de tener datos). */
-export function peekDishImage(id: string | number) {
-  return lastFlight && lastFlight.id === String(id) ? lastFlight.src : null;
-}
-
-// Medidas del detalle (ver page.tsx de dish): foto de 24/28/32rem y hoja bajo el encabezado.
+// Medidas del detalle (ver page.tsx de dish): foto de 24/28/32rem y hoja a 16/20/24rem del borde superior.
 export function dishHeroRect(): Rect {
   const w = window.innerWidth;
   return { left: 0, top: 0, width: w, height: w >= 1024 ? 512 : w >= 768 ? 448 : 384 };
 }
 export function dishSheetTop(): number {
   const w = window.innerWidth;
-  return w >= 1024 ? 476 : w >= 768 ? 396 : 316;
+  return w >= 1024 ? 384 : w >= 768 ? 320 : 256;
 }
 
 function begin(next: Omit<DishFlightState, "phase">) {

@@ -7,6 +7,7 @@ import LoginPage from "./LoginPage";
 import AppShell from "./AppShell";
 import CajaLayout from "./CajaLayout";
 import AjustesPage from "./AjustesPage";
+import ComandaPage from "../routes/mesas/ComandaPage";
 import {
   CocinaPage,
   ComprobantesPage,
@@ -52,7 +53,7 @@ export const routes: RouteObject[] = [
               },
               {
                 path: "mesas/:unidad/comanda",
-                element: <ProximamentePage title="Comanda" />,
+                element: <ComandaPage />,
               },
               { path: "cocina", element: <CocinaPage /> },
               {

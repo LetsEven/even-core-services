@@ -145,6 +145,17 @@ export function useComandaCart(storageKey: string) {
     [update],
   );
 
+  const setInstructions = useCallback(
+    (key: string, text: string) =>
+      update((d) => ({
+        ...d,
+        lines: d.lines.map((l) =>
+          l.key === key ? { ...l, specialInstructions: text.trim() || null } : l,
+        ),
+      })),
+    [update],
+  );
+
   const setNotes = useCallback(
     (value: string) => update((d) => ({ ...d, notes: value })),
     [update],
@@ -179,6 +190,7 @@ export function useComandaCart(storageKey: string) {
     removeLine,
     incrementItem,
     decrementItem,
+    setInstructions,
     setNotes,
     clear,
   };

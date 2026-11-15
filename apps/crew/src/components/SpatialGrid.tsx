@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import {
   DndContext,
@@ -16,7 +16,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, Check, Loader2, ArrowLeft, Move } from "lucide-react";
+import { Loader2, ArrowLeft, Move } from "lucide-react";
 import {
   peekTablePOS,
   peekTablePOSBatch,
@@ -29,7 +29,7 @@ import type { Order, DishStatus, CookingStatus, OrderType } from "../types";
 import { parseLocationCode } from "../utils/identifier";
 import OrderCard from "./OrderCard";
 import OpenTableWithDishesModal from "./OpenTableWithDishesModal";
-import AppHeader from "./AppHeader";
+import { useRegisterRefresh } from "../app/refresh";
 
 // Pantalla principal ("croquis") reusada por Tap & Pay, Tap Order & Pay,
 // Flex Bill y Room Service — generaliza lo que antes era Mesas.tsx
@@ -60,13 +60,9 @@ export interface SpatialGridConfig {
 
 interface Props {
   config: SpatialGridConfig;
-  onOpenPrinters: () => void;
-  onOpenHistorial: () => void;
-  onOpenComprobantes: () => void;
   branchId: string | null;
   branches: Branch[];
   branchesLoading: boolean;
-  onBranchChange: (id: string) => void;
   orders: Order[];
   onDishStatusChange: (
     orderId: string,
@@ -164,13 +160,9 @@ function SortableCircle({
 
 export default function SpatialGrid({
   config,
-  onOpenPrinters,
-  onOpenHistorial,
-  onOpenComprobantes,
   branchId,
   branches,
   branchesLoading,
-  onBranchChange,
   orders,
   onDishStatusChange,
   onOrderCookingStatusChange,
@@ -214,8 +206,6 @@ export default function SpatialGrid({
     null,
   );
 
-  const [branchOpen, setBranchOpen] = useState(false);
-  const branchRef = useRef<HTMLDivElement>(null);
   // Evita que el refresco periódico pise un drag en curso — no es un "modo",
   // solo se activa mientras el usuario tiene el dedo/mouse abajo arrastrando.
   const [isReordering, setIsReordering] = useState(false);
@@ -340,16 +330,6 @@ export default function SpatialGrid({
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [fetchData]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (branchRef.current && !branchRef.current.contains(e.target as Node)) {
-        setBranchOpen(false);
-      }
-    };
-    if (branchOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [branchOpen]);
 
   function findOrderForUnit(unitNumber: string): Order | undefined {
     return orders.find(
@@ -496,19 +476,13 @@ export default function SpatialGrid({
     (u) => !isUnitActive(u) && u.status !== "maintenance",
   ).length;
 
+  useRegisterRefresh(() => handleActualizar(true), loading);
+
   return (
     <div
       className="relative flex-1 min-h-0 flex flex-col"
       style={{ background: "#023828" }}
     >
-      <AppHeader
-        onOpenPrinters={onOpenPrinters}
-        onOpenHistorial={onOpenHistorial}
-        onOpenComprobantes={onOpenComprobantes}
-        onRefresh={() => handleActualizar(true)}
-        refreshing={loading}
-      />
-
       {/* Title + stats — no se muestra al ver el detalle de una orden */}
       {!selectedOrder && (
         <div className="flex flex-col items-center pb-5 gap-1">
@@ -517,41 +491,6 @@ export default function SpatialGrid({
           </h1>
           {(branches.length > 0 || (units.length > 0 && !loading)) && (
             <div className="flex items-center gap-2">
-              {branches.length > 0 && (
-                <div className="relative" ref={branchRef}>
-                  <button
-                    onClick={() => setBranchOpen((v) => !v)}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
-                  >
-                    <span>{branch?.name ?? "Seleccionar sucursal"}</span>
-                    {branches.length > 1 && (
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
-                      />
-                    )}
-                  </button>
-                  {branchOpen && branches.length > 1 && (
-                    <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
-                      {branches.map((b) => (
-                        <li key={b.id}>
-                          <button
-                            onClick={() => {
-                              onBranchChange(b.id);
-                              setBranchOpen(false);
-                            }}
-                            className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-                          >
-                            <span>{b.name}</span>
-                            {b.id === branchId && (
-                              <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
               {units.length > 0 && !loading && (
                 <button
                   onClick={() => setReorderMode((v) => !v)}

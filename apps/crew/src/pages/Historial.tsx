@@ -10,7 +10,6 @@ import {
   History,
 } from "lucide-react";
 import { getOrderHistory, getAvailableMonths } from "../services/api";
-import type { Branch } from "../services/api";
 import type { Order, OrderType } from "../types";
 import { formatFolio } from "../utils/folio";
 import { getOptions } from "../components/DishItem";
@@ -94,30 +93,23 @@ function formatDateTime(iso: string) {
 
 interface Props {
   onBack: () => void;
-  onOpenPrinters: () => void;
-  branches: Branch[];
   branchesLoading: boolean;
   branchId: string | null;
-  onBranchChange: (id: string) => void;
 }
 
 export default function Historial({
   onBack,
-  branches,
   branchesLoading,
   branchId,
-  onBranchChange,
 }: Props) {
   const { getToken } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [branchOpen, setBranchOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<Filter>("today");
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [movementsOrder, setMovementsOrder] = useState<Order | null>(null);
-  const branchRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
   const fetchHistory = useCallback(
@@ -162,16 +154,6 @@ export default function Historial({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (branchRef.current && !branchRef.current.contains(e.target as Node)) {
-        setBranchOpen(false);
-      }
-    };
-    if (branchOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [branchOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
         setFilterOpen(false);
       }
@@ -201,7 +183,7 @@ export default function Historial({
 
   return (
     <div
-      className="relative min-h-screen flex flex-col"
+      className="relative flex-1 flex flex-col"
       style={{ background: "#023828" }}
     >
       {/* Header */}
@@ -236,44 +218,6 @@ export default function Historial({
         <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
           Historial
         </h1>
-        {!branchesLoading && branches.length > 0 && (
-          <div className="relative" ref={branchRef}>
-            <button
-              onClick={() => setBranchOpen((v) => !v)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-even-offwhite/80 text-xs uppercase tracking-wider rounded-md px-4 py-1.5 border border-white/10 transition-colors cursor-pointer"
-            >
-              <span>
-                {branches.find((b) => b.id === branchId)?.name ??
-                  "Seleccionar sucursal"}
-              </span>
-              {branches.length > 1 && (
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-even-offwhite/40 transition-transform ${branchOpen ? "rotate-180" : ""}`}
-                />
-              )}
-            </button>
-            {branchOpen && branches.length > 1 && (
-              <ul className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 min-w-full w-max bg-even-evergreen border border-white/10 rounded-lg overflow-hidden shadow-xl">
-                {branches.map((b) => (
-                  <li key={b.id}>
-                    <button
-                      onClick={() => {
-                        onBranchChange(b.id);
-                        setBranchOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-even-offwhite/80 hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                      <span>{b.name}</span>
-                      {b.id === branchId && (
-                        <Check className="w-3.5 h-3.5 text-even-grass shrink-0" />
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
 
         {/* Filter dropdown */}
         {branchId && (

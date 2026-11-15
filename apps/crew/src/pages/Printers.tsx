@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import {
   ArrowLeft,
@@ -8,10 +8,7 @@ import {
   Play,
   Check,
   X,
-  ChevronDown,
   Cable,
-  Crown,
-  Monitor,
   Trash2,
 } from "lucide-react";
 import { usePrinters } from "../hooks/usePrinters";
@@ -20,11 +17,11 @@ import {
   syncPrinters,
   updatePrinter,
   deletePrinter,
-  type Branch,
   type PrinterRecord,
 } from "../services/api";
 import type { CrewDevice } from "../hooks/useSocket";
 import { isTauri } from "../lib/platform";
+import DevicesPanel from "../components/DevicesPanel";
 
 const ROLES = [
   {
@@ -72,10 +69,8 @@ interface Props {
   connectedDevices: CrewDevice[];
   masterDeviceId: string | null;
   setMaster: (deviceId: string) => void;
-  branches: Branch[];
   branchesLoading: boolean;
   branchId: string | null;
-  onBranchChange: (id: string) => void;
   onPrintersChanged?: () => void;
 }
 
@@ -90,10 +85,8 @@ export default function Printers({
   connectedDevices,
   masterDeviceId,
   setMaster,
-  branches,
   branchesLoading,
   branchId,
-  onBranchChange,
   onPrintersChanged,
 }: Props) {
   const { getToken } = useAuth();
@@ -110,19 +103,6 @@ export default function Printers({
     printTestUsb,
   } = usePrinters();
 
-  const [branchOpen, setBranchOpen] = useState(false);
-  const branchDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!branchOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (!branchDropdownRef.current?.contains(e.target as Node)) {
-        setBranchOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [branchOpen]);
   const [printers, setPrinters] = useState<PrinterRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -335,26 +315,12 @@ export default function Printers({
     [printTestUsb],
   );
 
-  const selectedBranchName =
-    branches.find((b) => b.id === branchId)?.name ?? "Seleccionar sucursal";
-
-  // Always include the current device so "Este dispositivo" never disappears
-  // during socket reconnects or when the server list arrives late.
-  const displayedDevices = useMemo(() => {
-    if (connectedDevices.some((d) => d.deviceId === deviceId))
-      return connectedDevices;
-    return [
-      { deviceId, socketId: null, connectedAt: null, online: true },
-      ...connectedDevices,
-    ];
-  }, [connectedDevices, deviceId]);
-
   const wifiPrinters = printers.filter((p) => p.connection_type !== "usb");
   const usbPrinters = printers.filter((p) => p.connection_type === "usb");
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="flex-1 flex flex-col"
       style={{ background: "#023828" }}
     >
       {/* Header */}
@@ -390,118 +356,13 @@ export default function Printers({
         className="flex-1 rounded-t-lg px-5 pt-6 pb-6 flex flex-col gap-4 mt-4 text-even-evergreen"
         style={{ background: "#FEFEEB" }}
       >
-        {/* Branch selector */}
-        <div className="relative" ref={branchDropdownRef}>
-          <button
-            onClick={() => setBranchOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-even-evergreen/20 shadow-sm rounded-lg text-even-evergreen text-xs uppercase tracking-wider cursor-pointer"
-          >
-            <span>{selectedBranchName}</span>
-            <ChevronDown
-              className={`w-4 h-4 text-even-evergreen/50 transition-transform ${branchOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {branchOpen && (
-            <ul className="absolute z-10 top-full mt-1 w-full bg-white border border-even-evergreen/10 rounded-lg overflow-hidden shadow-lg">
-              {branches.map((b) => (
-                <li key={b.id}>
-                  <button
-                    onClick={() => {
-                      onBranchChange(b.id);
-                      setBranchOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-3 text-sm transition-colors cursor-pointer ${
-                      branchId === b.id
-                        ? "text-even-evergreen bg-even-evergreen/15"
-                        : "text-even-evergreen/70 hover:bg-even-evergreen/10"
-                    }`}
-                  >
-                    {b.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
-        {!canPrint && (
-          <div
-            className={`px-4 py-3 rounded-lg ring-1 text-xs leading-relaxed ${
-              masterDeviceId === deviceId
-                ? "bg-amber-500/15 ring-amber-500/30 text-amber-800"
-                : "bg-even-evergreen/5 ring-even-evergreen/15 text-even-evergreen/70"
-            }`}
-          >
-            {masterDeviceId === deviceId
-              ? "Este dispositivo es el Master, pero la versión web no puede imprimir. Elige como Master un dispositivo con la app de Windows o Android."
-              : "Versión web: este dispositivo no imprime. Los tickets salen desde el dispositivo Master (app de Windows o Android)."}
-          </div>
-        )}
-
-        {/* Dispositivos conectados */}
-        <div>
-          <p className="text-even-evergreen/50 text-xs uppercase tracking-wide px-1 mb-2">
-            Dispositivos conectados · {displayedDevices.length}
-          </p>
-          <ul className="flex flex-col gap-2">
-            {displayedDevices.map((d) => {
-              const isMe = d.deviceId === deviceId;
-              const isMaster = d.deviceId === masterDeviceId;
-              const isOffline = !d.online;
-              const isWebDevice =
-                d.platform === "web" || (isMe && !canPrint);
-              return (
-                <li
-                  key={d.deviceId}
-                  className={`flex items-center justify-between px-4 py-3 rounded-lg ring-1 shadow-sm transition-colors ${
-                    isMaster && !isOffline
-                      ? "bg-even-grass/20 ring-even-grass/40"
-                      : isMaster && isOffline
-                        ? "bg-amber-500/15 ring-amber-500/30"
-                        : "bg-white ring-even-evergreen/20"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {isMaster ? (
-                      <Crown
-                        className={`w-4 h-4 shrink-0 ${isOffline ? "text-amber-600" : "text-even-evergreen"}`}
-                      />
-                    ) : (
-                      <Monitor className="w-4 h-4 text-even-evergreen/30 shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm font-medium truncate ${
-                          isMaster && !isOffline
-                            ? "text-even-evergreen"
-                            : isMaster && isOffline
-                              ? "text-amber-700"
-                              : "text-even-evergreen/70"
-                        }`}
-                      >
-                        {isMe ? "Este dispositivo" : "Dispositivo"}
-                        {isWebDevice && " · Web"}
-                        {isMaster && !isOffline && " · Master"}
-                        {isMaster && isOffline && " · Master (offline)"}
-                      </p>
-                      <p className="text-xs text-even-evergreen/30 font-mono">
-                        {d.deviceId.slice(0, 8)}
-                      </p>
-                    </div>
-                  </div>
-                  {!isMaster && !isWebDevice && (
-                    <button
-                      onClick={() => setMaster(d.deviceId)}
-                      className="ml-3 px-3 py-1.5 bg-even-evergreen/8 border border-even-evergreen/15 hover:bg-even-evergreen/15 text-even-evergreen/70 hover:text-even-evergreen text-xs uppercase tracking-wider rounded-md transition-colors cursor-pointer shrink-0"
-                    >
-                      Set Master
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <DevicesPanel
+          deviceId={deviceId}
+          connectedDevices={connectedDevices}
+          masterDeviceId={masterDeviceId}
+          setMaster={setMaster}
+        />
 
         {/* Content */}
         {branchesLoading ? (

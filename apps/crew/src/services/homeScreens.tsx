@@ -15,9 +15,6 @@ import {
 export function PickAndGoHome(props: HomeScreenProps) {
   return (
     <Kitchen
-      onOpenPrinters={props.onOpenPrinters}
-      onOpenHistorial={props.onOpenHistorial}
-      onOpenComprobantes={props.onOpenComprobantes}
       orders={props.orders.filter((o) => o.orderType === "pick_and_go")}
       loading={props.ordersLoading}
       error={props.ordersError}
@@ -28,7 +25,6 @@ export function PickAndGoHome(props: HomeScreenProps) {
       branches={props.branches}
       branchesLoading={props.branchesLoading}
       branchId={props.branchId}
-      onBranchChange={props.onBranchChange}
       availableWaiters={props.availableWaiters}
       waiterSession={props.waiterSession}
       requireWaiterLogin={props.requireWaiterLogin}
@@ -40,13 +36,9 @@ function SpatialHome(props: HomeScreenProps & { config: typeof tapPayConfig }) {
   return (
     <SpatialGrid
       config={props.config}
-      onOpenPrinters={props.onOpenPrinters}
-      onOpenHistorial={props.onOpenHistorial}
-      onOpenComprobantes={props.onOpenComprobantes}
       branchId={props.branchId}
       branches={props.branches}
       branchesLoading={props.branchesLoading}
-      onBranchChange={props.onBranchChange}
       orders={props.orders}
       onDishStatusChange={props.updateDish}
       onOrderCookingStatusChange={props.updateOrderCookingStatus}

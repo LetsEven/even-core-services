@@ -10,7 +10,7 @@ interface Props {
 // Solo se muestra cuando la sucursal tiene 2+ servicios contratados (caso
 // raro — la mayoría tiene 1). Deja elegir cuál pantalla principal ver; los
 // datos/socket son los mismos para todos, solo cambia qué HomeScreen se
-// renderiza (ver App.tsx).
+// renderiza (ver TopBar y router).
 export default function ServiceSwitcher({
   activeOrderTypes,
   selected,
@@ -20,8 +20,7 @@ export default function ServiceSwitcher({
 
   return (
     <div
-      className="sticky top-0 z-40 flex items-center justify-center gap-2 px-4 py-2 border-b border-white/10 overflow-x-auto no-scrollbar"
-      style={{ background: "#011f16" }}
+      className="flex items-center justify-center gap-2 px-4 py-2 border-t border-white/10 overflow-x-auto no-scrollbar"
     >
       {activeOrderTypes.map((type) => (
         <button

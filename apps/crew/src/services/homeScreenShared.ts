@@ -12,13 +12,9 @@ import type { Order, DishStatus, CookingStatus } from "../types";
 // Props comunes que App.tsx tiene disponibles y que cada HomeScreen necesita,
 // mapeadas internamente a los nombres de prop que espera Kitchen o SpatialGrid.
 export interface HomeScreenProps {
-  onOpenPrinters: () => void;
-  onOpenHistorial: () => void;
-  onOpenComprobantes: () => void;
   branchId: string | null;
   branches: Branch[];
   branchesLoading: boolean;
-  onBranchChange: (id: string) => void;
   orders: Order[];
   ordersLoading: boolean;
   ordersError: string | null;

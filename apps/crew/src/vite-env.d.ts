@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
   readonly VITE_APP_LABEL: string;
   readonly VITE_ENABLE_REPRINT?: string;
+  /** "true" activa el modo demo (solo dev; se niega con API de produccion). */
+  readonly VITE_DEMO_MODE?: string;
 }
 
 interface ImportMeta {

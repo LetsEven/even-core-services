@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type Auth = (cb: (data: Record<string, unknown>) => void) => void;
 
 class MockSocket {
-  handlers = new Map<string, (...a: any[]) => void>();
+  handlers = new Map<string, (...a: unknown[]) => void>();
   connect = vi.fn();
   disconnect = vi.fn();
-  on(ev: string, fn: (...a: any[]) => void) {
+  on(ev: string, fn: (...a: unknown[]) => void) {
     this.handlers.set(ev, fn);
     return this;
   }
@@ -58,8 +58,8 @@ describe("openCrewSocket", () => {
   it("pide un token nuevo en cada reconexion", async () => {
     const getToken = vi.fn().mockResolvedValueOnce("t1").mockResolvedValueOnce("t2");
     openCrewSocket({ ...base, kind: "local", getToken });
-    expect((await handshake() as any).token).toBe("t1");
-    expect((await handshake() as any).token).toBe("t2");
+    expect(await handshake()).toMatchObject({ token: "t1" });
+    expect(await handshake()).toMatchObject({ token: "t2" });
     expect(getToken).toHaveBeenCalledTimes(2);
   });
 

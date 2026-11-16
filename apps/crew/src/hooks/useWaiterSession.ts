@@ -40,7 +40,11 @@ export function useWaiterSession(
     // la próxima requireLogin() sobrescribe el ref de todos modos.
   }
 
-  const hasRealWaiters = availableWaiters.some((w) => w.id !== "EVEN");
+  // Mismo criterio que WaiterLoginModal: "EVEN" (sintético o con ese nombre)
+  // no es un mesero real para iniciar sesión.
+  const hasRealWaiters = availableWaiters.some(
+    (w) => w.id !== "EVEN" && w.name.trim().toUpperCase() !== "EVEN",
+  );
 
   const autoShow =
     !!branchId &&
@@ -81,10 +85,16 @@ export function useWaiterSession(
         onSuccess(waiterSession);
         return;
       }
+      // Sucursal sin meseros reales: el modal solo mostraría una lista vacía
+      // sin forma de continuar. Se sigue como EVEN (sin persistir sesión).
+      if (!hasRealWaiters) {
+        onSuccess({ id: "EVEN", name: "EVEN" });
+        return;
+      }
       pendingResolveRef.current = onSuccess;
       setLoginRequired(true);
     },
-    [waiterSession],
+    [waiterSession, hasRealWaiters],
   );
 
   return { waiterSession, modalOpen, allowGuest, resolveLogin, requireLogin };

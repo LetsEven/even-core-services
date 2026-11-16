@@ -42,6 +42,8 @@ interface DishItemProps {
   onStatusChange: (dishId: string, status: DishStatus) => void;
   hideStatusButtons?: boolean;
   hideStatusBadge?: boolean;
+  /** Solo lectura: botones de estado deshabilitados. */
+  statusReadOnly?: boolean;
   onQuantityChange?: (dishId: string, quantity: number) => Promise<void>;
 }
 
@@ -52,6 +54,7 @@ export default function DishItem({
   onStatusChange,
   hideStatusButtons = false,
   hideStatusBadge = false,
+  statusReadOnly = false,
   onQuantityChange,
 }: DishItemProps) {
   const [pendingAction, setPendingAction] = useState<
@@ -197,7 +200,7 @@ export default function DishItem({
             <button
               key={s}
               onClick={() => onStatusChange(dish.id, s)}
-              disabled={dish.status === s}
+              disabled={statusReadOnly || dish.status === s}
               className={`flex-1 py-1.5 text-xs rounded-md font-medium uppercase tracking-wider border transition-all active:scale-95 cursor-pointer disabled:cursor-default ${
                 dish.status === s
                   ? BUTTON_ACTIVE[s]

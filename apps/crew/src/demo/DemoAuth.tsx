@@ -1,7 +1,23 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { DemoAuthContext, type DemoAuthValue } from "../lib/auth";
+import { AuthContext } from "../lib/auth/context";
+import { permissionsForRole } from "../lib/auth/roles";
+import type { AuthProvider, AuthUser } from "../lib/auth/types";
+import { DEMO_TOKEN, DemoAuthContext, type DemoAuthValue } from "./demoAuthContext";
 
 const KEY = "crew_demo_signed_in";
+
+// Usuario del modo demo: super (todo accesible).
+const DEMO_USER: AuthUser = {
+  id: "demo-user",
+  name: "Demo Even",
+  role: "super",
+  permissions: permissionsForRole("super"),
+};
+
+// Estable entre renders: los efectos de la app lo usan como dependencia.
+const demoGetToken = async (): Promise<string | null> => DEMO_TOKEN;
+const demoHasPermission: AuthProvider["hasPermission"] = (p) =>
+  DEMO_USER.permissions.includes(p);
 
 function readSigned(): boolean {
   try {
@@ -33,14 +49,28 @@ export function DemoAuthProvider({ children }: { children: ReactNode }) {
     setSigned(false);
   }, []);
 
-  const value = useMemo<DemoAuthValue>(
+  const controls = useMemo<DemoAuthValue>(
     () => ({ isSignedIn, signIn, signOut }),
     [isSignedIn, signIn, signOut],
   );
 
+  const auth = useMemo<AuthProvider>(
+    () => ({
+      kind: "demo",
+      status: isSignedIn ? "signedIn" : "signedOut",
+      user: isSignedIn ? DEMO_USER : null,
+      getToken: demoGetToken,
+      signOut: async () => signOut(),
+      hasPermission: isSignedIn ? demoHasPermission : () => false,
+    }),
+    [isSignedIn, signOut],
+  );
+
   return (
-    <DemoAuthContext.Provider value={value}>
-      {children}
-    </DemoAuthContext.Provider>
+    <AuthContext.Provider value={auth}>
+      <DemoAuthContext.Provider value={controls}>
+        {children}
+      </DemoAuthContext.Provider>
+    </AuthContext.Provider>
   );
 }

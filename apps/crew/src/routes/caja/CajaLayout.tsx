@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from "react-router";
 import { Search } from "lucide-react";
 import { Input, cn } from "@even/ui";
 import { useRegisterRefresh } from "../../app/refresh";
+import { ROUTE_PERMISSIONS, useAuth } from "../../lib/auth";
 import { useSession } from "../../app/session/context";
 import { useCajaData } from "../../features/caja/useCajaData";
 import { FIXED_FILTERS, monthLabel } from "../../features/caja/dateRange";
@@ -24,6 +25,10 @@ const chip = (active: boolean) =>
 // compartido; la búsqueda solo aplica a las listas.
 export default function CajaLayout() {
   const { branchId, currentBranch, branchesLoading } = useSession();
+  const { hasPermission } = useAuth();
+  const tabs = TABS.filter(
+    (t) => t.to !== "/caja/resumen" || hasPermission(ROUTE_PERMISSIONS["/caja/resumen"]),
+  );
   const data = useCajaData({
     branchId,
     restaurantId: currentBranch?.restaurant_id ?? null,
@@ -39,9 +44,10 @@ export default function CajaLayout() {
         <div
           role="tablist"
           aria-label="Vistas de Caja"
-          className="grid grid-cols-3 gap-1 p-1 rounded-full bg-white/5 border border-white/10"
+          className="grid gap-1 p-1 rounded-full bg-white/5 border border-white/10"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
         >
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}

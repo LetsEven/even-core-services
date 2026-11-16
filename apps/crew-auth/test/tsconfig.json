@@ -1,0 +1,12 @@
+{
+  // Las pruebas de integracion importan el cliente de apps/crew (resolucion
+  // "bundler", sin extensiones) y el servicio; por eso no usan nodenext.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM"],
+    "rootDir": "../.."
+  },
+  "include": ["."]
+}

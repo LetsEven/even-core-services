@@ -3,18 +3,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router";
 
-const auth = vi.hoisted(() => ({
-  state: { isLoaded: true, isSignedIn: false },
-}));
-vi.mock("@clerk/clerk-react", () => ({ useAuth: () => auth.state }));
-// Estos guards se prueban contra Clerk: aunque el build corra con
-// VITE_DEMO_MODE=true, aqui el modo demo va apagado.
+// Estos guards se prueban con una sesion inyectada (AuthContext), sin Clerk ni
+// red; aunque el build corra con VITE_DEMO_MODE=true, aqui el modo demo va apagado.
 vi.mock("../lib/demoMode", () => ({
   isDemoMode: () => false,
   demoStatus: { active: false, error: null },
 }));
 
+const auth = vi.hoisted(() => ({
+  state: { status: "signedOut" as "loading" | "signedOut" | "signedIn" },
+}));
+
 import { LoginGate, RequireAuth } from "./guards";
+import { AuthContext, makeHasPermission, permissionsForRole, type AuthProvider } from "../lib/auth";
 import { HomeRedirect } from "./pages";
 import { SessionContext, type SessionValue } from "./session/context";
 
@@ -23,6 +24,21 @@ vi.mock("../pages/Printers", () => ({ default: () => null }));
 vi.mock("../pages/Historial", () => ({ default: () => null }));
 vi.mock("../pages/Comprobantes", () => ({ default: () => null }));
 vi.mock("../components/TablesBoard", () => ({ default: () => null }));
+
+function authValue(status: AuthProvider["status"]): AuthProvider {
+  const user =
+    status === "signedIn"
+      ? { id: "u", name: "Test", role: "super" as const, permissions: permissionsForRole("super") }
+      : null;
+  return {
+    kind: "clerk",
+    status,
+    user,
+    getToken: async () => null,
+    signOut: async () => {},
+    hasPermission: makeHasPermission(user),
+  };
+}
 
 function renderAt(path: string, session?: Partial<SessionValue>) {
   const router = createMemoryRouter(
@@ -48,16 +64,18 @@ function renderAt(path: string, session?: Partial<SessionValue>) {
     { initialEntries: [path] },
   );
   render(
-    <SessionContext.Provider value={session as SessionValue}>
-      <RouterProvider router={router} />
-    </SessionContext.Provider>,
+    <AuthContext.Provider value={authValue(auth.state.status)}>
+      <SessionContext.Provider value={session as SessionValue}>
+        <RouterProvider router={router} />
+      </SessionContext.Provider>
+    </AuthContext.Provider>,
   );
   return router;
 }
 
 afterEach(() => {
   cleanup();
-  auth.state = { isLoaded: true, isSignedIn: false };
+  auth.state = { status: "signedOut" };
 });
 
 describe("guard de login", () => {
@@ -68,15 +86,15 @@ describe("guard de login", () => {
     expect(router.state.location.state).toEqual({ from: "/caja" });
   });
 
-  it("mientras Clerk carga no redirige", () => {
-    auth.state = { isLoaded: false, isSignedIn: false };
+  it("mientras la sesión carga no redirige", () => {
+    auth.state = { status: "loading" };
     const router = renderAt("/caja");
     expect(screen.getByRole("status")).toBeTruthy();
     expect(router.state.location.pathname).toBe("/caja");
   });
 
   it("con sesión, /login regresa a la ruta pedida (o a /)", () => {
-    auth.state = { isLoaded: true, isSignedIn: true };
+    auth.state = { status: "signedIn" };
     const router = renderAt("/login", {
       branchesLoading: false,
       currentBranch: { id: "b" } as SessionValue["currentBranch"],
@@ -93,13 +111,13 @@ describe("redirección inicial", () => {
   };
 
   it("sucursal solo Pick & Go va a /cocina", () => {
-    auth.state = { isLoaded: true, isSignedIn: true };
+    auth.state = { status: "signedIn" };
     const router = renderAt("/", { ...base, activeOrderTypes: ["pick_and_go"] });
     expect(router.state.location.pathname).toBe("/cocina");
   });
 
   it("sucursal con servicios de mesa va a /mesas", () => {
-    auth.state = { isLoaded: true, isSignedIn: true };
+    auth.state = { status: "signedIn" };
     const router = renderAt("/", {
       ...base,
       activeOrderTypes: ["pick_and_go", "flex_bill"],

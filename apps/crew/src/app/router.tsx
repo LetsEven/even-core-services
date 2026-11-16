@@ -1,8 +1,10 @@
+import type { ReactElement } from "react";
 import { Navigate, Outlet, createBrowserRouter, createHashRouter } from "react-router";
 import type { RouteObject } from "react-router";
 import { isTauri } from "../lib/platform";
 import SessionProvider from "./session/SessionProvider";
-import { LoginGate, RequireAuth } from "./guards";
+import { LoginGate, RequireAuth, RequirePermission } from "./guards";
+import { ROUTE_PERMISSIONS, type GuardedRoute } from "../lib/auth";
 import LoginPage from "./LoginPage";
 import AppShell from "./AppShell";
 import CajaLayout from "./CajaLayout";
@@ -28,6 +30,16 @@ function SessionLayout() {
   );
 }
 
+// Envuelve la pantalla de una ruta con el permiso que le asigna el mapa
+// ROUTE_PERMISSIONS (lib/auth/roles.ts).
+function guard(route: GuardedRoute, element: ReactElement) {
+  return (
+    <RequirePermission permission={ROUTE_PERMISSIONS[route]}>
+      {element}
+    </RequirePermission>
+  );
+}
+
 export const routes: RouteObject[] = [
   {
     element: <SessionLayout />,
@@ -47,25 +59,37 @@ export const routes: RouteObject[] = [
             element: <AppShell />,
             children: [
               { index: true, element: <HomeRedirect /> },
-              { path: "mesas", element: <MesasPage /> },
-              { path: "mesas/:unidad", element: <CuentaPage /> },
+              { path: "mesas", element: guard("/mesas", <MesasPage />) },
+              {
+                path: "mesas/:unidad",
+                element: guard("/mesas/:unidad", <CuentaPage />),
+              },
               {
                 path: "mesas/:unidad/comanda",
-                element: <ComandaPage />,
+                element: guard("/mesas/:unidad/comanda", <ComandaPage />),
               },
-              { path: "cocina", element: <CocinaPage /> },
+              { path: "cocina", element: guard("/cocina", <CocinaPage />) },
               {
                 path: "caja",
-                element: <CajaLayout />,
+                element: guard("/caja", <CajaLayout />),
                 children: [
                   { index: true, element: <HistorialPage /> },
                   { path: "comprobantes", element: <ComprobantesPage /> },
-                  { path: "resumen", element: <ResumenPage /> },
+                  {
+                    path: "resumen",
+                    element: guard("/caja/resumen", <ResumenPage />),
+                  },
                 ],
               },
-              { path: "ajustes", element: <AjustesPage /> },
-              { path: "ajustes/impresoras", element: <PrintersPage /> },
-              { path: "ajustes/dispositivos", element: <DevicesPage /> },
+              { path: "ajustes", element: guard("/ajustes", <AjustesPage />) },
+              {
+                path: "ajustes/impresoras",
+                element: guard("/ajustes/impresoras", <PrintersPage />),
+              },
+              {
+                path: "ajustes/dispositivos",
+                element: guard("/ajustes/dispositivos", <DevicesPage />),
+              },
               { path: "*", element: <Navigate to="/" replace /> },
             ],
           },

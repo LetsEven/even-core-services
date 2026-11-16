@@ -88,7 +88,8 @@ export default function SessionProvider({
 }: {
   children: ReactNode;
 }) {
-  const { isSignedIn, getToken } = useAuth();
+  const { status, getToken } = useAuth();
+  const isSignedIn = status === "signedIn";
   const [branchId, setBranchId] = useState<string | null>(() =>
     localStorage.getItem("crew_branch_id"),
   );

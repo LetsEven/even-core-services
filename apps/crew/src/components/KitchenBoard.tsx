@@ -28,6 +28,8 @@ interface Props {
   ) => void;
   onOrderCookingStatusChange: (orderId: string, status: CookingStatus) => void;
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
+  /** Solo lectura (Cocina sin cocina.operar): sin cambios de estado. */
+  readOnly?: boolean;
   currentBranch?: Branch | null;
   onOrdersRefresh?: () => void;
   availableWaiters?: { id: string; name: string }[];
@@ -117,6 +119,7 @@ export default function KitchenBoard({
   onDishStatusChange,
   onOrderCookingStatusChange,
   onPrepTimeExtraChange,
+  readOnly = false,
   currentBranch,
   onOrdersRefresh,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
@@ -239,6 +242,7 @@ export default function KitchenBoard({
             }
             onOrderCookingStatusChange={onOrderCookingStatusChange}
             onPrepTimeExtraChange={onPrepTimeExtraChange}
+            readOnly={readOnly}
             currentBranch={currentBranch}
             onPaymentRegistered={onOrdersRefresh}
             availableWaiters={availableWaiters}

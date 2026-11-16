@@ -1,9 +1,10 @@
 import { NavLink } from "react-router";
 import { cn } from "@even/ui";
-import { NAV_DESTINATIONS } from "./nav";
+import { useNavDestinations } from "./nav";
 
 // Rail lateral (lg+).
 export default function NavRail() {
+  const destinations = useNavDestinations();
   return (
     <nav
       aria-label="Navegación principal"
@@ -14,7 +15,7 @@ export default function NavRail() {
         alt="Even"
         className="w-8 h-8 self-center mb-4"
       />
-      {NAV_DESTINATIONS.map(({ to, label, icon: Icon }) => (
+      {destinations.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}

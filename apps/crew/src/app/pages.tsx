@@ -4,18 +4,26 @@ import Historial from "../pages/Historial";
 import Comprobantes from "../pages/Comprobantes";
 import TablesBoard from "../components/TablesBoard";
 import { PickAndGoHome } from "../services/homeScreens";
-import { AppLoader } from "./guards";
+import { AppLoader, NoAccess } from "./guards";
+import { firstAllowedPath, useAuth } from "../lib/auth";
 import { useSession } from "./session/context";
 import { useHomeScreenProps } from "./useHomeScreenProps";
 import DevicesPanel from "../components/DevicesPanel";
 
-// "/" decide el destino inicial: Pick & Go solo -> Cocina; si no, Mesas.
+// "/" decide el destino inicial: Pick & Go solo -> Cocina; si no, Mesas. Si el
+// rol no puede ver esa vista, va a la primera que si pueda (cocina -> /cocina).
 export function HomeRedirect() {
   const { branchesLoading, currentBranch, activeOrderTypes } = useSession();
+  const { hasPermission } = useAuth();
   if (branchesLoading || !currentBranch) return <AppLoader />;
   const onlyPickAndGo =
     activeOrderTypes.length === 1 && activeOrderTypes[0] === "pick_and_go";
-  return <Navigate to={onlyPickAndGo ? "/cocina" : "/mesas"} replace />;
+  const target = firstAllowedPath(
+    hasPermission,
+    onlyPickAndGo ? "/cocina" : "/mesas",
+  );
+  if (!target) return <NoAccess />;
+  return <Navigate to={target} replace />;
 }
 
 // Mesas: todas las mesas juntas; el servicio es un atributo de cada cuenta.
@@ -35,7 +43,14 @@ export function MesasPage() {
 }
 
 export function CocinaPage() {
-  return <PickAndGoHome {...useHomeScreenProps()} />;
+  // Sin cocina.operar la vista es de solo lectura (no cambia estados).
+  const { hasPermission } = useAuth();
+  return (
+    <PickAndGoHome
+      {...useHomeScreenProps()}
+      readOnly={!hasPermission("cocina.operar")}
+    />
+  );
 }
 
 export function HistorialPage() {

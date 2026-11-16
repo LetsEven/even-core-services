@@ -1,15 +1,17 @@
 import { NavLink } from "react-router";
 import { cn } from "@even/ui";
-import { NAV_DESTINATIONS } from "./nav";
+import { useNavDestinations } from "./nav";
 
 // Barra inferior (<lg).
 export default function NavBar() {
+  const destinations = useNavDestinations();
   return (
     <nav
       aria-label="Navegación principal"
-      className="lg:hidden shrink-0 grid grid-cols-4 bg-even-evergreen border-t border-white/10"
+      className="lg:hidden shrink-0 grid bg-even-evergreen border-t border-white/10"
+      style={{ gridTemplateColumns: `repeat(${Math.max(1, destinations.length)}, minmax(0, 1fr))` }}
     >
-      {NAV_DESTINATIONS.map(({ to, label, icon: Icon }) => (
+      {destinations.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}

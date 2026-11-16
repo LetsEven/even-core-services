@@ -1,9 +1,10 @@
 import Kitchen from "../pages/Kitchen";
 import type { HomeScreenProps } from "./homeScreenShared";
 
-export function PickAndGoHome(props: HomeScreenProps) {
+export function PickAndGoHome(props: HomeScreenProps & { readOnly?: boolean }) {
   return (
     <Kitchen
+      readOnly={props.readOnly}
       orders={props.orders.filter((o) => o.orderType === "pick_and_go")}
       loading={props.ordersLoading}
       error={props.ordersError}

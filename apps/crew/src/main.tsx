@@ -1,9 +1,8 @@
 import { createRoot } from "react-dom/client";
-import { ClerkProvider } from "@clerk/clerk-react";
 import "./index.css";
 import App from "./App.tsx";
-import { createNativeClerk } from "./lib/clerkNative";
 import { demoStatus } from "./lib/demoMode";
+import { resolveAuthProvider } from "./lib/auth/select";
 import { isTauri } from "./lib/platform";
 
 const root = createRoot(document.getElementById("root")!);
@@ -41,22 +40,42 @@ async function startDemo() {
   );
 }
 
-function startNormal() {
+async function startClerk() {
   const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
   if (!PUBLISHABLE_KEY) {
     throw new Error("VITE_CLERK_PUBLISHABLE_KEY no configurado");
   }
 
-  const clerk = createNativeClerk(PUBLISHABLE_KEY);
+  const { ClerkAuthProvider } = await import("./lib/auth/clerk");
   registerServiceWorker();
 
   root.render(
-    <ClerkProvider Clerk={clerk} publishableKey={PUBLISHABLE_KEY} standardBrowser={!isTauri()}>
+    <ClerkAuthProvider publishableKey={PUBLISHABLE_KEY}>
       <App />
-    </ClerkProvider>,
+    </ClerkAuthProvider>,
   );
 }
 
-if (demoStatus.active || demoStatus.error) void startDemo();
-else startNormal();
+// Servicio crew-auth propio: dispositivo emparejado + usuario con PIN. No usa
+// Clerk (su codigo ni se descarga).
+async function startLocal() {
+  const baseUrl = import.meta.env.VITE_CREW_AUTH_URL;
+  if (!baseUrl) {
+    throw new Error("VITE_CREW_AUTH_URL no configurado (VITE_AUTH_PROVIDER=local)");
+  }
+
+  const { LocalAuthProvider } = await import("./lib/auth/local");
+  registerServiceWorker();
+
+  root.render(
+    <LocalAuthProvider baseUrl={baseUrl}>
+      <App />
+    </LocalAuthProvider>,
+  );
+}
+
+const kind = resolveAuthProvider(import.meta.env);
+if (kind === "demo") void startDemo();
+else if (kind === "local") void startLocal();
+else void startClerk();

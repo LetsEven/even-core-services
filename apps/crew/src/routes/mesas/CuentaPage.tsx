@@ -47,6 +47,7 @@ const SERVICE_LABELS: Record<string, string> = {
 export default function CuentaPage() {
   const { unidad = "" } = useParams();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const { orders, ordersLoading } = useSession();
   const code = decodeURIComponent(unidad);
   const order = findOrderForUnit(orders, code);
@@ -61,7 +62,7 @@ export default function CuentaPage() {
               ? "Cargando cuenta…"
               : "Esta mesa no tiene una cuenta abierta."}
           </p>
-          {!ordersLoading && (
+          {!ordersLoading && hasPermission("comanda.crear") && (
             <Button
               variant="primary"
               onClick={() => navigate(`/mesas/${encodeURIComponent(code)}/comanda`)}
@@ -82,7 +83,9 @@ export default function CuentaPage() {
 
 function Cuenta({ order, code }: { order: Order; code: string }) {
   const navigate = useNavigate();
-  const { getToken } = useAuth();
+  const { getToken, hasPermission } = useAuth();
+  const canCharge = hasPermission("cuenta.cobrar");
+  const canCreateComanda = hasPermission("comanda.crear");
   const s = useSession();
   const branch = s.currentBranch ?? null;
 
@@ -279,7 +282,7 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
 
       {/* Acciones */}
       <SheetFooter className="sticky flex flex-wrap items-center gap-2 pt-3">
-        {perms.canAddDish && (
+        {perms.canAddDish && canCreateComanda && (
           <Button
             variant="outline"
             size="sm"
@@ -310,7 +313,7 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
             <Printer className="size-4" /> Reimprimir comanda
           </Button>
         )}
-        {perms.canRegisterPayment && (
+        {perms.canRegisterPayment && canCharge && (
           <Button
             variant="primary"
             size="sm"

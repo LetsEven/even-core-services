@@ -13,6 +13,7 @@ import {
   useDeferredValue,
 } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import RestaurantDetailCard, {
   DETAIL_ANIMATION_MS,
 } from "./RestaurantDetailCard";
@@ -31,26 +32,26 @@ import {
   useScrollLock,
 } from "@even/ui";
 import MenuCategory from "./MenuCategory";
-import { X, RefreshCw, Utensils, Loader2, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { X, RefreshCw, Utensils, Loader2, ChevronLeft, ChevronRight, ShoppingCart, ReceiptText, CheckCircle2 } from "lucide-react";
 import { useUserData } from "../../context/userDataContext";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import Loader from "../UI/Loader";
 import PepperIcon from "../UI/PepperIcon";
+import { hasRecentPayment } from "../modals/PaymentTicketModals";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
 import {
   tapOrderService,
   type ActiveOrder,
-  type LastOrderDish,
 } from "@/services/taporders.service";
 
 const ChatView = lazy(() => import("../ChatView"));
 const AuthView = lazy(() => import("../AuthView"));
 const DashboardView = lazy(() => import("../DashboardView"));
 const RestaurantClosedModal = lazy(() => import("../RestaurantClosedModal"));
-const ReorderModal = lazy(() => import("../modals/ReorderModal"));
+const PaymentTicketModals = lazy(() => import("../modals/PaymentTicketModals"));
 
 // Pure functions — defined outside to avoid re-creation on every render
 function getStatusColor(status: string) {
@@ -137,9 +138,14 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasLastOrder, setHasLastOrder] = useState(false);
-  const [showReorderModal, setShowReorderModal] = useState(false);
-  const [lastOrderItems, setLastOrderItems] = useState<LastOrderDish[]>([]);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  // Pago recién hecho (?paid=1&order=<id>): se muestra el aviso y se abre la cuenta de la mesa.
+  const searchParams = useSearchParams();
+  const justPaid = useRef(searchParams.get("paid") === "1");
+  const paidOrderId = useRef<string | null>(searchParams.get("order"));
+  const [showPaidToast, setShowPaidToast] = useState(justPaid.current);
+  const [showTicket, setShowTicket] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
   const [showPepperChat, setShowPepperChat] = useState(false);
   const [isPepperClosing, setIsPepperClosing] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -247,7 +253,6 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
     showPepperChat ||
       showSettingsModal ||
       isStatusModalOpen ||
-      showReorderModal ||
       showDetail ||
       introActive,
   );
@@ -293,43 +298,24 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
     }
   };
 
-  // Verificar último pedido — devuelve los platillos reordenables
-  const checkLastOrderItems = async (): Promise<LastOrderDish[]> => {
-    const clientId = user?.id || guestId;
-    if (!clientId || !restaurantId) return [];
-    try {
-      const response = await tapOrderService.getLastOrderByUser(
-        clientId,
-        restaurantId,
-      );
-      return response.success && (response as any).hasLastOrder
-        ? ((response as any)?.data?.dishes ?? []).filter(
-            (d: LastOrderDish) => d.menu_item_id,
-          )
-        : [];
-    } catch (error) {
-      console.error("Error checking last order:", error);
-      return [];
-    }
-  };
-
-  // Cargar ambos en paralelo y setear el estado junto, para que los botones de
-  // "Estatus de pedido" y "Reordenar" aparezcan exactamente al mismo tiempo.
-  // #97: se difiere a que el navegador esté ocioso para no competir con la carga del menú.
+  // Pedidos activos de la mesa (la cuenta acumulada). Tras pagar (?paid=1) se cargan de inmediato;
+  // si no, se difiere a que el navegador esté ocioso para no competir con la carga del menú (#97).
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const [orders, dishes] = await Promise.all([
-        checkActiveOrder(),
-        checkLastOrderItems(),
-      ]);
+      const orders = await checkActiveOrder();
       if (cancelled) return;
       setActiveOrders(orders);
       setActiveOrderIndex((prev) => (prev < orders.length ? prev : 0));
-      setLastOrderItems(dishes);
-      setHasLastOrder(dishes.length > 0);
+      setOrdersLoaded(true);
     };
 
+    if (justPaid.current) {
+      load();
+      return () => {
+        cancelled = true;
+      };
+    }
     // Safari no tiene requestIdleCallback.
     const hasIdle = typeof window.requestIdleCallback === "function";
     const handle = hasIdle
@@ -346,7 +332,26 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
 
   const activeOrder = activeOrders[activeOrderIndex] ?? null;
 
-  const handleReorder = () => setShowReorderModal(true);
+  // Tras pagar: limpiar la URL, ocultar el aviso a los 5 s y abrir la cuenta cuando carguen los pedidos.
+  useEffect(() => {
+    if (!justPaid.current) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("paid");
+    url.searchParams.delete("order");
+    window.history.replaceState(null, "", url.toString());
+    const id = window.setTimeout(() => setShowPaidToast(false), 5000);
+    return () => window.clearTimeout(id);
+  }, []);
+  useEffect(() => {
+    if (!justPaid.current || !ordersLoaded) return;
+    justPaid.current = false;
+    if (activeOrders.length > 0) setIsStatusModalOpen(true);
+  }, [ordersLoaded, activeOrders]);
+
+  const handleSignUp = () => {
+    sessionStorage.setItem("even-post-auth-redirect", window.location.pathname + window.location.search);
+    navigateWithTable("/auth");
+  };
 
   const handleRefreshOrder = async () => {
     setIsRefreshing(true);
@@ -519,33 +524,6 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
           <MenuRestaurantHeading
             name={t("welcome", { gender: gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
             subtitle={tc("tableLabel", { table: tableNumber ?? "" })}
-            actions={
-              activeOrders.length > 0 || hasLastOrder ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {activeOrders.length > 0 && (
-                    <button
-                      onClick={() =>
-                        setTimeout(() => setIsStatusModalOpen(true), 400)
-                      }
-                      className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit active:scale-90 transition-all"
-                    >
-                      {activeOrders.length > 1
-                        ? t("viewOrders")
-                        : t("orderStatus")}
-                    </button>
-                  )}
-                  {hasLastOrder && (
-                    <button
-                      onClick={handleReorder}
-                      className="bg-even-grass text-even-evergreen border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all flex items-center gap-1.5"
-                    >
-                      {tc("reorderCta")}
-                      <RefreshCw className="size-4" />
-                    </button>
-                  )}
-                </div>
-              ) : undefined
-            }
           />
 
           {/* Buscador + secciones fijos arriba: no se ocultan al hacer scroll. Márgenes
@@ -629,6 +607,16 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             onClick: () => {
               closeActionsMenu();
               navigateWithTable("/cart");
+            },
+          },
+          {
+            id: "account",
+            label: t("accountLabel"),
+            hidden: activeOrders.length === 0,
+            icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              setIsStatusModalOpen(true);
             },
           },
           {
@@ -717,7 +705,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
                   )}
                   <div className="flex flex-col items-center justify-center">
                     <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                      {tc("orderStatusModalTitle")}
+                      {t("accountTitle")}
                     </h2>
                     <p className="text-sm md:text-base lg:text-lg text-white/80">
                       {tc("tableLabel", { table: tableNumber ?? "" })}
@@ -817,9 +805,61 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
                 </div>
               )}
             </div>
+            {hasRecentPayment(paidOrderId.current) && (
+              <div className="shrink-0 flex flex-col gap-2 border-t border-white/20 px-6 py-4 md:px-8 lg:px-10">
+                <button
+                  onClick={() => setShowTicket(true)}
+                  className="w-full rounded-2xl border border-white/30 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 md:text-base"
+                >
+                  {t("viewTicketCta")}
+                </button>
+                <button
+                  onClick={() => setShowInvoice(true)}
+                  className="w-full rounded-2xl border border-white/30 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 md:text-base"
+                >
+                  {t("invoiceCta")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 </>
+      )}
+
+      {/* Ticket de compra y Facturar del último pago */}
+      <Suspense fallback={null}>
+        <PaymentTicketModals
+          ticketOpen={showTicket}
+          onCloseTicket={() => setShowTicket(false)}
+          invoiceOpen={showInvoice}
+          onCloseInvoice={() => setShowInvoice(false)}
+          orderId={paidOrderId.current}
+        />
+      </Suspense>
+
+      {/* Aviso de pago exitoso */}
+      {showPaidToast && (
+        <div
+          role="status"
+          className="fixed inset-x-4 top-4 z-[1000] mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-even-evergreen px-4 py-3 text-white shadow-lg animate-fade-in"
+        >
+          <CheckCircle2 className="size-6 shrink-0 text-even-grass" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{t("paidToastTitle")}</p>
+            <p className="text-sm text-white/80">{t("paidToastBody")}</p>
+          </div>
+          {!isAuthenticated && (
+            <button
+              onClick={handleSignUp}
+              className="shrink-0 rounded-full bg-even-grass px-3 py-1 text-sm font-medium text-even-evergreen"
+            >
+              {t("signUpCta")}
+            </button>
+          )}
+          <button onClick={() => setShowPaidToast(false)} aria-label={t("closeToast")} className="shrink-0 p-1">
+            <X className="size-5" />
+          </button>
+        </div>
       )}
 
       {/* Settings Modal */}
@@ -921,15 +961,6 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
           `}</style>
         </>
       )}
-
-      {/* Reorder Modal */}
-      <Suspense fallback={null}>
-        <ReorderModal
-          isOpen={showReorderModal}
-          onClose={() => setShowReorderModal(false)}
-          items={lastOrderItems}
-        />
-      </Suspense>
 
       {/* Restaurant Closed Modal */}
       <Suspense fallback={null}>

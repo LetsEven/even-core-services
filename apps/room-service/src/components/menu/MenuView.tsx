@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import RestaurantDetailCard, {
   DETAIL_ANIMATION_MS,
 } from "./RestaurantDetailCard";
@@ -21,7 +22,7 @@ import {
 import PepperIcon from "../UI/PepperIcon";
 import LanguageToggleButton from "../UI/LanguageToggleButton";
 import MenuCategory from "./MenuCategory";
-import { X, RefreshCw, Loader2, Utensils, ShoppingCart } from "lucide-react";
+import { X, RefreshCw, Loader2, Utensils, ShoppingCart, ShoppingBag, CheckCircle2 } from "lucide-react";
 import {
   useState,
   useMemo,
@@ -37,10 +38,9 @@ import {
 import { useRoomNavigation } from "../../hooks/useRoomNavigation";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
-import type { ReorderItem } from "../ReorderModal";
+import { hasRecentPayment } from "../modals/PaymentTicketModals";
 import Loader from "../UI/Loader";
 import { useAuth } from "@/context/AuthContext";
-import { authService } from "@/services/auth.service";
 import {
   roomOrderService,
   type ActiveOrderResponse,
@@ -50,7 +50,7 @@ const ChatView = lazy(() => import("../ChatView"));
 const AuthView = lazy(() => import("../AuthView"));
 const DashboardView = lazy(() => import("../DashboardView"));
 const RestaurantClosedModal = lazy(() => import("../RestaurantClosedModal"));
-const ReorderModal = lazy(() => import("../ReorderModal"));
+const PaymentTicketModals = lazy(() => import("../modals/PaymentTicketModals"));
 
 interface UserAvatarProps {
   isAuthenticated: boolean;
@@ -120,6 +120,14 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
     useState<ActiveOrderResponse["data"]>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  // Pago recién hecho (?paid=1&order=<id>): se muestra el aviso y se abre el estatus del pedido.
+  const searchParams = useSearchParams();
+  const justPaid = useRef(searchParams.get("paid") === "1");
+  const paidOrderId = useRef<string | null>(searchParams.get("order"));
+  const [showPaidToast, setShowPaidToast] = useState(justPaid.current);
+  const [showTicket, setShowTicket] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
   const { user, profile, isAuthenticated, logout } = useAuth();
   const { navigateWithRoom } = useRoomNavigation();
   const { state } = useCart();
@@ -132,8 +140,6 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
   const [isSettingsClosing, setIsSettingsClosing] = useState(false);
   const [, setShowStickyBar] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
-  const [reorderItems, setReorderItems] = useState<ReorderItem[]>([]);
-  const [showReorderModal, setShowReorderModal] = useState(false);
   const [dashboardInitialTab, setDashboardInitialTab] = useState<
     "profile" | "cards" | "history" | "support" | undefined
   >(undefined);
@@ -210,7 +216,6 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
     setTimeout(() => {
       setShowSettingsModal(false);
       setIsSettingsClosing(false);
-      setReorderItems([]);
       setActiveOrder(null);
       try {
         if (restaurantId)
@@ -225,7 +230,6 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
     showPepperChat ||
       showStatusModal ||
       showSettingsModal ||
-      showReorderModal ||
       showDetail ||
       introActive,
   );
@@ -247,6 +251,8 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
       }
     } catch (error) {
       console.error("Error checking active order:", error);
+    } finally {
+      setOrdersLoaded(true);
     }
   }, [user?.id, guestId, restaurantId]);
 
@@ -254,61 +260,26 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
     checkActiveOrder();
   }, [checkActiveOrder]);
 
-  // Carga el último pedido: primero localStorage (rápido), luego API para usuarios autenticados
+  // Tras pagar: limpiar la URL, ocultar el aviso a los 5 s y abrir el estatus cuando cargue el pedido.
   useEffect(() => {
-    if (!restaurantId) return;
-    try {
-      const stored = localStorage.getItem(`even-last-order-${restaurantId}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.length > 0) setReorderItems(parsed);
-      }
-    } catch {}
-  }, [restaurantId]);
+    if (!justPaid.current) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("paid");
+    url.searchParams.delete("order");
+    window.history.replaceState(null, "", url.toString());
+    const id = window.setTimeout(() => setShowPaidToast(false), 5000);
+    return () => window.clearTimeout(id);
+  }, []);
+  useEffect(() => {
+    if (!justPaid.current || !ordersLoaded) return;
+    justPaid.current = false;
+    if (activeOrder) setShowStatusModal(true);
+  }, [ordersLoaded, activeOrder]);
 
-  useEffect(() => {
-    if (!user?.id || !restaurantId) return;
-    const fetchLastOrder = async () => {
-      try {
-        const response = await authService.fetchOrderHistory(user.id);
-        if (!response.ok) return;
-        const data = await response.json();
-        const allOrders: any[] = data.data || [];
-        // Cada elemento es una orden agrupada con su array dishes
-        const relevant = allOrders.filter(
-          (order: any) =>
-            order.orderType === "room-service" &&
-            order.restaurantId === restaurantId,
-        );
-        if (relevant.length === 0) return;
-        // Orden más reciente
-        const lastOrder = [...relevant].sort(
-          (a, b) =>
-            new Date(b.tableOrderDate).getTime() -
-            new Date(a.tableOrderDate).getTime(),
-        )[0];
-        const reorderable = (lastOrder.dishes || [])
-          .filter((dish: any) => dish?.item)
-          .map((dish: any) => ({
-            item: dish.item,
-            price: dish.price,
-            extra_price: dish.extraPrice || 0,
-            images: dish.images || [],
-            custom_fields: dish.customFields || null,
-          }));
-        if (reorderable.length > 0) {
-          setReorderItems(reorderable);
-          try {
-            localStorage.setItem(
-              `even-last-order-${restaurantId}`,
-              JSON.stringify(reorderable),
-            );
-          } catch {}
-        }
-      } catch {}
-    };
-    fetchLastOrder();
-  }, [user?.id, restaurantId]);
+  const handleSignUp = () => {
+    sessionStorage.setItem("even-post-auth-redirect", window.location.pathname + window.location.search);
+    navigateWithRoom("/auth");
+  };
 
   // Abrir dashboard en la tab correcta si viene ?dashboard=<tab>
   useEffect(() => {
@@ -545,31 +516,6 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
           <MenuRestaurantHeading
             name={t("welcome", { gender: profile?.gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
             subtitle={tc("roomLabel", { room: roomNumber ?? "" })}
-            actions={
-              activeOrder || reorderItems.length > 0 ? (
-                <>
-                  {activeOrder && (
-                    <button
-                      onClick={() =>
-                        setTimeout(() => setShowStatusModal(true), 400)
-                      }
-                      className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit active:scale-90 transition-all"
-                    >
-                      {t("orderStatus")}
-                    </button>
-                  )}
-                  {reorderItems.length > 0 && (
-                    <button
-                      onClick={() => setShowReorderModal(true)}
-                      className="bg-even-grass text-even-evergreen border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all flex items-center gap-1.5"
-                    >
-                      {tc("reorderCta")}
-                      <RefreshCw className="size-4" />
-                    </button>
-                  )}
-                </>
-              ) : undefined
-            }
           />
 
           {/* Buscador + secciones fijos arriba: no se ocultan al hacer scroll. Márgenes
@@ -743,9 +689,61 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
                 </div>
               )}
             </div>
+            {hasRecentPayment(paidOrderId.current) && (
+              <div className="shrink-0 flex flex-col gap-2 border-t border-white/20 px-6 py-4 md:px-8 lg:px-10">
+                <button
+                  onClick={() => setShowTicket(true)}
+                  className="w-full rounded-2xl border border-white/30 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 md:text-base"
+                >
+                  {t("viewTicketCta")}
+                </button>
+                <button
+                  onClick={() => setShowInvoice(true)}
+                  className="w-full rounded-2xl border border-white/30 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 md:text-base"
+                >
+                  {t("invoiceCta")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 </>
+      )}
+
+      {/* Ticket de compra y Facturar del último pago */}
+      <Suspense fallback={null}>
+        <PaymentTicketModals
+          ticketOpen={showTicket}
+          onCloseTicket={() => setShowTicket(false)}
+          invoiceOpen={showInvoice}
+          onCloseInvoice={() => setShowInvoice(false)}
+          orderId={paidOrderId.current}
+        />
+      </Suspense>
+
+      {/* Aviso de pago exitoso */}
+      {showPaidToast && (
+        <div
+          role="status"
+          className="fixed inset-x-4 top-4 z-[1000] mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-even-evergreen px-4 py-3 text-white shadow-lg animate-fade-in"
+        >
+          <CheckCircle2 className="size-6 shrink-0 text-even-grass" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{t("paidToastTitle")}</p>
+            <p className="text-sm text-white/80">{t("paidToastBody")}</p>
+          </div>
+          {!isAuthenticated && (
+            <button
+              onClick={handleSignUp}
+              className="shrink-0 rounded-full bg-even-grass px-3 py-1 text-sm font-medium text-even-evergreen"
+            >
+              {t("signUpCta")}
+            </button>
+          )}
+          <button onClick={() => setShowPaidToast(false)} aria-label={t("closeToast")} className="shrink-0 p-1">
+            <X className="size-5" />
+          </button>
+        </div>
       )}
 
       {/* Settings Modal */}
@@ -885,6 +883,18 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
               handlePepperClick();
             },
           },
+          // Pedido en curso: siempre visible junto al botón principal mientras haya uno.
+          {
+            id: "active-order",
+            pinned: true,
+            hidden: !activeOrder,
+            label: t("activeOrderLabel"),
+            icon: <ShoppingBag className="size-5 md:size-6" />,
+            onClick: () => {
+              closeActionsMenu();
+              setShowStatusModal(true);
+            },
+          },
         ]}
       />
 
@@ -919,15 +929,6 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
           openingHours={restaurant?.opening_hours}
           restaurantName={restaurant?.name}
           restaurantLogo={restaurant?.logo_url}
-        />
-      </Suspense>
-
-      {/* Reorder Modal */}
-      <Suspense fallback={null}>
-        <ReorderModal
-          isOpen={showReorderModal}
-          onClose={() => setShowReorderModal(false)}
-          items={reorderItems}
         />
       </Suspense>
 

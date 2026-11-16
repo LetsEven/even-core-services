@@ -64,7 +64,15 @@
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
     "menuLabel": "Menú",
-    "fabCountLabel": "{count, plural, one {# artículo} other {# artículos}}"
+    "fabCountLabel": "{count, plural, one {# artículo} other {# artículos}}",
+    "accountLabel": "Cuenta",
+    "accountTitle": "Cuenta de la mesa",
+    "paidToastTitle": "¡Pago exitoso!",
+    "paidToastBody": "Tu pago se realizó correctamente.",
+    "viewTicketCta": "Ver ticket de compra",
+    "invoiceCta": "Facturar",
+    "signUpCta": "Crear cuenta",
+    "closeToast": "Cerrar aviso"
   },
   "MenuItem": {
     "addToCart": "Agregar {name}",

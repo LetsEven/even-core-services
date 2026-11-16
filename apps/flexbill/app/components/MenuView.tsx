@@ -43,7 +43,6 @@ import { useCart } from "@/app/context/CartContext";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import { DEFAULT_IMAGES } from "@/app/constants/images";
 import { useTable } from "@/app/context/TableContext";
-import ReorderModal from "@/app/components/ReorderModal";
 
 const ChatView = lazy(() => import("@/app/components/ChatView"));
 const AuthView = lazy(() => import("./AuthView"));
@@ -168,7 +167,6 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
   >("profile");
   const [, setShowStickyBar] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
-  const [showReorderModal, setShowReorderModal] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const stickyTriggerRef = useRef<HTMLDivElement>(null);
@@ -202,7 +200,6 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
   useScrollLock(
     showPepperChat ||
       showSettingsModal ||
-      showReorderModal ||
       isStatusModalOpen ||
       showDetail ||
       introActive,
@@ -444,26 +441,6 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
           <MenuRestaurantHeading
             name={t("welcome", { gender: profile?.gender === "female" ? "female" : "other", name: profile?.firstName ? ` ${profile.firstName}` : "" })}
             subtitle={tc("tableLabel", { table: tableNumber ?? "" })}
-            actions={
-              Array.isArray(tableState.dishOrders) &&
-              tableState.dishOrders.length > 0 ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  <button
-                    onClick={() => setIsStatusModalOpen(true)}
-                    className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-base lg:text-lg font-medium text-black active:scale-90 transition-all"
-                  >
-                    {t("orderStatus")}
-                  </button>
-                  <button
-                    onClick={() => setShowReorderModal(true)}
-                    className="bg-even-grass text-even-evergreen border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-base lg:text-lg font-medium flex items-center gap-1.5 active:scale-90 transition-all"
-                  >
-                    {tc("reorderCta")}
-                    <RefreshCw className="size-4" />
-                  </button>
-                </div>
-              ) : undefined
-            }
           />
 
           <div className="w-full">
@@ -547,12 +524,13 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
           },
           {
             id: "order",
-            label: t("orderStatus"),
+            label: t("accountLabel"),
             count: Array.isArray(tableState.dishOrders) ? tableState.dishOrders.length : 0,
+            hidden: !Array.isArray(tableState.dishOrders) || tableState.dishOrders.length === 0,
             icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
             onClick: () => {
               closeActionsMenu();
-              navigateWithTable("/order");
+              setIsStatusModalOpen(true);
             },
           },
           {
@@ -705,7 +683,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
                   )}
                   <div className="flex flex-col items-center justify-center">
                     <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                      {t("orderStatus")}
+                      {t("accountTitle")}
                     </h2>
                     <p className="text-sm md:text-base lg:text-lg text-white/80">
                       {tc("tableLabel", { table: tableNumber ?? "" })}
@@ -803,18 +781,35 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
                 </div>
               )}
             </div>
+            {tableState.dishOrders.length > 0 && (
+              <div className="shrink-0 flex flex-col gap-3 border-t border-white/20 px-6 py-4 md:px-8 lg:px-10">
+                <div className="flex items-center justify-between text-white">
+                  <span className="text-lg font-medium md:text-xl">{t("accountTotal")}</span>
+                  <span className="text-lg font-medium md:text-xl">
+                    $
+                    {tableState.dishOrders
+                      .reduce(
+                        (sum, dish) => sum + (dish.total_display_price ?? Number(dish.price) * dish.quantity),
+                        0,
+                      )
+                      .toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsStatusModalOpen(false);
+                    navigateWithTable("/payment-options");
+                  }}
+                  className="w-full rounded-full bg-even-grass py-3 text-base font-medium text-even-evergreen transition-all active:scale-95 md:text-lg"
+                >
+                  {t("requestBillCta")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 </>
       )}
-
-      {/* Reorder Modal */}
-      <ReorderModal
-        isOpen={showReorderModal}
-        onClose={() => setShowReorderModal(false)}
-        dishOrders={tableState.dishOrders}
-        tableNumber={tableNumber}
-      />
 
       {/* Restaurant Closed Modal */}
       <Suspense fallback={null}>

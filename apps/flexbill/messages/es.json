@@ -56,7 +56,11 @@
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
     "menuLabel": "Menú",
-    "fabCountLabel": "{count, plural, one {# artículo} other {# artículos}}"
+    "fabCountLabel": "{count, plural, one {# artículo} other {# artículos}}",
+    "accountLabel": "Cuenta",
+    "accountTitle": "Cuenta de la mesa",
+    "accountTotal": "Total acumulado",
+    "requestBillCta": "Pedir la cuenta"
   },
   "MenuItem": {
     "addToCart": "Agregar {name}",

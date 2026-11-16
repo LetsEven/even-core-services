@@ -64,7 +64,15 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "menuLabel": "Menu",
-    "fabCountLabel": "{count, plural, one {# item} other {# items}}"
+    "fabCountLabel": "{count, plural, one {# item} other {# items}}",
+    "accountLabel": "Bill",
+    "accountTitle": "Table bill",
+    "paidToastTitle": "Payment successful!",
+    "paidToastBody": "Your payment went through.",
+    "viewTicketCta": "View receipt",
+    "invoiceCta": "Request invoice",
+    "signUpCta": "Create account",
+    "closeToast": "Dismiss"
   },
   "MenuItem": {
     "addToCart": "Add {name}",

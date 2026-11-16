@@ -1,0 +1,42 @@
+# Environment variables
+.env
+.env.*
+.env.local
+.env.production
+
+# Keystores
+*.keystore
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Tauri build output
+src-tauri/target/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/app/.cxx/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporales de la CLI de Supabase (los crea npm run release)
+supabase/.temp/

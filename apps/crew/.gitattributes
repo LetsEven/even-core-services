@@ -1,0 +1,3 @@
+# tauri build y cargo reescriben estos archivos con LF; sin esto aparecen como modificados en Windows (autocrlf)
+src-tauri/Cargo.toml text eol=lf
+src-tauri/Cargo.lock text eol=lf

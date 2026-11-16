@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { GraceCache } from '../auth/graceCache.js'
 import { applyFailure, reserveAttempt, resetOnSuccess } from '../auth/lockout.js'
-import { burnPinVerification, pinSchema, verifyPin } from '../auth/pin.js'
+import { burnPinVerification, PIN_SCHEME, hashPin, needsRehash, pinSchema, verifyPin } from '../auth/pin.js'
 import { permissionsFor } from '../auth/roles.js'
 import { newOpaqueToken, sha256Hex } from '../auth/tokens.js'
 import { writeAudit } from '../db/audit.js'
@@ -96,7 +96,7 @@ export function sessionRoutes(deps: Deps) {
       const generic = () => fail(c, 401, 'invalid_credentials', 'Credenciales invalidas')
 
       if (!eligible) {
-        await burnPinVerification(body.pin)
+        await burnPinVerification(body.pin, config.pinPepper)
         writeAudit(db, t, {
           restaurantId,
           actorId: user?.id ?? null,
@@ -112,7 +112,7 @@ export function sessionRoutes(deps: Deps) {
       // se responde igual de generico sin verificar el PIN.
       const reserved = reserveAttempt(db, config, user.id, device.id, t)
       if (!reserved.ok) {
-        await burnPinVerification(body.pin)
+        await burnPinVerification(body.pin, config.pinPepper)
         const recent = db
           .prepare("SELECT 1 AS x FROM audit_log WHERE action = 'login.blocked' AND target = ? AND at > ? LIMIT 1")
           .get(user.id, t - 60_000)
@@ -129,7 +129,7 @@ export function sessionRoutes(deps: Deps) {
         return generic()
       }
 
-      const ok = await verifyPin(body.pin, user.pin_hash, user.pin_salt)
+      const ok = await verifyPin(body.pin, user.pin_hash, user.pin_salt, config.pinPepper)
       if (!ok) {
         writeAudit(db, t, {
           restaurantId,
@@ -153,6 +153,12 @@ export function sessionRoutes(deps: Deps) {
       }
 
       resetOnSuccess(db, user.id, device.id, t)
+      if (needsRehash(user.pin_hash)) {
+        // Hash de un esquema anterior (sin pepper): se vuelve a guardar con el actual.
+        const next = await hashPin(body.pin, config.pinPepper)
+        db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE id = ?').run(next.hash, next.salt, user.id)
+        writeAudit(db, t, { restaurantId, actorId: user.id, action: 'user.pin_rehash', target: user.id, ip: ip(c), meta: { to: PIN_SCHEME } })
+      }
       // Renueva la vigencia del token de dispositivo con cada login exitoso.
       db.prepare('UPDATE devices SET expires_at = ?, updated_at = ? WHERE id = ?').run(t + config.deviceTtlMs, t, device.id)
       const s = createSession(deps, user.id, device.id)

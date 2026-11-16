@@ -13,7 +13,7 @@ const events = async (h: Harness, bearer: string, qs = '?limit=200') =>
 // Segundo restaurante con su super y su dispositivo.
 async function otherRestaurant(h: Harness) {
   const sup = await insertUser(h.db, h.clock.t, {
-    branchId: 'b-otro', restaurantId: 'rest-otro', name: 'Otro dueno', role: 'super', pin: '654321',
+    branchId: 'b-otro', restaurantId: 'rest-otro', name: 'Otro dueno', role: 'super', pin: '654321', pinPepper: h.config.pinPepper,
   })
   const { code } = insertPairingCode(h.db, h.clock.t, h.config.pairingTtlMs, {
     branchId: 'b-otro', deviceName: 'Caja ajena', createdBy: sup.id,

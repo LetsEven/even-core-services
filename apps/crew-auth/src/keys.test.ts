@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createSuperUser } from './cli/createSuper.js'
 import { createSigner, generatePem, resolvePrivateKeyPem } from './auth/tokens.js'
-import { loadConfig } from './config.js'
+import { DEV_PIN_PEPPER, loadConfig } from './config.js'
 import { openDb } from './db/index.js'
 
 describe('clave privada', () => {
@@ -39,10 +39,10 @@ describe('clave privada', () => {
 describe('create-super', () => {
   it('crea un super con PIN valido y rechaza uno invalido', async () => {
     const db = openDb(':memory:')
-    const r = await createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'Dueno', pin: '123456' })
+    const r = await createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'Dueno', pin: '123456', pinPepper: DEV_PIN_PEPPER })
     const row = db.prepare('SELECT role, restaurant_id FROM users WHERE id = ?').get(r.id)
     expect(row).toEqual({ role: 'super', restaurant_id: 'r1' })
-    await expect(createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'X', pin: '12' })).rejects.toThrow()
-    await expect(createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'X', pin: '12345' })).rejects.toThrow(/6 a 8/)
+    await expect(createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'X', pin: '12', pinPepper: DEV_PIN_PEPPER })).rejects.toThrow()
+    await expect(createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'X', pin: '12345', pinPepper: DEV_PIN_PEPPER })).rejects.toThrow(/6 a 8/)
   })
 })

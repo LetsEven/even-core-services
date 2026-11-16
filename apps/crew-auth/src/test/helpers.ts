@@ -42,6 +42,7 @@ export async function makeHarness(overrides: Partial<Config> = {}): Promise<Harn
     name: 'Dueno',
     role: 'super',
     pin: SUPER_PIN,
+    pinPepper: config.pinPepper,
   })
 
   const req: Harness['req'] = (method, path, opts = {}) => {
@@ -74,7 +75,7 @@ export async function makeHarness(overrides: Partial<Config> = {}): Promise<Harn
     req,
     pair,
     addUser: async (name, role, pin = '1234', extra = {}) =>
-      (await insertUser(db, clock.t, { branchId: extra.branchId ?? BRANCH, restaurantId: RESTAURANT, name, role, pin, cocinaOperar: extra.cocinaOperar })).id,
+      (await insertUser(db, clock.t, { branchId: extra.branchId ?? BRANCH, restaurantId: RESTAURANT, name, role, pin, pinPepper: config.pinPepper, cocinaOperar: extra.cocinaOperar })).id,
     login: (userId, pin, device) => req('POST', '/v1/login', { body: { userId, pin }, device }),
   }
 }

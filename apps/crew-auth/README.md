@@ -25,6 +25,7 @@ Produccion: `npm run build -w @even/crew-auth && npm run start -w @even/crew-aut
 | `CREW_AUTH_ORIGINS` | vacio | Origenes CORS permitidos, separados por coma. Vacio = ningun origen de navegador. |
 | `NODE_ENV` | | Con `production` (la imagen Docker ya lo fija) la clave privada es **obligatoria** y no se autogenera. |
 | `CREW_AUTH_PRIVATE_KEY` | generada (solo fuera de produccion) | Clave privada Ed25519 en PEM PKCS8. **Obligatoria con `NODE_ENV=production`**: el servicio no arranca sin ella. Fuera de produccion, si falta se genera y se guarda en `DATA_DIR/crew-auth-private-key.pem` con permisos 600. Se aceptan `\n` literales. |
+| `CREW_AUTH_PIN_PEPPER` | desarrollo | Secreto (32+ caracteres aleatorios) para el HMAC que se aplica al PIN antes de scrypt. **Obligatorio con `NODE_ENV=production`.** Sin el, una base filtrada permite probar PIN offline. Fuera de produccion, si falta se usa uno fijo de desarrollo (avisa en el log). Generar: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. **No cambiarlo despues**: invalida todos los PIN guardados (habria que resetearlos). |
 | `CREW_AUTH_ISSUER` | `crew-auth` | Claim `iss` de los tokens. Los verificadores deben usar el mismo valor. |
 | `CREW_AUTH_TRUST_PROXY` | `0` | Con `1` hay un proxy de confianza delante (Railway): la IP del cliente es la entrada **mas a la derecha** de `X-Forwarded-For` (la que agrego el proxy; lo de la izquierda lo controla el cliente). Nunca activarlo si el servicio es accesible directamente. |
 | `CREW_AUTH_TRUST_PROXY_HOPS` | | N proxies de confianza en cadena: la IP es la N-esima desde la derecha. Manda sobre `CREW_AUTH_TRUST_PROXY` (`0` lo desactiva). Si la cabecera trae menos de N entradas o no es una IP valida, se usa la del socket. |
@@ -82,7 +83,7 @@ El lockout por PIN responde 401 `invalid_credentials`, no 423.
 
 Pruebas: `test/local.integration.test.ts` arranca esta app en un puerto efimero y la usa con `apps/crew/src/lib/auth/localClient.ts` y `localSession.ts`; `test/tsconfig.json` las tipa con resolucion `bundler` (el cliente usa imports sin extension).
 
-PIN: 4 a 8 digitos (6 a 8 para el rol `super`), scrypt con sal unica, comparacion en tiempo constante. Errores de validacion: `400 {error:"invalid_request"}`. Al promover un usuario a super (`PATCH` con `role: "super"`) hay que enviar tambien un `pin` de 6+ digitos (no se conoce la longitud del actual).
+PIN: 4 a 8 digitos (6 a 8 para el rol `super`), `scrypt(HMAC-SHA256(CREW_AUTH_PIN_PEPPER, pin), sal unica)`, comparacion en tiempo constante. El hash lleva la version del esquema (`v2$<hex>`; sin prefijo = v1, scrypt sin pepper, anterior): los v1 se siguen aceptando y se vuelven a guardar como v2 en el siguiente login correcto (`user.pin_rehash` en el audit), asi se migra sin resetear a nadie. Errores de validacion: `400 {error:"invalid_request"}`. Al promover un usuario a super (`PATCH` con `role: "super"`) hay que enviar tambien un `pin` de 6+ digitos (no se conoce la longitud del actual).
 
 ### Dispositivos
 
@@ -105,7 +106,7 @@ Al agotar el ciclo se bloquea con backoff exponencial: 15 min, 30 min, 1 h, ... 
 
 1. Servicio nuevo desde este repo con `apps/crew-auth/railway.json` (Dockerfile, contexto raiz del monorepo).
 2. Volumen montado en `/data` (SQLite y, si no se define la clave, la clave privada viven ahi).
-3. Variables: `CREW_AUTH_ORIGINS`, `CREW_AUTH_TRUST_PROXY=1` y **`CREW_AUTH_PRIVATE_KEY`** (obligatoria: la imagen fija `NODE_ENV=production`, y sin la clave el servicio no arranca). Railway inyecta `PORT`.
+3. Variables: `CREW_AUTH_ORIGINS`, `CREW_AUTH_TRUST_PROXY=1`, **`CREW_AUTH_PRIVATE_KEY`** y **`CREW_AUTH_PIN_PEPPER`** (ambas obligatorias: la imagen fija `NODE_ENV=production`, y sin ellas el servicio no arranca). Railway inyecta `PORT`.
    - *Despliegue existente que usaba la clave autogenerada*: antes de subir esta version, copiar la clave actual a la variable para que los tokens vigentes sigan verificandose: `railway ssh` y `cat /data/crew-auth-private-key.pem`, pegar el contenido (con saltos de linea o `\n`) en `CREW_AUTH_PRIVATE_KEY`. Despues se puede borrar el archivo del volumen.
 4. Un solo replica: SQLite y el rate limit en memoria no son compartidos.
 5. Volumen y usuario: ver "Archivos, permisos y root".

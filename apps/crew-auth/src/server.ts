@@ -7,6 +7,7 @@ import { openSecureDb, warnIfRoot } from './storage.js'
 async function main() {
   const config = loadConfig()
   warnIfRoot()
+  if (!config.pinPepperFromEnv) console.warn('CREW_AUTH_PIN_PEPPER sin definir: se usa el pepper de desarrollo (solo permitido fuera de produccion)')
   const db = openSecureDb(config)
   const pem = await resolvePrivateKeyPem(config)
   const signer = await createSigner(pem, config.issuer)

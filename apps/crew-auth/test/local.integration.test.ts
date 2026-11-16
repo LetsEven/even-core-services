@@ -23,6 +23,7 @@ const SUPER_PIN = '123456'
 const serverClock = { v: 0 }
 
 let db: Db
+let config: ReturnType<typeof loadConfig>
 let server: ReturnType<typeof serve>
 let client: LocalClient
 let baseUrl: string
@@ -39,7 +40,7 @@ const status = async (p: Promise<unknown>) => {
 }
 
 beforeAll(async () => {
-  const config = loadConfig({ DATA_DIR: '/nonexistent', CREW_AUTH_ORIGINS: 'https://crew.example' })
+  config = loadConfig({ DATA_DIR: '/nonexistent', CREW_AUTH_ORIGINS: 'https://crew.example' })
   db = openDb(':memory:')
   const signer = await createSigner(await generatePem(), config.issuer)
   const app = createApp({ db, config, signer, now: () => Date.now() + serverClock.v })
@@ -66,7 +67,7 @@ const ctx = {} as {
 
 describe('crew-auth + cliente de Crew, extremo a extremo', () => {
   it('create-super + codigo de emparejamiento, y emparejar el dispositivo (un solo uso)', async () => {
-    const created = await createSuperUser(db, { branchId: BRANCH, restaurantId: RESTAURANT, name: 'Dueno', pin: SUPER_PIN })
+    const created = await createSuperUser(db, { branchId: BRANCH, restaurantId: RESTAURANT, name: 'Dueno', pin: SUPER_PIN, pinPepper: config.pinPepper })
     ctx.superId = created.id
     const { code } = insertPairingCode(db, Date.now(), 10 * 60_000, {
       branchId: BRANCH,

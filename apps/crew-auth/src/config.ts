@@ -13,6 +13,10 @@ export interface Config {
   /** NODE_ENV=production: la clave privada es obligatoria y no se autogenera. */
   production: boolean
   privateKeyPem: string | undefined
+  /** Secreto para HMAC del PIN antes de scrypt (CREW_AUTH_PIN_PEPPER). Obligatorio en produccion. */
+  pinPepper: string
+  /** false = se usa el valor de desarrollo (solo permitido fuera de produccion). */
+  pinPepperFromEnv: boolean
   issuer: string
   /** Saltos de proxy de confianza: 0 = ninguno (IP del socket); N = la IP es la N-esima desde la derecha de X-Forwarded-For. */
   trustProxyHops: number
@@ -37,6 +41,10 @@ export interface Config {
 }
 
 export const AUDIENCE = 'even-crew'
+
+/** Solo desarrollo y pruebas: en produccion CREW_AUTH_PIN_PEPPER es obligatorio. */
+export const DEV_PIN_PEPPER = 'crew-auth-dev-only-pin-pepper-do-not-use-in-production'
+const PEPPER_MIN_LEN = 32
 
 export const DEFAULTS = {
   accessTtlSec: 15 * 60,
@@ -76,13 +84,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     if (!Number.isInteger(hops) || hops < 0 || hops > 10) throw new Error('CREW_AUTH_TRUST_PROXY_HOPS invalido (entero de 0 a 10)')
     trustProxyHops = hops
   }
+  const production = env.NODE_ENV === 'production'
+  const pepper = env.CREW_AUTH_PIN_PEPPER?.trim()
+  if (production && !pepper) {
+    throw new Error('CREW_AUTH_PIN_PEPPER es obligatorio con NODE_ENV=production (secreto aleatorio de 32+ caracteres). Ver README.')
+  }
+  if (pepper && pepper.length < PEPPER_MIN_LEN) {
+    throw new Error(`CREW_AUTH_PIN_PEPPER es demasiado corto (minimo ${PEPPER_MIN_LEN} caracteres).`)
+  }
+  if (production && pepper === DEV_PIN_PEPPER) throw new Error('CREW_AUTH_PIN_PEPPER no puede ser el valor de desarrollo.')
   return {
     port,
     dataDir,
     dbPath: `${dataDir.replace(/\/+$/, '')}/crew-auth.db`,
     origins,
-    production: env.NODE_ENV === 'production',
+    production,
     privateKeyPem: pem || undefined,
+    pinPepper: pepper || DEV_PIN_PEPPER,
+    pinPepperFromEnv: Boolean(pepper),
     issuer: env.CREW_AUTH_ISSUER?.trim() || 'crew-auth',
     trustProxyHops,
     rateLimit: { ...DEFAULTS.rateLimit },

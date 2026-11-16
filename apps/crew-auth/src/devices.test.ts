@@ -18,6 +18,7 @@ async function foreignDevice(h: Harness): Promise<string> {
     name: 'Otro dueno',
     role: 'super',
     pin: '654321',
+    pinPepper: h.config.pinPepper,
   })
   const { code } = insertPairingCode(h.db, h.clock.t, h.config.pairingTtlMs, {
     branchId: 'b-otro',

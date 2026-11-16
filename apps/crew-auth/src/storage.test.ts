@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSigner, generatePem, resolvePrivateKeyPem } from './auth/tokens.js'
 import { loadConfig } from './config.js'
+import { openDb } from './db/index.js'
 import { hardenDataDir, openSecureDb, warnIfRoot } from './storage.js'
 
 const mode = (p: string) => statSync(p).mode & 0o777
@@ -78,7 +79,7 @@ describe('permisos de DATA_DIR y de la base', () => {
 
 describe('clave privada en produccion', () => {
   it('NODE_ENV=production sin CREW_AUTH_PRIVATE_KEY no arranca y no genera ningun archivo', async () => {
-    const config = loadConfig({ NODE_ENV: 'production', DATA_DIR: join(tmp, 'data') })
+    const config = loadConfig({ NODE_ENV: 'production', DATA_DIR: join(tmp, 'data'), CREW_AUTH_PIN_PEPPER: 'p'.repeat(32) })
     expect(config.production).toBe(true)
     await expect(resolvePrivateKeyPem(config)).rejects.toThrow(/CREW_AUTH_PRIVATE_KEY.*obligatoria/)
     expect(existsSync(join(tmp, 'data'))).toBe(false)
@@ -89,7 +90,7 @@ describe('clave privada en produccion', () => {
     mkdirSync(dataDir)
     writeFileSync(join(dataDir, 'crew-auth-private-key.pem'), await generatePem())
     const pem = await generatePem()
-    const config = loadConfig({ NODE_ENV: 'production', DATA_DIR: dataDir, CREW_AUTH_PRIVATE_KEY: pem })
+    const config = loadConfig({ NODE_ENV: 'production', DATA_DIR: dataDir, CREW_AUTH_PRIVATE_KEY: pem, CREW_AUTH_PIN_PEPPER: 'p'.repeat(32) })
     expect(await resolvePrivateKeyPem(config)).toBe(pem.trim())
   })
 
@@ -127,5 +128,20 @@ describe('create-super', () => {
     expect(r.stdout + r.stderr).not.toContain('246810')
     expect(mode(join(tmp, 'data'))).toBe(0o700)
     expect(mode(join(tmp, 'data', 'crew-auth.db'))).toBe(0o600)
+  })
+
+  it('en produccion exige el pepper y guarda el PIN con el esquema v2', () => {
+    const base = { NODE_ENV: 'production', CREW_AUTH_SUPER_PIN: '246810' }
+    const args = ['--restaurant', 'rest-9', '--branch', 'suc-1', '--name', 'Dueno']
+    const sin = run(args, base)
+    expect(sin.status).not.toBe(0)
+    expect(sin.stderr).toContain('CREW_AUTH_PIN_PEPPER')
+    expect(existsSync(join(tmp, 'data'))).toBe(false)
+
+    const con = run(args, { ...base, CREW_AUTH_PIN_PEPPER: 'p'.repeat(32) })
+    expect(con.status, con.stderr).toBe(0)
+    const db = openDb(join(tmp, 'data', 'crew-auth.db'))
+    expect((db.prepare('SELECT pin_hash FROM users').get() as { pin_hash: string }).pin_hash).toMatch(/^v2\$/)
+    db.close()
   })
 })

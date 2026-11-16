@@ -102,6 +102,7 @@ export function userRoutes(deps: Deps) {
       name: body.name,
       role: body.role,
       pin: body.pin,
+      pinPepper: config.pinPepper,
       cocinaOperar: body.role === 'cocina' ? body.cocinaOperar : false,
     })
     writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'user.create', target: user.id, ip: ip(c), meta: { role: user.role, branchId } })
@@ -142,7 +143,7 @@ export function userRoutes(deps: Deps) {
       `UPDATE users SET name = ?, role = ?, active = ?, cocina_operar = ?, branch_id = ?, updated_at = ? WHERE id = ?`,
     ).run(body.name ?? target.name, role, active ? 1 : 0, cocinaOperar ? 1 : 0, branchId, t, target.id)
     if (body.pin !== undefined) {
-      const { hash, salt } = await hashPin(body.pin)
+      const { hash, salt } = await hashPin(body.pin, config.pinPepper)
       db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE id = ?').run(hash, salt, target.id)
       clearLockout(db, target.id, t)
     }
@@ -168,7 +169,7 @@ export function userRoutes(deps: Deps) {
     const target = loadTarget(c, c.req.param('id'), auth.restaurantId)
     const rule = pinSchemaFor(target.role).safeParse(body.pin)
     if (!rule.success) return fail(c, 400, 'invalid_request', rule.error.issues[0]?.message)
-    const { hash, salt } = await hashPin(body.pin)
+    const { hash, salt } = await hashPin(body.pin, config.pinPepper)
     const t = now()
     db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ?, updated_at = ? WHERE id = ?').run(hash, salt, t, target.id)
     clearLockout(db, target.id, t)

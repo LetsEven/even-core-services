@@ -152,7 +152,7 @@ describe('POST /v1/users/:id/unlock', () => {
     const sup = await loginOk(h, h.superId, SUPER_PIN, device)
     const { insertUser } = await import('./db/users.js')
     const foreign = await insertUser(h.db, h.clock.t, {
-      branchId: 'x', restaurantId: 'otro', name: 'Ajeno', role: 'mesero', pin: '1234',
+      branchId: 'x', restaurantId: 'otro', name: 'Ajeno', role: 'mesero', pin: '1234', pinPepper: h.config.pinPepper,
     })
     expect((await h.req('POST', `/v1/users/${foreign.id}/unlock`, { bearer: sup.accessToken })).status).toBe(404)
     expect((await h.req('POST', '/v1/users/no-existe/unlock', { bearer: sup.accessToken })).status).toBe(404)

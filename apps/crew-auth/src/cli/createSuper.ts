@@ -10,7 +10,7 @@ import { insertUser } from '../db/users.js'
 
 export async function createSuperUser(
   db: Db,
-  input: { branchId: string; restaurantId: string; name: string; pin: string },
+  input: { branchId: string; restaurantId: string; name: string; pin: string; pinPepper: string },
   now = Date.now(),
 ): Promise<{ id: string; branchId: string }> {
   const pin = superPinSchema.safeParse(input.pin)
@@ -21,6 +21,7 @@ export async function createSuperUser(
     name: input.name,
     role: 'super',
     pin: input.pin,
+    pinPepper: input.pinPepper,
   })
   writeAudit(db, now, { restaurantId: user.restaurant_id, actorId: null, action: 'user.create_super', target: user.id, meta: { branchId: input.branchId } })
   return { id: user.id, branchId: user.branch_id }
@@ -84,6 +85,7 @@ async function main() {
       restaurantId: values.restaurant,
       name: values.name,
       pin,
+      pinPepper: config.pinPepper,
     })
     console.log(`Super creado: ${created.id}`)
     if (values['pairing-code']) {

@@ -72,10 +72,12 @@ export interface NewUser {
   role: Role
   pin: string
   cocinaOperar?: boolean
+  /** config.pinPepper */
+  pinPepper: string
 }
 
 export async function insertUser(db: Db, now: number, input: NewUser): Promise<UserRow> {
-  const { hash, salt } = await hashPin(input.pin)
+  const { hash, salt } = await hashPin(input.pin, input.pinPepper)
   const id = input.id ?? randomUUID()
   db.prepare(
     `INSERT INTO users (id, branch_id, restaurant_id, name, role, pin_hash, pin_salt, cocina_operar, created_at, updated_at)

@@ -25,10 +25,10 @@ vi.mock("../pages/Historial", () => ({ default: () => null }));
 vi.mock("../pages/Comprobantes", () => ({ default: () => null }));
 vi.mock("../components/TablesBoard", () => ({ default: () => null }));
 
-function authValue(status: AuthProvider["status"]): AuthProvider {
+function authValue(status: AuthProvider["status"], role: "super" | "mesero" = "super"): AuthProvider {
   const user =
     status === "signedIn"
-      ? { id: "u", name: "Test", role: "super" as const, permissions: permissionsForRole("super") }
+      ? { id: "u", name: "Test", role, permissions: permissionsForRole(role) }
       : null;
   return {
     kind: "clerk",
@@ -40,7 +40,7 @@ function authValue(status: AuthProvider["status"]): AuthProvider {
   };
 }
 
-function renderAt(path: string, session?: Partial<SessionValue>) {
+function renderAt(path: string | { pathname: string; state: unknown }, session?: Partial<SessionValue>, role: "super" | "mesero" = "super") {
   const router = createMemoryRouter(
     [
       {
@@ -64,7 +64,7 @@ function renderAt(path: string, session?: Partial<SessionValue>) {
     { initialEntries: [path] },
   );
   render(
-    <AuthContext.Provider value={authValue(auth.state.status)}>
+    <AuthContext.Provider value={authValue(auth.state.status, role)}>
       <SessionContext.Provider value={session as SessionValue}>
         <RouterProvider router={router} />
       </SessionContext.Provider>
@@ -101,6 +101,24 @@ describe("guard de login", () => {
       activeOrderTypes: ["tap_pay"],
     });
     expect(router.state.location.pathname).toBe("/mesas");
+  });
+});
+
+describe("login tras cambiar de usuario", () => {
+  const session = {
+    branchesLoading: false,
+    currentBranch: { id: "b" } as SessionValue["currentBranch"],
+    activeOrderTypes: ["tap_pay"],
+  };
+  it("si la ruta previa no la ve el nuevo rol, va a su vista inicial", () => {
+    auth.state = { status: "signedIn" };
+    const router = renderAt({ pathname: "/login", state: { from: "/ajustes" } }, session, "mesero");
+    expect(router.state.location.pathname).toBe("/mesas");
+  });
+  it("si la ruta previa si la ve, vuelve a ella", () => {
+    auth.state = { status: "signedIn" };
+    const router = renderAt({ pathname: "/login", state: { from: "/caja" } }, session, "super");
+    expect(router.state.location.pathname).toBe("/caja");
   });
 });
 

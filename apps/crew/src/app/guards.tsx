@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router";
-import { firstAllowedPath, useAuth, type Permission } from "../lib/auth";
+import { canVisitPath, firstAllowedPath, useAuth, type Permission } from "../lib/auth";
 
 export function AppLoader() {
   return (
@@ -28,12 +28,15 @@ export function RequireAuth() {
 
 // /login: con sesión activa manda a la ruta pedida originalmente (o a "/").
 export function LoginGate({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, hasPermission } = useAuth();
   const location = useLocation();
   if (status === "loading") return <AppLoader />;
   if (status === "signedIn") {
+    // Solo vuelve a la ruta previa si ESTE usuario puede verla (al cambiar de usuario
+    // la sesion anterior pudo dejar una ruta de otro rol); si no, a su vista inicial ("/").
     const from = (location.state as { from?: string } | null)?.from;
-    return <Navigate to={from && from !== "/login" ? from : "/"} replace />;
+    const canReturn = from && from !== "/login" && canVisitPath(hasPermission, from);
+    return <Navigate to={canReturn ? from : "/"} replace />;
   }
   return <>{children}</>;
 }

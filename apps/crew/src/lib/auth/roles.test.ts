@@ -4,6 +4,7 @@ import {
   ROLES,
   ROLE_PERMISSIONS,
   ROUTE_PERMISSIONS,
+  canVisitPath,
   firstAllowedPath,
   isPermission,
   permissionsForRole,
@@ -124,5 +125,22 @@ describe("vista inicial por rol", () => {
   });
   it("sin permisos devuelve null", () => {
     expect(firstAllowedPath(() => false, "/mesas")).toBeNull();
+  });
+});
+
+describe("canVisitPath", () => {
+  const has = (role: Role) => (p: Permission) => roleHasPermission(role, p);
+  it("casa rutas con parametros y respeta el permiso del rol", () => {
+    expect(canVisitPath(has("mesero"), "/mesas")).toBe(true);
+    expect(canVisitPath(has("mesero"), "/mesas/12")).toBe(true);
+    expect(canVisitPath(has("mesero"), "/mesas/12/comanda?x=1")).toBe(true);
+    expect(canVisitPath(has("mesero"), "/cocina")).toBe(false);
+    expect(canVisitPath(has("mesero"), "/ajustes/impresoras")).toBe(false);
+    expect(canVisitPath(has("cocina"), "/mesas/5")).toBe(false);
+    expect(canVisitPath(has("cocina"), "/cocina/")).toBe(true);
+    expect(canVisitPath(has("super"), "/caja/resumen")).toBe(true);
+  });
+  it("una ruta desconocida no cuenta como permitida", () => {
+    expect(canVisitPath(has("super"), "/nada")).toBe(false);
   });
 });

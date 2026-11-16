@@ -105,3 +105,20 @@ export function firstAllowedPath(
   if (preferred && has(ROUTE_PERMISSIONS[preferred])) return preferred;
   return HOME_ORDER.find((r) => has(ROUTE_PERMISSIONS[r])) ?? null;
 }
+
+/**
+ * ¿Puede este rol ver `path`? Solo vale para rutas conocidas de ROUTE_PERMISSIONS
+ * (los `:param` casan un segmento). Una ruta desconocida no es "permitida": quien
+ * decide el destino cae en la vista inicial del rol.
+ */
+export function canVisitPath(has: (p: Permission) => boolean, path: string): boolean {
+  const clean = path.split(/[?#]/)[0]?.replace(/\/+$/, "") || "/";
+  const entries = Object.entries(ROUTE_PERMISSIONS) as [GuardedRoute, Permission][];
+  // El patron mas especifico (mas segmentos) manda: /mesas/5/comanda antes que /mesas/:unidad.
+  const match = entries
+    .filter(([pattern]) =>
+      new RegExp(`^${pattern.replace(/:[^/]+/g, "[^/]+")}$`).test(clean),
+    )
+    .sort((a, b) => b[0].length - a[0].length)[0];
+  return match ? has(match[1]) : false;
+}

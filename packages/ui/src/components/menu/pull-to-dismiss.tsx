@@ -31,7 +31,9 @@ export function PullToDismiss({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const dismissRef = useRef(onDismiss);
-  dismissRef.current = onDismiss;
+  useEffect(() => {
+    dismissRef.current = onDismiss;
+  });
 
   useEffect(() => {
     const root = ref.current;

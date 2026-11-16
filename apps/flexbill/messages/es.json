@@ -79,7 +79,6 @@
     "paidLabel": "Pagó ${amount}"
   },
   "CartView": {
-    "emptyCartHero": "El carrito está vacío, agrega items y disfruta",
     "confirmYourOrder": "Confirma tu pedido",
     "myCart": "Mi carrito",
     "cartEmptyTitle": "Tu carrito está vacío",
@@ -562,7 +561,8 @@
     "tryAgainCta": "Intentar de nuevo",
     "itemNameConsumption": "Consumo",
     "itemNameTip": "Propina",
-    "itemNameServiceFee": "Cargo por servicio"
+    "itemNameServiceFee": "Cargo por servicio",
+    "showOtherCards": "Ver otras tarjetas ({count})"
   },
   "HomePage": {
     "heroTitle": "Bienvenido",

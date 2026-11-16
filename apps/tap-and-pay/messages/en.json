@@ -215,7 +215,8 @@
     "consumptionBreakdown": "+ Order",
     "tipBreakdown": "+ Tip",
     "serviceCommissionBreakdown": "+ Service fee",
-    "tryAgainCta": "Try again"
+    "tryAgainCta": "Try again",
+    "showOtherCards": "Show other cards ({count})"
   },
   "TipSelectionPage": {
     "subtitle": "Check your bill",

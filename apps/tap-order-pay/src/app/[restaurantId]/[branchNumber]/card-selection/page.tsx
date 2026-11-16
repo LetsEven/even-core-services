@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useCart } from "@/context/CartContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
 import { usePayment } from "@/context/PaymentContext";
@@ -129,6 +130,8 @@ export default function CardSelectionPage() {
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   // El carrito vive en el provider: si ya cargó (vengo de la confirmación) no
   // hay nada que esperar y el paso se pinta completo desde el primer render.
+  // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
+  const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(
     !cartState.hasLoaded || cartState.isLoading,
   );
@@ -1389,14 +1392,14 @@ export default function CardSelectionPage() {
           <MenuHeaderBack />
         </div>
         <div className="h-20" />
-        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+        <div className="w-full flex-1 flex flex-col">
+          <div className={sheetClasses.hero}>
             <div className="py-6 px-8 flex flex-col justify-center">
               <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
             </div>
           </div>
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-10">
+            <div className={`${sheetClasses.card} overflow-hidden`}>
               <div className="flex-1 overflow-y-auto py-8 pb-30 flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                   <div className="h-4 w-20 bg-tone-200 rounded-full animate-pulse" />
@@ -1415,7 +1418,7 @@ export default function CardSelectionPage() {
           </div>
         </div>
         <div
-          className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+          className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
           <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
@@ -1513,8 +1516,8 @@ export default function CardSelectionPage() {
       <div className="min-h-dvh brand-evergreen flex flex-col app-root">
         <MenuHeaderBack />
 
-        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+        <div className="w-full flex-1 flex flex-col">
+          <div className={sheetClasses.hero}>
             <div className="py-6 px-8 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
                 {t("selectPaymentMethodTitle")}
@@ -1523,7 +1526,7 @@ export default function CardSelectionPage() {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-50">
+            <div className={`${sheetClasses.card} overflow-hidden z-50`}>
               <div className="flex-1 overflow-y-auto py-8 pb-30">
                 {/* Resumen del pedido */}
                 <div className="space-y-2 mb-6">
@@ -1627,7 +1630,12 @@ export default function CardSelectionPage() {
                     Métodos de pago
                   </h3>
                   <div className="space-y-2.5">
-                    {allPaymentMethods.map((method) => (
+                    {(showAllCards
+                      ? allPaymentMethods
+                      : allPaymentMethods.filter(
+                          (pm) => pm.id === selectedPaymentMethodId,
+                        )
+                    ).map((method) => (
                       <div
                         key={method.id}
                         className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
@@ -1640,6 +1648,7 @@ export default function CardSelectionPage() {
                           onClick={() => {
                             setSelectedPaymentMethodId(method.id);
                             setSelectedMSI(null);
+                            setShowAllCards(false);
                           }}
                           className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
                         >
@@ -1655,6 +1664,7 @@ export default function CardSelectionPage() {
                           onClick={() => {
                             setSelectedPaymentMethodId(method.id);
                             setSelectedMSI(null);
+                            setShowAllCards(false);
                           }}
                           className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
                             selectedPaymentMethodId === method.id
@@ -1680,6 +1690,18 @@ export default function CardSelectionPage() {
                         </button>
                       </div>
                     ))}
+
+                    {!showAllCards && allPaymentMethods.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllCards(true)}
+                        className="w-full py-1.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
+                      >
+                        {t("showOtherCards", {
+                          count: allPaymentMethods.length - 1,
+                        })}
+                      </button>
+                    )}
 
                     {walletOrderRejected && (
                       <p className="text-sm text-tone-600 text-center">
@@ -1787,7 +1809,7 @@ export default function CardSelectionPage() {
         </div>
 
         {/* Barra inferior fija */}
-        <div className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button
             onClick={handleInitiatePayment}
             disabled={
@@ -2045,7 +2067,7 @@ export default function CardSelectionPage() {
           }}
         >
           <div
-            className="bg-white rounded-t-4xl w-full shadow-xl"
+            className="bg-white rounded-t-4xl w-full max-w-(--app-max-w) mx-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 max-w-2xl mx-auto">

@@ -425,7 +425,8 @@
     "serviceCommissionLabel": "+ Service fee",
     "msiTotalLabel": "Total ${amount} MXN",
     "minAmountForInstallments": "Minimum amount ${amount} MXN for installment payments",
-    "tryAgainCta": "Try again"
+    "tryAgainCta": "Try again",
+    "showOtherCards": "Show other cards ({count})"
   },
   "PaymentSuccessPage": {
     "errorLoadOrder": "We couldn't load the order information",
@@ -444,7 +445,6 @@
     "continueCta": "Continue"
   },
   "CartView": {
-    "emptyCartHero": "Your cart is empty, add items and enjoy",
     "confirmYourOrder": "Confirm your order",
     "myCart": "My cart",
     "cartEmptyTitle": "Your cart is empty",

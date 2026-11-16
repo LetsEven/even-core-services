@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useSearchParams, useParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -111,6 +112,8 @@ export default function CardSelectionPage() {
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
+  const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
@@ -1285,7 +1288,7 @@ export default function CardSelectionPage() {
         <div
           className={`px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col ${isAnimatingOut ? "animate-slide-down" : ""}`}
         >
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+          <div className={sheetClasses.hero}>
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
                 {t("selectPaymentMethodTitle")}
@@ -1294,7 +1297,7 @@ export default function CardSelectionPage() {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-6 md:px-8 lg:px-10 overflow-hidden z-10">
+            <div className={`${sheetClasses.card} overflow-hidden`}>
               <div className="flex-1 overflow-y-auto py-8 pb-30">
                 {/* Payment Summary */}
                 <div className="space-y-2 mb-6">
@@ -1362,7 +1365,12 @@ export default function CardSelectionPage() {
                     {t("paymentMethodsLabel")}
                   </h3>
                   <div className="space-y-2.5">
-                    {allPaymentMethods.map((method) => (
+                    {(showAllCards
+                      ? allPaymentMethods
+                      : allPaymentMethods.filter(
+                          (pm) => pm.id === selectedPaymentMethodId,
+                        )
+                    ).map((method) => (
                       <div
                         key={method.id}
                         className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
@@ -1372,7 +1380,10 @@ export default function CardSelectionPage() {
                         }`}
                       >
                         <div
-                          onClick={() => setSelectedPaymentMethodId(method.id)}
+                          onClick={() => {
+                            setSelectedPaymentMethodId(method.id);
+                            setShowAllCards(false);
+                          }}
                           className="flex items-center justify-center gap-3 mx-auto cursor-pointer text-base md:text-lg lg:text-xl"
                         >
                           <div>{getCardTypeIcon(method.cardBrand)}</div>
@@ -1384,7 +1395,10 @@ export default function CardSelectionPage() {
                         </div>
 
                         <div
-                          onClick={() => setSelectedPaymentMethodId(method.id)}
+                          onClick={() => {
+                            setSelectedPaymentMethodId(method.id);
+                            setShowAllCards(false);
+                          }}
                           className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
                             selectedPaymentMethodId === method.id
                               ? "border-even-grass bg-even-grass"
@@ -1413,6 +1427,18 @@ export default function CardSelectionPage() {
                         )}
                       </div>
                     ))}
+
+                    {!showAllCards && allPaymentMethods.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllCards(true)}
+                        className="w-full py-1.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
+                      >
+                        {t("showOtherCards", {
+                          count: allPaymentMethods.length - 1,
+                        })}
+                      </button>
+                    )}
 
                     {walletOrderRejected && (
                       <p className="text-sm text-tone-600 text-center">
@@ -1503,7 +1529,7 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija — botón pagar */}
         <div
-          className="fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+          className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
           <button
@@ -1789,7 +1815,7 @@ export default function CardSelectionPage() {
           }}
         >
           <div
-            className="bg-white rounded-t-4xl w-full shadow-xl"
+            className="bg-white rounded-t-4xl w-full max-w-(--app-max-w) mx-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 max-w-2xl mx-auto">

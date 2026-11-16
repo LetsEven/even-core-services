@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Minus, Plus, ChevronDown, ShoppingBag } from "lucide-react";
@@ -156,16 +157,13 @@ export default function CartView() {
     <div className="min-h-screen brand-evergreen flex flex-col app-root">
       <MenuHeaderBack />
 
-      <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-        <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+      <div className="w-full flex-1 flex flex-col">
+        <div className={sheetClasses.hero}>
           {cartState.items.length === 0 ? (
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
+            <div className="pt-6 md:pt-8 lg:pt-10 pb-2 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                 {tc("roomLabel", { room: roomState.roomNumber ?? "" })}
               </h1>
-              <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("emptyCartHero")}
-              </h2>
             </div>
           ) : (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
@@ -181,7 +179,7 @@ export default function CartView() {
 
         <div className="flex-1 h-full flex flex-col overflow-hidden">
           {/* Cart Items */}
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 overflow-hidden">
+          <div className={`${sheetClasses.card} overflow-hidden`}>
             {/* Scrollable content */}
             <div
               ref={scrollContainerRef}
@@ -424,7 +422,7 @@ export default function CartView() {
             {/* Fixed bottom section */}
             {cartState.items.length > 0 && (
               <div
-                className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+                className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
                 style={{
                   paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                 }}

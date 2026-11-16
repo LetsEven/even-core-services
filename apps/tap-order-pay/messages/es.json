@@ -425,7 +425,8 @@
     "serviceCommissionLabel": "+ Comisión de servicio",
     "msiTotalLabel": "Total ${amount} MXN",
     "minAmountForInstallments": "Monto mínimo ${amount} MXN para pagos a meses",
-    "tryAgainCta": "Intentar de nuevo"
+    "tryAgainCta": "Intentar de nuevo",
+    "showOtherCards": "Ver otras tarjetas ({count})"
   },
   "PaymentSuccessPage": {
     "errorLoadOrder": "No se pudo cargar la información de la orden",
@@ -444,7 +445,6 @@
     "continueCta": "Continuar"
   },
   "CartView": {
-    "emptyCartHero": "El carrito está vacío, agrega items y disfruta",
     "confirmYourOrder": "Confirma tu pedido",
     "myCart": "Mi carrito",
     "cartEmptyTitle": "Tu carrito está vacío",

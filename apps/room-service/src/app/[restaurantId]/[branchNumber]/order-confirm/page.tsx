@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { DEFAULT_TIP_PERCENTAGE, readCheckoutDraft, writeCheckoutDraft } from "@even/cart";
 import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 import { useParams } from "next/navigation";
@@ -107,14 +108,14 @@ export default function OrderConfirmPage() {
         <div className="h-20" />
 
         <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
-          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-            <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+          <div className="flex flex-col relative w-full">
+            <div className={sheetClasses.hero}>
               <div className="py-6 px-8 flex flex-col justify-center">
                 <div className="h-8 w-2/3 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
               </div>
             </div>
 
-            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 gap-4">
+            <div className={`${sheetClasses.card} flex-none py-8 gap-4`}>
               <div className="flex justify-between items-center">
                 <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse" />
                 <div className="h-4 w-24 bg-tone-200 rounded-full animate-pulse" />
@@ -159,8 +160,8 @@ export default function OrderConfirmPage() {
 
       {/* Tarjeta anclada al fondo */}
       <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
-        <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-          <div className="bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+        <div className="flex flex-col relative w-full">
+          <div className={sheetClasses.hero}>
             <div className="py-6 px-8 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
                 {t("title")}
@@ -168,7 +169,7 @@ export default function OrderConfirmPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]">
+          <div className={`${sheetClasses.card} flex-none py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]`}>
             {/* Subtotal */}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between items-center">

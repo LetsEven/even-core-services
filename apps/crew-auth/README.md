@@ -147,3 +147,9 @@ los usuarios al arrancar (idempotente: no duplica ni cambia PIN de usuarios exis
 
 El codigo de vinculacion se imprime en los logs. Los PIN viven en una variable de entorno: **no usar en produccion**
 (alli, CLI `create-super`). Quita la variable una vez creados los usuarios.
+
+### Railway (dev)
+
+Servicio con Dockerfile `apps/crew-auth/Dockerfile`, volumen en `/data`, healthcheck `/health`. Variables: `DATA_DIR=/data`,
+`CREW_AUTH_PRIVATE_KEY`, `CREW_AUTH_PIN_PEPPER`, `CREW_AUTH_ORIGINS`, `CREW_AUTH_TRUST_PROXY=1` y `RAILWAY_RUN_UID=0`
+(el volumen se monta como root). El pepper no debe cambiar despues de crear usuarios.

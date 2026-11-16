@@ -105,7 +105,7 @@ describe("guard de login", () => {
 });
 
 describe("login tras cambiar de usuario", () => {
-  const session = {
+  const session: Partial<SessionValue> = {
     branchesLoading: false,
     currentBranch: { id: "b" } as SessionValue["currentBranch"],
     activeOrderTypes: ["tap_pay"],

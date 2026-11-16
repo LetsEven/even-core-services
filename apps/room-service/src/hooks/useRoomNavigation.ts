@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useCallback } from "react";
+import { startRouteTransition } from "@even/ui";
+import { FLOW_STEPS } from "@/lib/flow-steps";
 import { useRestaurant } from "../context/RestaurantContext";
 
 export function useRoomNavigation() {
@@ -59,11 +61,13 @@ export function useRoomNavigation() {
       const separator = fullPath.includes("?") ? "&" : "?";
       const newUrl = `${fullPath}${separator}room=${roomNumber}`;
 
-      if (replace) {
-        router.replace(newUrl);
-      } else {
-        router.push(newUrl);
-      }
+      startRouteTransition(newUrl, () => {
+        if (replace) {
+          router.replace(newUrl);
+        } else {
+          router.push(newUrl);
+        }
+      }, FLOW_STEPS);
     },
     [router, roomNumber, currentRestaurantId, currentBranchNumber]
   );

@@ -1,0 +1,2 @@
+/** Pasos del flujo de pago que se animan entre sí (segmentos de ruta). */
+export const FLOW_STEPS = ["cart", "payment-options", "tip-selection", "card-selection"] as const;

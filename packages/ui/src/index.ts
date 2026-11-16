@@ -110,3 +110,12 @@ export { DishLoadingShell } from "./components/menu/dish-loading-shell";
 export { DishScreen, DishSheet } from "./components/menu/dish-layout";
 export { PullToDismiss } from "./components/menu/pull-to-dismiss";
 export { markDishReady, startDishClose, startDishFlight, useDishFlight } from "./lib/dish-transition";
+export { FlowNavOverlay, FlowSkeletonBody, FlowTitle, Ghost, type FlowNavOverlayProps, type FlowScreen } from "./components/flow-nav-overlay";
+export {
+  ENTER_MS,
+  LEAVE_MS,
+  flowStepOf,
+  notifyRouteChanged,
+  startRouteTransition,
+  usePendingFlowStep,
+} from "./lib/route-transition";

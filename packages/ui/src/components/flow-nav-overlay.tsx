@@ -1,0 +1,99 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { cn } from "../lib/cn";
+import { usePendingFlowStep } from "../lib/route-transition";
+import { sheetClasses } from "./sheet-screen";
+
+export type FlowScreen = {
+  /** Título del paso (mismo que la vista real). */
+  hero: ReactNode;
+  /** Clases extra del bloque del título (p. ej. `p-0` si el título trae su propio relleno). */
+  heroClassName?: string;
+  /** Esqueleto de la tarjeta. */
+  body: ReactNode;
+  /** Relleno de la tarjeta; por defecto `overflow-hidden`. */
+  cardClassName?: string;
+  /** La vista real es una tarjeta del alto de su contenido, anclada abajo. */
+  anchored?: boolean;
+};
+
+export type FlowNavOverlayProps = {
+  /** Pantalla de cada paso del flujo, por segmento de ruta. */
+  screens: Record<string, FlowScreen>;
+  /** Cabecera con el botón de volver (solo visual). */
+  header: ReactNode;
+};
+
+const RISE = "0.7s cubic-bezier(0.22, 0.8, 0.24, 1)";
+const FADE = "0.5s ease";
+
+/** Dato que aún no llega: ocupa lo mismo que el texto real, pero se ve como barra. */
+export function Ghost({ className, children }: { className?: string; children: ReactNode }) {
+  return (
+    <span aria-hidden className={cn("animate-pulse rounded-full bg-tone-200 text-transparent select-none", className)}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Esqueleto del paso destino, visible desde que se pide navegar hasta que la ruta real se monta.
+ * Va en el layout de la ruta, junto con `RouteTransitionGate` en el layout raíz.
+ */
+export function FlowNavOverlay({ screens, header }: FlowNavOverlayProps) {
+  const step = usePendingFlowStep();
+  const screen = step ? screens[step] : undefined;
+  if (!screen) return null;
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-even-evergreen" aria-hidden>
+      <style>{`
+        @keyframes flow-rise { from { transform: translateY(100%); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes flow-fade { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+      {/* Fondo verde opaco: oculta la vista real que ya se montó debajo mientras sube la tarjeta */}
+      <div className="app-col relative flex min-h-0 flex-1 flex-col">
+        <div>{header}</div>
+        <div className={cn("flex w-full flex-1 flex-col", screen.anchored && "justify-end")}>
+          <div style={{ animation: `flow-fade ${FADE} 0.2s backwards` }}>
+            <div className={cn(sheetClasses.hero, screen.heroClassName)}>{screen.hero}</div>
+          </div>
+          <div
+            className={cn(sheetClasses.card, screen.cardClassName ?? "overflow-hidden")}
+            style={{ animation: `flow-rise ${RISE}` }}
+          >
+            {screen.body}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Título del paso con la misma tipografía y márgenes que la vista real. */
+export function FlowTitle({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col justify-center px-8 py-6">
+      <p className="mt-2 mb-6 text-3xl leading-7 font-medium text-white">{children}</p>
+    </div>
+  );
+}
+
+/** Cuerpo genérico de la tarjeta: filas de relleno y botón inferior. Para pasos sin esqueleto propio. */
+export function FlowSkeletonBody({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="flex-1 px-6 py-8 pb-[120px] md:px-8 lg:px-10">
+      <div className="space-y-4">
+        {Array.from({ length: rows }, (_, row) => (
+          <div key={row} className="flex items-center justify-between gap-4">
+            <Ghost className="w-1/2">Concepto del paso</Ghost>
+            <Ghost>$000.00 MXN</Ghost>
+          </div>
+        ))}
+      </div>
+      <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
+        <div className="h-12 w-full animate-pulse rounded-full bg-even-grass/40" />
+      </div>
+    </div>
+  );
+}

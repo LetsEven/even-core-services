@@ -10,7 +10,7 @@ import { getUser, revokeUserSessions } from '../db/users.js'
 import type { UserRow } from '../db/users.js'
 import { clientIp, fail, parseJson } from '../http.js'
 import { deviceAuth } from '../middleware/deviceAuth.js'
-import { rateLimit } from '../middleware/rateLimit.js'
+import { RateLimiter, rateLimit } from '../middleware/rateLimit.js'
 import type { AppEnv, Deps } from '../types.js'
 
 const loginSchema = z.object({ userId: z.string().min(1).max(64), pin: pinSchema })
@@ -69,25 +69,15 @@ interface SessionRow {
 export function sessionRoutes(deps: Deps) {
   const { db, config, now } = deps
   const app = new Hono<AppEnv>()
-  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, config.trustProxy)
+  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, config.trustProxyHops)
+  const limiter = new RateLimiter({ windowMs: config.rateLimit.windowMs, now })
 
   app.post(
     '/v1/login',
-    rateLimit({
-      windowMs: config.rateLimit.windowMs,
-      now,
-      rules: [
-        { key: (c) => `ip:${ip(c)}`, max: config.rateLimit.loginPerIp },
-        {
-          key: (c) => {
-            const token = c.req.header('x-device-token')
-            return token ? `dev:${sha256Hex(token)}` : null
-          },
-          max: config.rateLimit.loginPerDevice,
-        },
-      ],
-    }),
+    // Primero la regla por IP (corta ahi); la de dispositivo va despues de deviceAuth, con el id real.
+    rateLimit(limiter, { key: (c) => `ip:${ip(c)}`, max: config.rateLimit.loginPerIp }),
     deviceAuth(deps),
+    rateLimit(limiter, { key: (c) => `dev:${c.get('device').id}`, max: config.rateLimit.loginPerDevice }),
     async (c) => {
       const body = await parseJson(c, loginSchema)
       const device = c.get('device')

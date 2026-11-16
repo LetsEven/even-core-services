@@ -57,7 +57,7 @@ const listQuery = z.object({ branchId: idSchema.optional() })
 export function userRoutes(deps: Deps) {
   const { db, config, now } = deps
   const app = new Hono<AppEnv>()
-  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, config.trustProxy)
+  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, config.trustProxyHops)
   const superOnly = requireRole(deps, 'super')
 
   // Selector de usuarios del dispositivo: solo id, name, role. Nunca hashes.

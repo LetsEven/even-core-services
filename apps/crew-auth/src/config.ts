@@ -12,7 +12,8 @@ export interface Config {
   origins: string[]
   privateKeyPem: string | undefined
   issuer: string
-  trustProxy: boolean
+  /** Saltos de proxy de confianza: 0 = ninguno (IP del socket); N = la IP es la N-esima desde la derecha de X-Forwarded-For. */
+  trustProxyHops: number
   rateLimit: RateLimitConfig
   accessTtlSec: number
   refreshTtlMs: number
@@ -59,6 +60,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     .filter(Boolean)
   // Las variables de entorno multilinea a veces llegan con "\n" literales.
   const pem = env.CREW_AUTH_PRIVATE_KEY?.trim().replace(/\\n/g, '\n')
+  const hopsRaw = env.CREW_AUTH_TRUST_PROXY_HOPS?.trim()
+  let trustProxyHops = env.CREW_AUTH_TRUST_PROXY === '1' ? 1 : 0
+  if (hopsRaw) {
+    const hops = Number(hopsRaw)
+    if (!Number.isInteger(hops) || hops < 0 || hops > 10) throw new Error('CREW_AUTH_TRUST_PROXY_HOPS invalido (entero de 0 a 10)')
+    trustProxyHops = hops
+  }
   return {
     port,
     dataDir,
@@ -66,7 +74,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     origins,
     privateKeyPem: pem || undefined,
     issuer: env.CREW_AUTH_ISSUER?.trim() || 'crew-auth',
-    trustProxy: env.CREW_AUTH_TRUST_PROXY === '1',
+    trustProxyHops,
     rateLimit: { ...DEFAULTS.rateLimit },
     accessTtlSec: DEFAULTS.accessTtlSec,
     refreshTtlMs: DEFAULTS.refreshTtlMs,

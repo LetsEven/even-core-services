@@ -25,7 +25,8 @@ Produccion: `npm run build -w @even/crew-auth && npm run start -w @even/crew-aut
 | `CREW_AUTH_ORIGINS` | vacio | Origenes CORS permitidos, separados por coma. Vacio = ningun origen de navegador. |
 | `CREW_AUTH_PRIVATE_KEY` | generada | Clave privada Ed25519 en PEM PKCS8. Si falta se genera y se guarda en `DATA_DIR/crew-auth-private-key.pem` con permisos 600. Se aceptan `\n` literales. |
 | `CREW_AUTH_ISSUER` | `crew-auth` | Claim `iss` de los tokens. Los verificadores deben usar el mismo valor. |
-| `CREW_AUTH_TRUST_PROXY` | `0` | Con `1` la IP del cliente sale de `X-Forwarded-For` (poner en `1` detras de Railway o un proxy; nunca si el servicio es accesible directamente). |
+| `CREW_AUTH_TRUST_PROXY` | `0` | Con `1` hay un proxy de confianza delante (Railway): la IP del cliente es la entrada **mas a la derecha** de `X-Forwarded-For` (la que agrego el proxy; lo de la izquierda lo controla el cliente). Nunca activarlo si el servicio es accesible directamente. |
+| `CREW_AUTH_TRUST_PROXY_HOPS` | | N proxies de confianza en cadena: la IP es la N-esima desde la derecha. Manda sobre `CREW_AUTH_TRUST_PROXY` (`0` lo desactiva). Si la cabecera trae menos de N entradas o no es una IP valida, se usa la del socket. |
 | `CREW_AUTH_SUPER_PIN` | | Solo para `create-super`: PIN sin interaccion. |
 
 Generar una clave: `node -e "const c=require('node:crypto');console.log(c.generateKeyPairSync('ed25519').privateKey.export({type:'pkcs8',format:'pem'}))"`.
@@ -79,6 +80,10 @@ PIN: 4 a 8 digitos (6 a 8 para el rol `super`), scrypt con sal unica, comparacio
 ### Dispositivos
 
 El token de dispositivo vence a los 90 dias y se renueva con cada login exitoso en ese dispositivo (los que no se usan se caen solos). Un super puede revocar cualquier dispositivo de su restaurante: el token deja de valer y todas sus sesiones se cierran al instante (el access token tambien, por `sid`). Si un equipo se pierde o lo roban: Ajustes > Equipos vinculados > Revocar.
+
+### Rate limit
+
+Ventana fija de 60 s en memoria (una sola instancia). En login se evalua primero la regla por IP (60/min) y si excede se responde 429 sin mas; la de dispositivo (20/min) corre despues de autenticar el dispositivo, con su id real (un token inventado no crea buckets). Los buckets viven en un mapa LRU de maximo 10 000 claves, sin barrido por peticion. Los fallos de `POST /v1/devices/pair` se agregan en el audit por (IP, hora) con un contador (`meta.count`) y, con mas de 100 IPs distintas en la hora, en una fila comun (`ip: "*"`).
 
 ### Lockout
 

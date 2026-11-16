@@ -1,12 +1,32 @@
+import { isIP } from 'node:net'
 import { getConnInfo } from '@hono/node-server/conninfo'
 import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 
-export function clientIp(c: Context, trustProxy: boolean): string {
-  if (trustProxy) {
-    const xff = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    if (xff) return xff
+/** Acepta `1.2.3.4`, `1.2.3.4:5678`, `::1`, `[::1]:80`; devuelve null si no es una IP valida. */
+function parseIp(raw: string): string | null {
+  let v = raw.trim()
+  const bracket = /^\[([^\]]+)\](?::\d+)?$/.exec(v)
+  if (bracket) v = bracket[1] ?? ''
+  else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(v)) v = v.slice(0, v.lastIndexOf(':'))
+  return isIP(v) ? v.toLowerCase() : null
+}
+
+/**
+ * IP del cliente. Con `trustProxyHops = N > 0` es la entrada N-esima desde la DERECHA de
+ * X-Forwarded-For: cada proxy de confianza agrega al final la IP de quien le hablo, asi que lo que
+ * esta a la izquierda lo controla el cliente (y se ignora). Si la cabecera trae menos de N entradas
+ * o la entrada no es una IP, se usa la del socket (nunca un valor arbitrario del cliente).
+ */
+export function clientIp(c: Context, trustProxyHops: number): string {
+  if (trustProxyHops > 0) {
+    const parts = (c.req.header('x-forwarded-for') ?? '')
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+    const picked = parts.length >= trustProxyHops ? parseIp(parts[parts.length - trustProxyHops] ?? '') : null
+    if (picked) return picked
   }
   try {
     return getConnInfo(c).remote.address ?? 'unknown'

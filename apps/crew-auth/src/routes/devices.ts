@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { newOpaqueToken, sha256Hex } from '../auth/tokens.js'
-import { writeAudit } from '../db/audit.js'
+import { recordPairFail, writeAudit } from '../db/audit.js'
 import { insertPairingCode, normalizePairingCode } from '../db/pairing.js'
 import { branchBelongsToRestaurant } from '../db/users.js'
 import { clientIp, fail, parseJson } from '../http.js'
-import { rateLimit } from '../middleware/rateLimit.js'
+import { RateLimiter, rateLimit } from '../middleware/rateLimit.js'
 import { requireRole } from '../middleware/requireRole.js'
 import type { AppEnv, Deps } from '../types.js'
 
@@ -22,7 +22,8 @@ const pairSchema = z.object({
 export function deviceRoutes(deps: Deps) {
   const { db, config, now } = deps
   const app = new Hono<AppEnv>()
-  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, config.trustProxy)
+  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, config.trustProxyHops)
+  const pairLimiter = new RateLimiter({ windowMs: config.rateLimit.windowMs, now })
 
   // Solo super: crea un codigo de un solo uso con 10 min de vigencia.
   app.post('/v1/devices/pairing-codes', requireRole(deps, 'super'), async (c) => {
@@ -44,11 +45,7 @@ export function deviceRoutes(deps: Deps) {
 
   app.post(
     '/v1/devices/pair',
-    rateLimit({
-      windowMs: config.rateLimit.windowMs,
-      now,
-      rules: [{ key: (c) => `ip:${ip(c)}`, max: config.rateLimit.pairPerIp }],
-    }),
+    rateLimit(pairLimiter, { key: (c) => `ip:${ip(c)}`, max: config.rateLimit.pairPerIp }),
     async (c) => {
       const body = await parseJson(c, pairSchema)
       const t = now()
@@ -85,7 +82,7 @@ export function deviceRoutes(deps: Deps) {
       })()
 
       if (!result) {
-        writeAudit(db, t, { action: 'device.pair_fail', ip: ip(c) })
+        recordPairFail(db, t, ip(c))
         return fail(c, 401, 'invalid_code', 'Codigo invalido o vencido')
       }
       writeAudit(db, t, { actorId: result.created_by, action: 'device.pair', target: deviceId, ip: ip(c), meta: { branchId: result.branch_id } })

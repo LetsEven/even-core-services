@@ -23,6 +23,8 @@ test("lista las tarjetas guardadas a través de @even/payments", async ({ page }
   await page.goto(CARD_SELECTION_URL);
 
   await expect(page.getByText("**** 4242")).toBeVisible();
+  // La selección es compacta: solo se ve la tarjeta elegida hasta pedir las otras.
+  await page.getByRole("button", { name: /Ver otras tarjetas/ }).click();
   await expect(page.getByText("**** 5454")).toBeVisible();
   expect(paymentsApi.requests).toContainEqual({ method: "GET", path: "/payment-methods", body: null });
 });

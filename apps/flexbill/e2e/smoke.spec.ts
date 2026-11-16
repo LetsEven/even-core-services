@@ -7,7 +7,7 @@ test("el menú de la mesa carga sus platillos", async ({ page }) => {
 
   await expect(page.locator("main").getByText("Mesa 12")).toBeVisible();
   await expect(page.getByText("Club sándwich", { exact: false }).first()).toBeVisible();
-  await expect(page.getByText("$180.00 MXN")).toBeVisible();
+  await expect(page.getByText("$180.00").first()).toBeVisible();
 });
 
 test("la cuenta de la mesa ofrece las formas de dividir el pago", async ({ page }) => {

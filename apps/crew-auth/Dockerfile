@@ -34,7 +34,7 @@ COPY --from=builder /app/out-install/apps/crew-auth/dist ./apps/crew-auth/dist
 
 RUN mkdir -p /data && chown -R node:node /data
 USER node
-VOLUME /data
+# Railway rechaza la instruccion VOLUME: el volumen se monta desde la configuracion del servicio en /data.
 EXPOSE 8080
 WORKDIR /app/apps/crew-auth
 # Alta del primer super: docker exec -it <contenedor> node dist/cli/createSuper.js --restaurant <id> --branch <id> --name <n> --pairing-code

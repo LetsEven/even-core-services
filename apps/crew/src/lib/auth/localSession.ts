@@ -252,8 +252,8 @@ export function createLocalAuth(opts: {
     return isSession(s) ? s : null;
   }
 
-  // Otra pestana roto el refresh token y nos paso el access token nuevo: el
-  // nuestro ya no vale (su sesion se revoco al rotar), asi que lo adoptamos.
+  // Otra pestana roto el refresh token y nos paso el access token nuevo: lo
+  // adoptamos (evita un refresh propio y mantiene todas las pestanas al dia).
   function onPeerMessage(data: unknown) {
     if (typeof data !== "object" || data === null) return;
     const m = data as Record<string, unknown>;

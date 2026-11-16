@@ -19,6 +19,9 @@ const BRANCH = 'sucursal-1'
 const RESTAURANT = 'rest-1'
 const SUPER_PIN = '123456'
 
+// Reloj del servidor (el del cliente se desplaza aparte con ctx.clock para forzar refreshes).
+const serverClock = { v: 0 }
+
 let db: Db
 let server: ReturnType<typeof serve>
 let client: LocalClient
@@ -39,7 +42,7 @@ beforeAll(async () => {
   const config = loadConfig({ DATA_DIR: '/nonexistent', CREW_AUTH_ORIGINS: 'https://crew.example' })
   db = openDb(':memory:')
   const signer = await createSigner(await generatePem(), config.issuer)
-  const app = createApp({ db, config, signer, now: () => Date.now() })
+  const app = createApp({ db, config, signer, now: () => Date.now() + serverClock.v })
   server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' })
   await new Promise<void>((resolve) => server.once('listening', () => resolve()))
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
@@ -102,9 +105,11 @@ describe('crew-auth + cliente de Crew, extremo a extremo', () => {
   it('refresh rotativo: token nuevo, el access nuevo funciona', async () => {
     const before = stored<{ refreshToken: string }>(ctx.storage, SESSION_KEY).refreshToken
     const oldAccess = (await ctx.auth.getToken())!
+    serverClock.v = 2_000 // pasan unos segundos: el access nuevo lleva otro iat
     ctx.clock.offset = 15 * 60_000 - 5_000 // el access esta por vencer
     const fresh = (await ctx.auth.getToken())!
     ctx.clock.offset = 0
+    serverClock.v = 0
     ctx.auth.stop()
 
     expect(fresh).not.toBe(oldAccess)
@@ -112,18 +117,26 @@ describe('crew-auth + cliente de Crew, extremo a extremo', () => {
     expect(after.refreshToken).not.toBe(before)
     expect(after.name).toBe('Dueno')
     expect((await client.adminListUsers(fresh, BRANCH)).map((u) => u.name)).toEqual(['Dueno'])
-    // La sesion vieja (sid) quedo revocada junto con su refresh token.
-    expect(await status(client.adminListUsers(oldAccess, BRANCH))).toBe(401)
+    // El sid es estable entre rotaciones: el access anterior (de otra pestana) sigue valiendo.
+    expect(await status(client.adminListUsers(oldAccess, BRANCH))).toBe(200)
     ctx.storage.setItem('prev_refresh', before)
   })
 
-  it('reusar un refresh ya rotado revoca las sesiones del usuario en el dispositivo', async () => {
+  it('reusar un refresh ya rotado: dentro de 10 s recibe la misma respuesta; despues revoca las sesiones del dispositivo', async () => {
     const { deviceToken } = stored<{ deviceToken: string }>(ctx.storage, DEVICE_KEY)
     const old = ctx.storage.getItem('prev_refresh')!
     const live = (await ctx.auth.getToken())!
     expect(await status(client.adminListUsers(live, BRANCH))).toBe(200)
 
+    // Ventana de gracia: la rotacion acaba de ocurrir, es un reintento legitimo (respuesta perdida).
+    const graced = await client.refresh(deviceToken, old)
+    expect(graced.refreshToken).toBe(stored<{ refreshToken: string }>(ctx.storage, SESSION_KEY).refreshToken)
+    expect(await status(client.adminListUsers(live, BRANCH))).toBe(200)
+
+    // Pasada la ventana es robo: 401 y cae todo lo del usuario en el dispositivo.
+    serverClock.v = 13_000
     expect(await status(client.refresh(deviceToken, old))).toBe(401)
+    serverClock.v = 0
     // La sesion vigente tambien cayo.
     expect(await status(client.adminListUsers(live, BRANCH))).toBe(401)
     expect(await status(client.refresh(deviceToken, stored<{ refreshToken: string }>(ctx.storage, SESSION_KEY).refreshToken))).toBe(401)
@@ -251,6 +264,29 @@ describe('crew-auth + cliente de Crew, extremo a extremo', () => {
     expect((await ctx.auth.listUsers()).length).toBeGreaterThan(0)
     expect(await status(client.adminListDevices(token))).toBe(200)
     robado.stop()
+  })
+
+  it('si se pierde la respuesta del refresh, el reintento con el token viejo no cierra la sesion', async () => {
+    let dropped = 0
+    const lossy = createLocalClient({
+      baseUrl,
+      fetchImpl: async (input, init) => {
+        const res = await fetch(input, init) // el servidor SI rota...
+        if (String(input).endsWith('/v1/refresh') && dropped === 0) {
+          dropped += 1
+          throw new TypeError('connection reset') // ...pero la respuesta no llega
+        }
+        return res
+      },
+    })
+    const rt = stored<{ refreshToken: string }>(ctx.storage, SESSION_KEY).refreshToken
+    const tab = createLocalAuth({ client: lossy, storage: ctx.storage, startRetryDelaysMs: [10, 10] })
+    await tab.start()
+    expect(dropped).toBe(1)
+    expect(tab.getSnapshot().status).toBe('signedIn') // sin pedir PIN de nuevo
+    expect(stored<{ refreshToken: string }>(ctx.storage, SESSION_KEY).refreshToken).not.toBe(rt)
+    expect(await status(client.adminListUsers((await tab.getToken())!, BRANCH))).toBe(200)
+    tab.stop()
   })
 
   it('dos pestanas (mismo storage) que recargan a la vez no se invalidan por la rotacion', async () => {

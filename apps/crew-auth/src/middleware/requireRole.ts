@@ -26,10 +26,10 @@ export function requireRole({ db, signer, now }: Deps, ...roles: Role[]) {
          FROM sessions s
          JOIN users u ON u.id = s.user_id
          JOIN devices d ON d.id = s.device_id AND d.revoked_at IS NULL
-         WHERE s.id = ? AND s.user_id = ? AND s.revoked_at IS NULL AND s.expires_at > ?
+         WHERE s.id = ? AND s.user_id = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND s.absolute_expires_at > ?
            AND u.active = 1 AND u.deleted_at IS NULL`,
       )
-      .get(claims.sid, claims.sub, now()) as
+      .get(claims.sid, claims.sub, now(), now()) as
       | { id: string; role: string; branch_id: string; restaurant_id: string; cocina_operar: number; device_id: string }
       | undefined
     if (!row || !isRole(row.role)) return fail(c, 401, 'unauthorized', 'No autorizado')

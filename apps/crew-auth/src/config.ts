@@ -16,7 +16,12 @@ export interface Config {
   trustProxyHops: number
   rateLimit: RateLimitConfig
   accessTtlSec: number
+  /** Ventana deslizante: cada refresh extiende la sesion otras 12 h... */
   refreshTtlMs: number
+  /** ...pero nunca mas alla de este tope desde el login. */
+  sessionAbsoluteTtlMs: number
+  /** Un refresh recien rotado que se reutiliza dentro de esta ventana recibe la misma respuesta. */
+  refreshGraceMs: number
   pairingTtlMs: number
   /** Vigencia del token de dispositivo; se renueva con cada login exitoso. */
   deviceTtlMs: number
@@ -34,6 +39,8 @@ export const AUDIENCE = 'even-crew'
 export const DEFAULTS = {
   accessTtlSec: 15 * 60,
   refreshTtlMs: 12 * 60 * 60 * 1000,
+  sessionAbsoluteTtlMs: 7 * 24 * 60 * 60 * 1000,
+  refreshGraceMs: 10_000,
   pairingTtlMs: 10 * 60 * 1000,
   deviceTtlMs: 90 * 24 * 60 * 60 * 1000,
   maxFailedAttempts: 5,
@@ -78,6 +85,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     rateLimit: { ...DEFAULTS.rateLimit },
     accessTtlSec: DEFAULTS.accessTtlSec,
     refreshTtlMs: DEFAULTS.refreshTtlMs,
+    sessionAbsoluteTtlMs: DEFAULTS.sessionAbsoluteTtlMs,
+    refreshGraceMs: DEFAULTS.refreshGraceMs,
     pairingTtlMs: DEFAULTS.pairingTtlMs,
     deviceTtlMs: DEFAULTS.deviceTtlMs,
     maxFailedAttempts: DEFAULTS.maxFailedAttempts,

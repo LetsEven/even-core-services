@@ -247,8 +247,8 @@ export function createLocalClient(opts: {
       };
     },
 
-    // El servicio valida el refresh token del cuerpo (no exige el dispositivo);
-    // se envia X-Device-Token por consistencia.
+    // El servicio exige X-Device-Token y que sea el dispositivo de la sesion
+    // (un refresh token robado no sirve desde otro equipo).
     async refresh(deviceToken, refreshToken) {
       const b = await call("POST", "/v1/refresh", {
         device: deviceToken,

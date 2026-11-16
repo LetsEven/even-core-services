@@ -125,14 +125,15 @@ describe('refresh y logout', () => {
     const h = await makeHarness()
     const device = await h.pair()
     const first = await loginOk(h, h.superId, SUPER_PIN, device)
-    const r1 = await h.req('POST', '/v1/refresh', { body: { refreshToken: first.refreshToken } })
+    const r1 = await h.req('POST', '/v1/refresh', { body: { refreshToken: first.refreshToken }, device })
     expect(r1.status).toBe(200)
     const second = (await r1.json()) as { accessToken: string; refreshToken: string }
     expect(second.refreshToken).not.toBe(first.refreshToken)
 
-    const reuse = await h.req('POST', '/v1/refresh', { body: { refreshToken: first.refreshToken } })
+    h.clock.t += h.config.refreshGraceMs + 1 // fuera de la ventana de gracia: es un reuso
+    const reuse = await h.req('POST', '/v1/refresh', { body: { refreshToken: first.refreshToken }, device })
     expect(reuse.status).toBe(401)
-    const afterReuse = await h.req('POST', '/v1/refresh', { body: { refreshToken: second.refreshToken } })
+    const afterReuse = await h.req('POST', '/v1/refresh', { body: { refreshToken: second.refreshToken }, device })
     expect(afterReuse.status).toBe(401)
   })
 
@@ -141,7 +142,7 @@ describe('refresh y logout', () => {
     const device = await h.pair()
     const s = await loginOk(h, h.superId, SUPER_PIN, device)
     h.clock.t += 12 * 60 * 60 * 1000 + 1
-    expect((await h.req('POST', '/v1/refresh', { body: { refreshToken: s.refreshToken } })).status).toBe(401)
+    expect((await h.req('POST', '/v1/refresh', { body: { refreshToken: s.refreshToken }, device })).status).toBe(401)
   })
 
   it('logout revoca refresh y corta el access token', async () => {
@@ -149,9 +150,9 @@ describe('refresh y logout', () => {
     const device = await h.pair()
     const s = await loginOk(h, h.superId, SUPER_PIN, device)
     expect((await h.req('GET', '/v1/audit', { bearer: s.accessToken })).status).toBe(200)
-    const out = await h.req('POST', '/v1/logout', { body: { refreshToken: s.refreshToken } })
+    const out = await h.req('POST', '/v1/logout', { body: { refreshToken: s.refreshToken }, device })
     expect(out.status).toBe(200)
-    expect((await h.req('POST', '/v1/refresh', { body: { refreshToken: s.refreshToken } })).status).toBe(401)
+    expect((await h.req('POST', '/v1/refresh', { body: { refreshToken: s.refreshToken }, device })).status).toBe(401)
     expect((await h.req('GET', '/v1/audit', { bearer: s.accessToken })).status).toBe(401)
   })
 
@@ -163,7 +164,7 @@ describe('refresh y logout', () => {
     const ana = await loginOk(h, id, '1234', device)
     const res = await h.req('PATCH', `/v1/users/${id}`, { bearer: sup.accessToken, body: { active: false } })
     expect(res.status).toBe(200)
-    expect((await h.req('POST', '/v1/refresh', { body: { refreshToken: ana.refreshToken } })).status).toBe(401)
+    expect((await h.req('POST', '/v1/refresh', { body: { refreshToken: ana.refreshToken }, device })).status).toBe(401)
     expect((await h.login(id, '1234', device)).status).toBe(401)
   })
 })
@@ -292,7 +293,7 @@ describe('audit', () => {
     const s = await loginOk(h, h.superId, SUPER_PIN, device)
     await h.login(h.superId, '000000', device)
     await h.req('POST', '/v1/users', { bearer: s.accessToken, body: { name: 'N', role: 'mesero', pin: '5555' } })
-    await h.req('POST', '/v1/logout', { body: { refreshToken: s.refreshToken } })
+    await h.req('POST', '/v1/logout', { body: { refreshToken: s.refreshToken }, device })
     const sup2 = await loginOk(h, h.superId, SUPER_PIN, device)
     const res = await h.req('GET', '/v1/audit?limit=100', { bearer: sup2.accessToken })
     const text = await res.text()

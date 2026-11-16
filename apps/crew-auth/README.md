@@ -57,8 +57,8 @@ Auth: `Authorization: Bearer <accessToken>` (JWT) y/o `X-Device-Token: <deviceTo
 | `POST /v1/devices/pair` | - (rate limit por IP) | `{pairingCode, deviceName?}` -> `{deviceToken, branchId}`. |
 | `GET /v1/users?branchId=` | dispositivo | Selector: `{users:[{id,name,role}]}`. Nunca hashes. Solo la sucursal del dispositivo. |
 | `POST /v1/login` | dispositivo | `{userId, pin}` -> `{accessToken, refreshToken, expiresIn, user}`. Lockout (ver abajo), rate limit por IP y dispositivo (429). Error generico `invalid_credentials`. Un login exitoso renueva la vigencia del token de dispositivo. |
-| `POST /v1/refresh` | - | `{refreshToken}` -> tokens nuevos. Rotativo (12 h); reusar uno viejo cierra las sesiones del dispositivo. |
-| `POST /v1/logout` | - | `{refreshToken}` -> `{ok:true}`. Revoca la sesion (y su access token). |
+| `POST /v1/refresh` | dispositivo | `{refreshToken}` -> tokens nuevos. Rotativo (ventana deslizante de 12 h, tope absoluto de 7 dias desde el login). Exige `X-Device-Token` y que sea el dispositivo de la sesion. Reusar uno ya rotado cierra las sesiones del usuario en el dispositivo, salvo dentro de la ventana de gracia (ver abajo). |
+| `POST /v1/logout` | dispositivo | `{refreshToken}` -> `{ok:true}`. Revoca la sesion (y todos sus access tokens). Mismas exigencias de dispositivo. |
 | `POST /v1/users` | super | `{name, role, pin, branchId?, cocinaOperar?, id?}` |
 | `PATCH /v1/users/:id` | super | `{name?, role?, active?, cocinaOperar?, branchId?}` |
 | `POST /v1/users/:id/reset-pin` | super | `{pin}` (desbloquea y cierra sesiones) |
@@ -71,7 +71,13 @@ Auth: `Authorization: Bearer <accessToken>` (JWT) y/o `X-Device-Token: <deviceTo
 
 JWT de acceso (EdDSA, 15 min): `iss`, `aud=even-crew`, `sub`, `role`, `permissions[]`, `branchId`, `restaurantId`, `deviceId`, y `sid` (id de sesion). El servicio valida ademas que la sesion siga vigente en cada llamada admin; otros verificadores (p. ej. el backend con JWKS) solo ven la firma y la expiracion, por lo que un logout corta el access token en este servicio pero no en otros hasta que vence (max. 15 min).
 
-Al rotar el refresh token se revoca la sesion anterior (y con ella su access token, por `sid`): quien comparta el refresh token entre pestanas debe difundir el access token nuevo (lo hace el cliente de Crew). El lockout por PIN responde 401 `invalid_credentials`, no 423.
+El lockout por PIN responde 401 `invalid_credentials`, no 423.
+
+### Refresh: sid estable y ventana de gracia
+
+- **`sid` estable.** Rotar el refresh token cambia el token de la *misma* sesion (la fila guarda el hash del anterior); el `sid` del access token no cambia. Decision: antes cada rotacion revocaba el `sid` anterior y las demas pestanas recibian 401 hasta adoptar el token difundido; ahora el access token en poder de otra pestana sigue valiendo hasta vencer (15 min) y solo se corta por logout, reuso detectado, reset/baja del usuario o revocacion del dispositivo (todo por `sid`). El difundir el token entre pestanas (cliente de Crew) queda como optimizacion, ya no como requisito de correccion. De paso la tabla `sessions` ya no crece una fila por rotacion.
+- **Tope absoluto.** `absolute_expires_at` = login + 7 dias; la ventana deslizante de 12 h nunca lo sobrepasa. Pasado el tope (aunque el access token no haya vencido) la sesion deja de valer y hay que pedir PIN.
+- **Ventana de gracia (10 s).** Si el refresh recien rotado se vuelve a presentar dentro de los 10 s siguientes a la rotacion (respuesta perdida, dos pestanas) desde el mismo dispositivo y la sesion sigue viva, se devuelve **la misma respuesta** (mismos tokens). La respuesta se guarda solo en memoria (nunca tokens en claro en la base): si el proceso se reinicia dentro de esos 10 s, el reintento se trata como reuso. Pasada la ventana, reusar un refresh rotado sigue siendo robo: 401, se revocan las sesiones del usuario en ese dispositivo y queda `refresh.reuse` en el audit. Un refresh token presentado desde otro dispositivo se rechaza (401, `refresh.device_mismatch`) sin tocar la sesion legitima.
 
 Pruebas: `test/local.integration.test.ts` arranca esta app en un puerto efimero y la usa con `apps/crew/src/lib/auth/localClient.ts` y `localSession.ts`; `test/tsconfig.json` las tipa con resolucion `bundler` (el cliente usa imports sin extension).
 

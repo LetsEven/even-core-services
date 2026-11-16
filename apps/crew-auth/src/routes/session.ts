@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { GraceCache } from '../auth/graceCache.js'
 import { applyFailure, reserveAttempt, resetOnSuccess } from '../auth/lockout.js'
 import { burnPinVerification, pinSchema, verifyPin } from '../auth/pin.js'
 import { permissionsFor } from '../auth/roles.js'
@@ -52,9 +53,9 @@ function createSession(deps: Deps, userId: string, deviceId: string): { id: stri
   const id = randomUUID()
   const refreshToken = newOpaqueToken()
   db.prepare(
-    `INSERT INTO sessions (id, user_id, device_id, refresh_hash, expires_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, userId, deviceId, sha256Hex(refreshToken), t + config.refreshTtlMs, t, t)
+    `INSERT INTO sessions (id, user_id, device_id, refresh_hash, expires_at, absolute_expires_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, userId, deviceId, sha256Hex(refreshToken), t + config.refreshTtlMs, t + config.sessionAbsoluteTtlMs, t, t)
   return { id, refreshToken }
 }
 
@@ -63,8 +64,14 @@ interface SessionRow {
   user_id: string
   device_id: string
   expires_at: number
+  absolute_expires_at: number
+  rotated_at: number | null
   revoked_at: number | null
 }
+
+const SESSION_COLS = 'id, user_id, device_id, expires_at, absolute_expires_at, rotated_at, revoked_at'
+
+type LoginResponse = Awaited<ReturnType<typeof issueTokens>>
 
 export function sessionRoutes(deps: Deps) {
   const { db, config, now } = deps
@@ -148,54 +155,85 @@ export function sessionRoutes(deps: Deps) {
     },
   )
 
-  app.post('/v1/refresh', async (c) => {
+  // Respuestas de refresh de los ultimos segundos (ver GraceCache).
+  const grace = new GraceCache<LoginResponse>(config.refreshGraceMs, now)
+
+  // Decision: el `sid` es estable entre rotaciones. Rotar cambia el refresh token de la MISMA sesion
+  // (se guarda el hash del anterior), de modo que el access token vigente de otra pestana sigue
+  // valiendo hasta que vence o se revoca la sesion (logout, reuso, dispositivo revocado); antes cada
+  // rotacion revocaba el `sid` anterior y las demas pestanas recibian 401 hasta adoptar el token nuevo.
+  // El tope absoluto (7 dias) se fija en el login; la ventana deslizante (12 h) se renueva al rotar.
+  app.post('/v1/refresh', deviceAuth(deps), async (c) => {
     const body = await parseJson(c, refreshSchema)
+    const device = c.get('device')
     const t = now()
     const hash = sha256Hex(body.refreshToken)
-    const old = db
-      .prepare('SELECT id, user_id, device_id, expires_at, revoked_at FROM sessions WHERE refresh_hash = ?')
-      .get(hash) as SessionRow | undefined
     const invalid = () => fail(c, 401, 'invalid_token', 'Sesion invalida')
-    if (!old) return invalid()
+    const mismatch = (s: SessionRow) => {
+      writeAudit(db, t, { actorId: s.user_id, action: 'refresh.device_mismatch', target: s.id, ip: ip(c), meta: { deviceId: device.id } })
+      return invalid()
+    }
 
-    if (old.revoked_at !== null) {
-      // Reuso de un refresh ya rotado o revocado: se asume robo y se cierran las sesiones del dispositivo.
+    const cur = db.prepare(`SELECT ${SESSION_COLS} FROM sessions WHERE refresh_hash = ?`).get(hash) as SessionRow | undefined
+    if (!cur) {
+      const prev = db.prepare(`SELECT ${SESSION_COLS} FROM sessions WHERE prev_refresh_hash = ?`).get(hash) as
+        | SessionRow
+        | undefined
+      if (!prev) return invalid()
+      if (prev.device_id !== device.id) return mismatch(prev)
+      // Sesion ya cerrada: nada que proteger (no se cascadea).
+      if (prev.revoked_at !== null) return invalid()
+      // Reuso dentro de la ventana de gracia: misma respuesta que recibio la rotacion (respuesta
+      // perdida, dos pestanas). Pasada la ventana es un refresh ya rotado reutilizado: se asume robo.
+      const again = prev.rotated_at !== null && t - prev.rotated_at <= config.refreshGraceMs ? grace.get(hash) : undefined
+      if (again) return c.json(await again)
       db.prepare(
         'UPDATE sessions SET revoked_at = ?, updated_at = ? WHERE user_id = ? AND device_id = ? AND revoked_at IS NULL',
-      ).run(t, t, old.user_id, old.device_id)
-      writeAudit(db, t, { actorId: old.user_id, action: 'refresh.reuse', target: old.id, ip: ip(c) })
-      return invalid()
-    }
-    if (old.expires_at <= t) return invalid()
-
-    const user = getUser(db, old.user_id)
-    const device = db
-      .prepare('SELECT id FROM devices WHERE id = ? AND deleted_at IS NULL AND revoked_at IS NULL AND expires_at > ?')
-      .get(old.device_id, t)
-    if (!user || user.active !== 1 || !device) {
-      revokeUserSessions(db, t, old.user_id)
+      ).run(t, t, prev.user_id, prev.device_id)
+      writeAudit(db, t, { actorId: prev.user_id, action: 'refresh.reuse', target: prev.id, ip: ip(c), meta: { deviceId: device.id } })
       return invalid()
     }
 
-    const rotated = db.transaction(() => {
-      const res = db
-        .prepare('UPDATE sessions SET revoked_at = ?, updated_at = ? WHERE id = ? AND revoked_at IS NULL')
-        .run(t, t, old.id)
-      if (res.changes !== 1) return undefined
-      return createSession(deps, user.id, old.device_id)
-    })()
-    if (!rotated) return invalid()
+    if (cur.device_id !== device.id) return mismatch(cur)
+    if (cur.revoked_at !== null) return invalid()
+    if (cur.expires_at <= t || cur.absolute_expires_at <= t) return invalid()
 
-    writeAudit(db, t, { actorId: user.id, action: 'refresh', target: rotated.id, ip: ip(c) })
-    return c.json(await issueTokens(deps, user, old.device_id, rotated.id, rotated.refreshToken))
+    const user = getUser(db, cur.user_id)
+    if (!user || user.active !== 1) {
+      revokeUserSessions(db, t, cur.user_id)
+      return invalid()
+    }
+
+    const refreshToken = newOpaqueToken()
+    const rotated = db
+      .prepare(
+        `UPDATE sessions SET prev_refresh_hash = refresh_hash, refresh_hash = ?, rotated_at = ?, expires_at = ?, updated_at = ?
+         WHERE id = ? AND refresh_hash = ? AND revoked_at IS NULL`,
+      )
+      .run(sha256Hex(refreshToken), t, Math.min(t + config.refreshTtlMs, cur.absolute_expires_at), t, cur.id, hash)
+    if (rotated.changes !== 1) return invalid()
+
+    // Todo lo anterior es sincrono: dos peticiones con el mismo token no se intercalan, y la segunda
+    // entra por la rama de gracia. La promesa se guarda antes de esperar la firma del access token.
+    const response = issueTokens(deps, user, cur.device_id, cur.id, refreshToken)
+    grace.set(hash, response)
+    writeAudit(db, t, { actorId: user.id, action: 'refresh', target: cur.id, ip: ip(c) })
+    return c.json(await response)
   })
 
-  app.post('/v1/logout', async (c) => {
+  app.post('/v1/logout', deviceAuth(deps), async (c) => {
     const body = await parseJson(c, refreshSchema)
+    const device = c.get('device')
     const t = now()
+    const hash = sha256Hex(body.refreshToken)
+    // Tambien vale el refresh anterior (otra pestana pudo rotar justo antes).
     const s = db
-      .prepare('SELECT id, user_id FROM sessions WHERE refresh_hash = ? AND revoked_at IS NULL')
-      .get(sha256Hex(body.refreshToken)) as { id: string; user_id: string } | undefined
+      .prepare('SELECT id, user_id, device_id FROM sessions WHERE (refresh_hash = ? OR prev_refresh_hash = ?) AND revoked_at IS NULL')
+      .get(hash, hash) as { id: string; user_id: string; device_id: string } | undefined
+    if (s && s.device_id !== device.id) {
+      writeAudit(db, t, { actorId: s.user_id, action: 'refresh.device_mismatch', target: s.id, ip: ip(c), meta: { deviceId: device.id } })
+      return fail(c, 401, 'invalid_token', 'Sesion invalida')
+    }
     if (s) {
       db.prepare('UPDATE sessions SET revoked_at = ?, updated_at = ? WHERE id = ?').run(t, t, s.id)
       writeAudit(db, t, { actorId: s.user_id, action: 'logout', target: s.id, ip: ip(c) })

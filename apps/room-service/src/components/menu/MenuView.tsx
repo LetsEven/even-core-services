@@ -7,14 +7,10 @@ import RestaurantDetailCard, {
 import RestaurantIntro from "./RestaurantIntro";
 import {
   CategoryTabs,
-  MenuFab,
+  FabDock,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
-  MenuActionsModal,
-  PillButton,
-  PillCartButton,
-  PillPepperButton,
   UserAvatar as SharedUserAvatar,
   setMenuCategory,
   takeMenuPosition,
@@ -25,7 +21,7 @@ import {
 import PepperIcon from "../UI/PepperIcon";
 import LanguageToggleButton from "../UI/LanguageToggleButton";
 import MenuCategory from "./MenuCategory";
-import { X, RefreshCw, Loader2, Utensils } from "lucide-react";
+import { X, RefreshCw, Loader2, Utensils, ShoppingCart } from "lucide-react";
 import {
   useState,
   useMemo,
@@ -621,18 +617,6 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
         </div>
       </main>
 
-      {/* Botón flotante: hamburguesa; con artículos se vuelve verde y muestra el carrito */}
-      <MenuFab
-        open={menuOpenByUser}
-        onToggle={() => setMenuOpenByUser((open) => !open)}
-        count={totalItems}
-        countLabel={(count) => t("fabCountLabel", { count })}
-        hidden={
-          showDetail || introActive || showPepperChat || showSettingsModal
-        }
-        labels={{ open: t("openMenu"), close: t("closeMenu") }}
-      />
-
       {/* Status Modal */}
       {showStatusModal && activeOrder && (
         <>
@@ -853,44 +837,56 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
         </>
       )}
 
-      <MenuActionsModal
+      {/* Menú flotante: hamburguesa que despliega botones sueltos (sin píldora) */}
+      <FabDock
         open={pillVisible}
+        onToggle={() => setMenuOpenByUser((open) => !open)}
         onClose={closeActionsMenu}
-        label={t("menuLabel")}
-      >
-        <PillButton
-          onClick={() => {
-            closeActionsMenu();
-            handleSettingsClick();
-          }}
-          aria-label={t("profileAlt")}
-          clip
-        >
-          <UserAvatar
-            isAuthenticated={isAuthenticated}
-            profile={profile}
-            iconSize="size-6 md:size-7"
-            textSize="text-base md:text-lg"
-          />
-        </PillButton>
-        <PillCartButton
-          onClick={() => {
-            closeActionsMenu();
-            handleCartClick();
-          }}
-          count={state.totalItems}
-          aria-label={t("viewCart", { count: state.totalItems })}
-        />
-        <PillPepperButton
-          onClick={() => {
-            closeActionsMenu();
-            handlePepperClick();
-          }}
-          aria-label={t("pepperLabel")}
-        >
-          <PepperIcon />
-        </PillPepperButton>
-      </MenuActionsModal>
+        count={state.totalItems}
+        countLabel={(count) => t("fabCountLabel", { count })}
+        hidden={showDetail || introActive || showPepperChat || showSettingsModal}
+        menuLabel={t("menuLabel")}
+        labels={{ open: t("openMenu"), close: t("closeMenu") }}
+        items={[
+          {
+            id: "profile",
+            label: t("profileAlt"),
+            clip: true,
+            icon: (
+              <UserAvatar
+                isAuthenticated={isAuthenticated}
+                profile={profile}
+                iconSize="size-6 md:size-7"
+                textSize="text-base md:text-lg"
+              />
+            ),
+            onClick: () => {
+              closeActionsMenu();
+              handleSettingsClick();
+            },
+          },
+          {
+            id: "cart",
+            label: t("viewCart", { count: state.totalItems }),
+            count: state.totalItems,
+            icon: <ShoppingCart className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              handleCartClick();
+            },
+          },
+          {
+            id: "pepper",
+            label: t("pepperLabel"),
+            clip: true,
+            icon: <PepperIcon />,
+            onClick: () => {
+              closeActionsMenu();
+              handlePepperClick();
+            },
+          },
+        ]}
+      />
 
       {/* Bienvenida al cargar la página */}
       {introActive && (

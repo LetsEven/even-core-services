@@ -21,15 +21,10 @@ import RestaurantDetailCard, {
 import RestaurantIntro from "@/app/components/RestaurantIntro";
 import {
   CategoryTabs,
-  MenuFab,
+  FabDock,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
-  MenuActionsModal,
-  PillButton,
-  PillCartButton,
-  PillOrderButton,
-  PillPepperButton,
   UserAvatar as SharedUserAvatar,
   setMenuCategory,
   takeMenuPosition,
@@ -41,7 +36,7 @@ import MenuCategory from "@/app/components/MenuCategory";
 import PepperIcon from "@/app/components/UI/PepperIcon";
 import ErrorScreen from "@/app/components/ErrorScreen";
 import Loader from "@/app/components/UI/Loader";
-import { RefreshCw, X, Utensils, Loader2 } from "lucide-react";
+import { RefreshCw, X, Utensils, Loader2, ShoppingCart, ReceiptText } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { useCart } from "@/app/context/CartContext";
@@ -512,68 +507,66 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
         </div>
       </main>
 
-      {/* Botón flotante: hamburguesa; con artículos se vuelve verde y muestra el carrito */}
-      <MenuFab
-        open={menuOpenByUser}
-        onToggle={() => setMenuOpenByUser((open) => !open)}
-        count={totalItems}
-        countLabel={(count) => t("fabCountLabel", { count })}
-        hidden={
-          showDetail || introActive || showPepperChat || showSettingsModal
-        }
-        labels={{ open: t("openMenu"), close: t("closeMenu") }}
-      />
-
-      <MenuActionsModal
+      {/* Menú flotante: hamburguesa que despliega botones sueltos (sin píldora) */}
+      <FabDock
         open={pillVisible}
+        onToggle={() => setMenuOpenByUser((open) => !open)}
         onClose={closeActionsMenu}
-        label={t("menuLabel")}
-      >
-        <PillButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowSettingsModal(true);
-          }}
-          aria-label={t("profileAlt")}
-          clip
-        >
-          <UserAvatar
-            isAuthenticated={isAuthenticated}
-            profile={profile}
-            iconSize="size-6 md:size-7"
-            textSize="text-base md:text-lg"
-          />
-        </PillButton>
-        <PillCartButton
-          onClick={() => {
-            closeActionsMenu();
-            navigateWithTable("/cart");
-          }}
-          count={cartState.totalItems}
-          aria-label={t("viewCart", { count: cartState.totalItems })}
-        />
-        <PillOrderButton
-          onClick={() => {
-            closeActionsMenu();
-            navigateWithTable("/order");
-          }}
-          count={
-            Array.isArray(tableState.dishOrders)
-              ? tableState.dishOrders.length
-              : 0
-          }
-          aria-label={t("orderStatus")}
-        />
-        <PillPepperButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowPepperChat(true);
-          }}
-          aria-label={t("pepperLabel")}
-        >
-          <PepperIcon />
-        </PillPepperButton>
-      </MenuActionsModal>
+        count={cartState.totalItems}
+        countLabel={(count) => t("fabCountLabel", { count })}
+        hidden={showDetail || introActive || showPepperChat || showSettingsModal}
+        menuLabel={t("menuLabel")}
+        labels={{ open: t("openMenu"), close: t("closeMenu") }}
+        items={[
+          {
+            id: "profile",
+            label: t("profileAlt"),
+            clip: true,
+            icon: (
+              <UserAvatar
+                isAuthenticated={isAuthenticated}
+                profile={profile}
+                iconSize="size-6 md:size-7"
+                textSize="text-base md:text-lg"
+              />
+            ),
+            onClick: () => {
+              closeActionsMenu();
+              setShowSettingsModal(true);
+            },
+          },
+          {
+            id: "cart",
+            label: t("viewCart", { count: cartState.totalItems }),
+            count: cartState.totalItems,
+            icon: <ShoppingCart className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              navigateWithTable("/cart");
+            },
+          },
+          {
+            id: "order",
+            label: t("orderStatus"),
+            count: Array.isArray(tableState.dishOrders) ? tableState.dishOrders.length : 0,
+            icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              navigateWithTable("/order");
+            },
+          },
+          {
+            id: "pepper",
+            label: t("pepperLabel"),
+            clip: true,
+            icon: <PepperIcon />,
+            onClick: () => {
+              closeActionsMenu();
+              setShowPepperChat(true);
+            },
+          },
+        ]}
+      />
 
       {/* Bienvenida al cargar la página */}
       {introActive && (

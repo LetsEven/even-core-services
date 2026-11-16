@@ -19,14 +19,10 @@ import RestaurantDetailCard, {
 import RestaurantIntro from "./RestaurantIntro";
 import {
   CategoryTabs,
-  MenuFab,
+  FabDock,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
-  MenuActionsModal,
-  PillButton,
-  PillCartButton,
-  PillPepperButton,
   UserAvatar as SharedUserAvatar,
   setMenuCategory,
   takeMenuPosition,
@@ -35,14 +31,7 @@ import {
   useScrollLock,
 } from "@even/ui";
 import MenuCategory from "./MenuCategory";
-import {
-  X,
-  RefreshCw,
-  Utensils,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { X, RefreshCw, Utensils, Loader2, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { useUserData } from "../../context/userDataContext";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
 import { useCart } from "../../context/CartContext";
@@ -604,56 +593,56 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
         </div>
       </main>
 
-      {/* Botón flotante: hamburguesa; con artículos se vuelve verde y muestra el carrito */}
-      <MenuFab
-        open={menuOpenByUser}
+      {/* Menú flotante: hamburguesa que despliega botones sueltos (sin píldora) */}
+      <FabDock
+        open={pillVisible}
         onToggle={() => setMenuOpenByUser((open) => !open)}
+        onClose={closeActionsMenu}
         count={totalItems}
         countLabel={(count) => t("fabCountLabel", { count })}
-        hidden={
-          showDetail || introActive || showPepperChat || showSettingsModal
-        }
+        hidden={showDetail || introActive || showPepperChat || showSettingsModal}
+        menuLabel={t("menuLabel")}
         labels={{ open: t("openMenu"), close: t("closeMenu") }}
+        items={[
+          {
+            id: "profile",
+            label: t("profileAlt"),
+            clip: true,
+            icon: (
+              <UserAvatar
+                isAuthenticated={isAuthenticated}
+                profile={profile}
+                iconSize="size-6 md:size-7"
+                textSize="text-base md:text-lg"
+              />
+            ),
+            onClick: () => {
+              closeActionsMenu();
+              setShowSettingsModal(true);
+            },
+          },
+          {
+            id: "cart",
+            label: t("viewCart", { count: totalItems }),
+            count: totalItems,
+            icon: <ShoppingCart className="size-5 md:size-6" strokeWidth={1.5} />,
+            onClick: () => {
+              closeActionsMenu();
+              navigateWithTable("/cart");
+            },
+          },
+          {
+            id: "pepper",
+            label: t("pepperLabel"),
+            clip: true,
+            icon: <PepperIcon />,
+            onClick: () => {
+              closeActionsMenu();
+              setShowPepperChat(true);
+            },
+          },
+        ]}
       />
-
-      <MenuActionsModal
-        open={pillVisible}
-        onClose={closeActionsMenu}
-        label={t("menuLabel")}
-      >
-        <PillButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowSettingsModal(true);
-          }}
-          aria-label={t("profileAlt")}
-          clip
-        >
-          <UserAvatar
-            isAuthenticated={isAuthenticated}
-            profile={profile}
-            iconSize="size-6 md:size-7"
-            textSize="text-base md:text-lg"
-          />
-        </PillButton>
-        <PillCartButton
-          onClick={() => {
-            closeActionsMenu();
-            navigateWithTable("/cart");
-          }}
-          count={totalItems}
-          aria-label={t("viewCart", { count: totalItems })}
-        />
-        <PillPepperButton
-          onClick={() => {
-            closeActionsMenu();
-            setShowPepperChat(true);
-          }}
-          aria-label={t("pepperLabel")}
-        >
-          <PepperIcon />
-        </PillPepperButton>
-      </MenuActionsModal>
 
       {/* Bienvenida al cargar la página */}
       {introActive && (

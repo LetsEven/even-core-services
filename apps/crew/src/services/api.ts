@@ -147,6 +147,8 @@ export interface Branch {
   max_pending_orders?: number | null;
   tap_pay_print?: boolean;
   services?: string[];
+  // Ajustes operativos de la sucursal (ver features/config/crewConfig.ts).
+  crew_config?: unknown;
 }
 
 export async function getBranches(token: string): Promise<Branch[]> {

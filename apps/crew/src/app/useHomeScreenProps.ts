@@ -1,7 +1,7 @@
 import type { HomeScreenProps } from "../services/homeScreenShared";
 import { useSession } from "./session/context";
 
-// Arma las props de las pantallas principales (Kitchen/SpatialGrid) desde la sesión.
+// Arma las props de las pantallas principales (Cocina) desde la sesión.
 export function useHomeScreenProps(): HomeScreenProps {
   const s = useSession();
   return {

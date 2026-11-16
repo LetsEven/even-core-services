@@ -7,7 +7,7 @@ import { usePrinting } from "../../hooks/usePrinting";
 import { useKitchenOrders } from "../../hooks/useKitchenOrders";
 import { getBranches, getWaiters } from "../../services/api";
 import type { Branch } from "../../services/api";
-import type { DishStatus, OrderType } from "../../types";
+import type { DishStatus } from "../../types";
 import { getOrCreateDeviceId } from "../../utils/deviceId";
 import { getActiveOrderTypes } from "../../services/serviceMapping";
 import NewOrderToasts, { type OrderNotif } from "../../components/NewOrderToasts";
@@ -19,6 +19,7 @@ import { useClearAppBadge } from "../../hooks/useClearAppBadge";
 import { isTauri } from "../../lib/platform";
 import { playNotificationSound } from "../../lib/sound";
 import { syncWebPushToken } from "../../lib/webPush";
+import { resolveCrewConfig } from "../../features/config/crewConfig";
 import { SessionContext, type SessionValue } from "./context";
 
 const APP_LABEL = import.meta.env.VITE_APP_LABEL || "Even Crew";
@@ -94,14 +95,8 @@ export default function SessionProvider({
   );
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
-  // Solo relevante si la sucursal tiene 2+ servicios activos (caso raro) —
-  // ver ServiceSwitcher. Si el valor guardado ya no está entre los activos
-  // (cambio de sucursal, o el servicio se dio de baja), se recalcula abajo.
-  const [selectedOrderType, setSelectedOrderType] = useState<OrderType | null>(
-    null,
-  );
   // Lista de meseros de la sucursal (Soft Restaurant) — vive a nivel App
-  // para que la compartan Kitchen y SpatialGrid, y para armar la sesión de
+  // para que la compartan Kitchen y Mesas, y para armar la sesión de
   // mesero por dispositivo (ver useWaiterSession).
   const [availableWaiters, setAvailableWaiters] = useState<
     { id: string; name: string }[]
@@ -299,7 +294,7 @@ export default function SessionProvider({
     }
 
     // Toast solo para Pick & Go — los demás servicios ya avisan "nuevo/no
-    // visto" con el pulse del croquis (SpatialGrid), así que un toast
+    // visto" con el pulse del croquis (Mesas), así que un toast
     // aparte sería ruido duplicado. Pick & Go es lista simple, sin pulse.
     const newOnes = fetched.filter(
       (o) =>
@@ -387,13 +382,10 @@ export default function SessionProvider({
     () => getActiveOrderTypes(currentBranch?.services),
     [currentBranch?.services],
   );
-  // Si hay 2+ servicios, usa la selección del switcher (si sigue siendo
-  // válida para esta sucursal); si no, o si solo hay 1, toma el primero.
-  // Fallback a Pick & Go si no hay servicio mapeable.
-  const resolvedOrderType: OrderType =
-    (selectedOrderType && activeOrderTypes.includes(selectedOrderType)
-      ? selectedOrderType
-      : activeOrderTypes[0]) ?? "pick_and_go";
+  const crewConfig = useMemo(
+    () => resolveCrewConfig(currentBranch?.crew_config),
+    [currentBranch?.crew_config],
+  );
 
   const value: SessionValue = {
     deviceId,
@@ -403,8 +395,7 @@ export default function SessionProvider({
     currentBranch,
     changeBranch,
     activeOrderTypes,
-    resolvedOrderType,
-    setSelectedOrderType,
+    crewConfig,
     availableWaiters,
     waiterSession,
     requireWaiterLogin: requireLogin,

@@ -1,6 +1,8 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useContext, useEffect, useRef, useMemo } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "../../lib/auth";
+import { LocalAuthContext } from "../../lib/auth/localContext";
+import { pickLocalBranch, scopeBranches } from "./branchScope";
 import { useSocket } from "../../hooks/useSocket";
 import type { CrewDevice } from "../../hooks/useSocket";
 import { usePrinting } from "../../hooks/usePrinting";
@@ -87,11 +89,18 @@ export default function SessionProvider({
 }: {
   children: ReactNode;
 }) {
-  const { status, getToken } = useAuth();
+  const { status, getToken, kind, user } = useAuth();
   const isSignedIn = status === "signedIn";
-  const [branchId, setBranchId] = useState<string | null>(() =>
-    localStorage.getItem("crew_branch_id"),
+  // Modo local: la sucursal es la del dispositivo emparejado (ver branchScope).
+  const localCtx = useContext(LocalAuthContext);
+  const localMode = kind === "local";
+  const deviceBranchId = localMode ? (localCtx?.branchId ?? null) : null;
+  const isSuper = user?.role === "super";
+  const branchFixed = localMode && !isSuper;
+  const [branchState, setBranchId] = useState<string | null>(() =>
+    localMode ? deviceBranchId : localStorage.getItem("crew_branch_id"),
   );
+  const branchId = branchFixed ? deviceBranchId : branchState;
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   // Solo relevante si la sucursal tiene 2+ servicios activos (caso raro) —
@@ -172,6 +181,23 @@ export default function SessionProvider({
         if (!token) throw new Error("Token no disponible todavía");
         const list = await getBranches(token);
         if (cancelled) return;
+        if (localMode) {
+          const allowed = scopeBranches(list, deviceBranchId, isSuper);
+          setBranches(allowed);
+          if (!branchFixed) {
+            setBranchId((prev) => {
+              const chosen = pickLocalBranch(
+                allowed,
+                deviceBranchId,
+                prev,
+                localStorage.getItem("crew_branch_id"),
+              );
+              return chosen;
+            });
+          }
+          setBranchesLoading(false);
+          return;
+        }
         setBranches(list);
         // Auto-seleccionar sucursal por defecto en el primer login: conserva
         // la guardada si sigue siendo válida, si no usa la primera. Evita que
@@ -202,7 +228,7 @@ export default function SessionProvider({
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, getToken, localMode, deviceBranchId, isSuper, branchFixed]);
 
   useEffect(() => {
     if (!isSignedIn || !branchId) {
@@ -218,6 +244,9 @@ export default function SessionProvider({
   }, [isSignedIn, branchId, getToken]);
 
   const changeBranch = useCallback((id: string) => {
+    if (branchFixed) return;
+    // En local solo se cambia entre las sucursales permitidas.
+    if (localMode && !branches.some((b) => b.id === id)) return;
     setBranchId((prev) => {
       if (id !== prev) {
         setConnectedDevices([]);
@@ -226,7 +255,7 @@ export default function SessionProvider({
       return id;
     });
     localStorage.setItem("crew_branch_id", id);
-  }, []);
+  }, [branchFixed, localMode, branches]);
 
   // Hooks que deben vivir toda la sesión (independiente de la página activa)
   const {

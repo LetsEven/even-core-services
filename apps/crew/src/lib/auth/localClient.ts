@@ -168,11 +168,16 @@ function userOf(body: unknown): unknown {
   return isObj(body) ? body.user : bad();
 }
 
+/** Tiempo maximo de cada llamada al servicio (conexion + cuerpo). */
+export const REQUEST_TIMEOUT_MS = 15_000;
+
 export function createLocalClient(opts: {
   baseUrl: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }): LocalClient {
   const base = opts.baseUrl.replace(/\/+$/, "");
+  const timeoutMs = opts.timeoutMs ?? REQUEST_TIMEOUT_MS;
 
   async function call(
     method: string,
@@ -183,27 +188,41 @@ export function createLocalClient(opts: {
     if (o.bearer) headers.Authorization = `Bearer ${o.bearer}`;
     if (o.device) headers["X-Device-Token"] = o.device;
     if (o.body !== undefined) headers["Content-Type"] = "application/json";
-    let res: Response;
+    // Timeout con AbortController. Ademas se compite contra la senal para que
+    // venza aunque la implementacion de fetch la ignore (o el cuerpo se cuelgue).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const aborted = new Promise<never>((_, reject) => {
+      ctrl.signal.addEventListener("abort", () => reject(new Error("timeout")));
+    });
+    aborted.catch(() => {});
     try {
       // fetch global resuelto en cada llamada (no al crear el cliente) para
       // respetar el wrapper de fetch si algun dia se instala.
-      res = await (opts.fetchImpl ?? fetch)(`${base}${path}`, {
-        method,
-        headers,
-        body: o.body === undefined ? undefined : JSON.stringify(o.body),
-      });
-    } catch {
-      throw new CrewAuthError(0);
-    }
-    if (!res.ok) {
-      const ra = Number(res.headers.get("Retry-After"));
-      throw new CrewAuthError(res.status, Number.isFinite(ra) && ra > 0 ? ra : null);
-    }
-    if (res.status === 204) return null;
-    try {
-      return await res.json();
-    } catch {
-      return null;
+      const res = await Promise.race([
+        (opts.fetchImpl ?? fetch)(`${base}${path}`, {
+          method,
+          headers,
+          body: o.body === undefined ? undefined : JSON.stringify(o.body),
+          signal: ctrl.signal,
+        }),
+        aborted,
+      ]);
+      if (!res.ok) {
+        const ra = Number(res.headers.get("Retry-After"));
+        throw new CrewAuthError(res.status, Number.isFinite(ra) && ra > 0 ? ra : null);
+      }
+      if (res.status === 204) return null;
+      try {
+        return await Promise.race([res.json(), aborted]);
+      } catch {
+        return null;
+      }
+    } catch (e) {
+      if (e instanceof CrewAuthError) throw e;
+      throw new CrewAuthError(0); // red o timeout: transitorio
+    } finally {
+      clearTimeout(timer);
     }
   }
 

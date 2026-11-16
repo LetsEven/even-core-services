@@ -154,19 +154,8 @@ export default function KitchenBoard({
 
   const selected = orders.find((o) => o.id === selectedId) ?? null;
 
-  if (orders.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-lg font-medium uppercase tracking-wider text-even-evergreen">
-          Sin órdenes pendientes
-        </p>
-        <p className="text-xs uppercase tracking-widest text-even-evergreen/60">
-          Todas las órdenes han sido entregadas
-        </p>
-      </div>
-    );
-  }
-
+  // Sin órdenes se conserva el tablero (Preparando / Listo / Entregado) con
+  // cada columna vacía y su mensaje, en vez de una pantalla en blanco.
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Móvil: pestañas por columna */}

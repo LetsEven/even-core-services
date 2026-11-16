@@ -253,6 +253,7 @@ describe('permisos por rol en endpoints admin', () => {
       ['PATCH', `/v1/users/${h.superId}`, { name: 'N' }],
       ['DELETE', `/v1/users/${h.superId}`],
       ['POST', `/v1/users/${h.superId}/reset-pin`, { pin: '1234' }],
+      ['POST', `/v1/users/${h.superId}/unlock`],
       ['GET', '/v1/audit'],
       ['GET', '/v1/admin/users'],
       ['POST', '/v1/devices/pairing-codes', {}],

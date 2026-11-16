@@ -2,6 +2,12 @@ import { CrewAuthError } from "../../lib/auth/localClient";
 
 export const PIN_MIN = 4;
 export const PIN_MAX = 8;
+/** El super (administra todo el restaurante) exige 6 digitos como minimo. */
+export const PIN_MIN_SUPER = 6;
+
+export function pinMinFor(role: string): number {
+  return role === "super" ? PIN_MIN_SUPER : PIN_MIN;
+}
 /** Mismo umbral y espera que el servicio (5 fallos, 15 min). */
 export const MAX_FAILURES = 5;
 export const DEFAULT_LOCKOUT_S = 15 * 60;
@@ -10,8 +16,8 @@ export function appendDigit(pin: string, digit: string): string {
   return /^\d$/.test(digit) && pin.length < PIN_MAX ? pin + digit : pin;
 }
 
-export function isValidPin(pin: string): boolean {
-  return /^\d+$/.test(pin) && pin.length >= PIN_MIN && pin.length <= PIN_MAX;
+export function isValidPin(pin: string, min: number = PIN_MIN): boolean {
+  return /^\d+$/.test(pin) && pin.length >= min && pin.length <= PIN_MAX;
 }
 
 export function formatCountdown(totalSeconds: number): string {

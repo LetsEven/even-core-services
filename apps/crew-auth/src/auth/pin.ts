@@ -1,7 +1,13 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
+import type { Role } from './roles.js'
 
+/** PIN de uso general (login y roles no-super): 4 a 8 digitos. */
 export const pinSchema = z.string().regex(/^\d{4,8}$/, 'El PIN debe tener de 4 a 8 digitos')
+/** El super administra todo el restaurante: minimo 6 digitos. */
+export const superPinSchema = z.string().regex(/^\d{6,8}$/, 'El PIN de un super debe tener de 6 a 8 digitos')
+
+export const pinSchemaFor = (role: Role) => (role === 'super' ? superPinSchema : pinSchema)
 
 const KEY_LEN = 64
 const SCRYPT_OPTS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }

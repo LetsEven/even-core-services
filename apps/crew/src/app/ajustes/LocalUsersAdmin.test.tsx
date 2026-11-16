@@ -107,6 +107,39 @@ describe("administracion de usuarios locales", () => {
     expect(await screen.findByText("K7Q2XMAB")).toBeTruthy();
   });
 
+  it("super exige 6 digitos; no se ofrece promover a super; desbloquea a un usuario bloqueado", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        users: [
+          { ...adminUser("u1", "Ana", "mesero"), lockedUntil: 1_900_000_000_000 },
+          adminUser("s2", "Socio", "super"),
+          adminUser("me", "Gerente", "super"),
+        ],
+      }),
+    );
+    mountAdmin();
+    expect(await screen.findByText("Bloqueado")).toBeTruthy();
+    const anaRoles = [...(screen.getByLabelText("Rol de Ana") as HTMLSelectElement).options].map((o) => o.value);
+    expect(anaRoles).not.toContain("super");
+    const socioRoles = [...(screen.getByLabelText("Rol de Socio") as HTMLSelectElement).options].map((o) => o.value);
+    expect(socioRoles).toContain("super");
+
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fireEvent.click(screen.getByRole("button", { name: /Desbloquear/ }));
+    await waitFor(() => expect(screen.queryByText("Bloqueado")).toBeNull());
+    expect(fetchMock.mock.calls[1][0]).toBe("https://auth.test/v1/users/u1/unlock");
+    expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+
+    // Nuevo usuario con rol super: 5 digitos no alcanzan, 6 si.
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Nuevo" } });
+    fireEvent.change(screen.getByLabelText("Rol"), { target: { value: "super" } });
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "12345" } });
+    const create = screen.getByRole("button", { name: /Crear usuario/ }) as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "123456" } });
+    expect(create.disabled).toBe(false);
+  });
+
   it("un PIN invalido no se envia", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ users: [] }));
     mountAdmin();

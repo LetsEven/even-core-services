@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { applyFailure, reserveAttempt, resetOnSuccess } from '../auth/lockout.js'
 import { burnPinVerification, pinSchema, verifyPin } from '../auth/pin.js'
 import { permissionsFor } from '../auth/roles.js'
 import { newOpaqueToken, sha256Hex } from '../auth/tokens.js'
@@ -93,25 +94,42 @@ export function sessionRoutes(deps: Deps) {
       const t = now()
       const user = getUser(db, body.userId)
       const eligible = user !== undefined && user.active === 1 && user.branch_id === device.branchId
-      const locked = eligible && user.locked_until !== null && user.locked_until > t
       const generic = () => fail(c, 401, 'invalid_credentials', 'Credenciales invalidas')
 
-      if (!eligible || locked) {
+      if (!eligible) {
         await burnPinVerification(body.pin)
         writeAudit(db, t, {
           actorId: user?.id ?? null,
-          action: locked ? 'login.blocked' : 'login.fail',
+          action: 'login.fail',
           target: body.userId,
           ip: ip(c),
-          meta: { deviceId: device.id, reason: locked ? 'locked' : 'unknown_or_inactive' },
+          meta: { deviceId: device.id, reason: 'unknown_or_inactive' },
         })
+        return generic()
+      }
+
+      // Reserva atomica del intento antes de scrypt; si el ciclo esta agotado o hay bloqueo vigente,
+      // se responde igual de generico sin verificar el PIN.
+      const reserved = reserveAttempt(db, config, user.id, device.id, t)
+      if (!reserved.ok) {
+        await burnPinVerification(body.pin)
+        const recent = db
+          .prepare("SELECT 1 AS x FROM audit_log WHERE action = 'login.blocked' AND target = ? AND at > ? LIMIT 1")
+          .get(user.id, t - 60_000)
+        if (!recent) {
+          writeAudit(db, t, {
+            actorId: user.id,
+            action: 'login.blocked',
+            target: user.id,
+            ip: ip(c),
+            meta: { deviceId: device.id, scope: reserved.scope },
+          })
+        }
         return generic()
       }
 
       const ok = await verifyPin(body.pin, user.pin_hash, user.pin_salt)
       if (!ok) {
-        db.prepare('UPDATE users SET failed_attempts = failed_attempts + 1, updated_at = ? WHERE id = ?').run(t, user.id)
-        const after = db.prepare('SELECT failed_attempts FROM users WHERE id = ?').get(user.id) as { failed_attempts: number }
         writeAudit(db, t, {
           actorId: user.id,
           action: 'login.fail',
@@ -119,24 +137,19 @@ export function sessionRoutes(deps: Deps) {
           ip: ip(c),
           meta: { deviceId: device.id, reason: 'bad_pin' },
         })
-        if (after.failed_attempts >= config.maxFailedAttempts) {
-          db.prepare('UPDATE users SET locked_until = ?, failed_attempts = 0, updated_at = ? WHERE id = ?').run(
-            t + config.lockoutMs,
-            t,
-            user.id,
-          )
+        for (const lock of applyFailure(db, config, user.id, device.id, reserved.reservation, t)) {
           writeAudit(db, t, {
             actorId: user.id,
             action: 'user.locked',
             target: user.id,
             ip: ip(c),
-            meta: { until: t + config.lockoutMs },
+            meta: { scope: lock.scope, until: lock.until, lockCount: lock.lockCount, deviceId: device.id },
           })
         }
         return generic()
       }
 
-      db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?').run(t, user.id)
+      resetOnSuccess(db, user.id, device.id, t)
       // Renueva la vigencia del token de dispositivo con cada login exitoso.
       db.prepare('UPDATE devices SET expires_at = ?, updated_at = ? WHERE id = ?').run(t + config.deviceTtlMs, t, device.id)
       const s = createSession(deps, user.id, device.id)

@@ -64,6 +64,8 @@ export interface AdminUser {
   active: boolean;
   branchId: string;
   cocinaOperar: boolean;
+  /** ms epoch hasta cuando esta bloqueado (global o en algun dispositivo), si lo esta. */
+  lockedUntil: number | null;
 }
 
 export interface PairingCode {
@@ -101,6 +103,8 @@ export interface LocalClient {
     patch: { name?: string; role?: Role; active?: boolean },
   ): Promise<AdminUser>;
   adminResetPin(accessToken: string, id: string, pin: string): Promise<void>;
+  /** Quita el bloqueo por intentos fallidos sin cambiar el PIN (POST /v1/users/:id/unlock). */
+  adminUnlockUser(accessToken: string, id: string): Promise<void>;
   adminCreatePairingCode(
     accessToken: string,
     branchId: string,
@@ -136,6 +140,7 @@ function parseAdminUser(v: unknown): AdminUser {
     active: v.active,
     branchId: str(v.branchId) ?? "",
     cocinaOperar: v.cocinaOperar === true,
+    lockedUntil: typeof v.lockedUntil === "number" ? v.lockedUntil : null,
   };
 }
 
@@ -293,6 +298,12 @@ export function createLocalClient(opts: {
       await call("POST", `/v1/users/${encodeURIComponent(id)}/reset-pin`, {
         bearer: accessToken,
         body: { pin },
+      });
+    },
+
+    async adminUnlockUser(accessToken, id) {
+      await call("POST", `/v1/users/${encodeURIComponent(id)}/unlock`, {
+        bearer: accessToken,
       });
     },
 

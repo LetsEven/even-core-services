@@ -39,9 +39,10 @@ describe('clave privada', () => {
 describe('create-super', () => {
   it('crea un super con PIN valido y rechaza uno invalido', async () => {
     const db = openDb(':memory:')
-    const r = await createSuperUser(db, { branchId: 'b1', name: 'Dueno', pin: '1234' })
+    const r = await createSuperUser(db, { branchId: 'b1', name: 'Dueno', pin: '123456' })
     const row = db.prepare('SELECT role, restaurant_id FROM users WHERE id = ?').get(r.id)
     expect(row).toEqual({ role: 'super', restaurant_id: 'b1' })
     await expect(createSuperUser(db, { branchId: 'b1', name: 'X', pin: '12' })).rejects.toThrow()
+    await expect(createSuperUser(db, { branchId: 'b1', name: 'X', pin: '12345' })).rejects.toThrow(/6 a 8/)
   })
 })

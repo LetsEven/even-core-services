@@ -15,6 +15,7 @@ export interface UserRow {
   cocina_operar: number
   failed_attempts: number
   locked_until: number | null
+  lock_count: number
   created_at: number
   updated_at: number
   deleted_at: number | null
@@ -34,7 +35,8 @@ export interface PublicUser {
   updatedAt: number
 }
 
-export function toPublicUser(u: UserRow): PublicUser {
+/** `lockedUntil`: el bloqueo vigente mas largo (global o de algun dispositivo), o null. */
+export function toPublicUser(u: UserRow, lockedUntil: number | null = u.locked_until): PublicUser {
   return {
     id: u.id,
     name: u.name,
@@ -43,10 +45,19 @@ export function toPublicUser(u: UserRow): PublicUser {
     restaurantId: u.restaurant_id,
     active: u.active === 1,
     cocinaOperar: u.cocina_operar === 1,
-    lockedUntil: u.locked_until,
+    lockedUntil,
     createdAt: u.created_at,
     updatedAt: u.updated_at,
   }
+}
+
+/** Bloqueo vigente de un usuario: el mayor entre el global y los de sus dispositivos. */
+export function activeLockUntil(db: Db, u: Pick<UserRow, 'id' | 'locked_until'>, now: number): number | null {
+  const dev = db
+    .prepare('SELECT MAX(locked_until) AS until FROM user_device_attempts WHERE user_id = ? AND locked_until > ?')
+    .get(u.id, now) as { until: number | null }
+  const all = [u.locked_until, dev.until].filter((x): x is number => x !== null && x > now)
+  return all.length ? Math.max(...all) : null
 }
 
 export function getUser(db: Db, id: string): UserRow | undefined {

@@ -55,12 +55,15 @@ Auth: `Authorization: Bearer <accessToken>` (JWT) y/o `X-Device-Token: <deviceTo
 | `POST /v1/devices/pairing-codes` | super | `{branchId?, deviceName?}` -> `{pairingCode, branchId, expiresAt}`. 10 min, un uso. |
 | `POST /v1/devices/pair` | - (rate limit por IP) | `{pairingCode, deviceName?}` -> `{deviceToken, branchId}`. |
 | `GET /v1/users?branchId=` | dispositivo | Selector: `{users:[{id,name,role}]}`. Nunca hashes. Solo la sucursal del dispositivo. |
-| `POST /v1/login` | dispositivo | `{userId, pin}` -> `{accessToken, refreshToken, expiresIn, user}`. Lockout a los 5 fallos (15 min), rate limit por IP y dispositivo (429). Error generico `invalid_credentials`. |
+| `POST /v1/login` | dispositivo | `{userId, pin}` -> `{accessToken, refreshToken, expiresIn, user}`. Lockout (ver abajo), rate limit por IP y dispositivo (429). Error generico `invalid_credentials`. Un login exitoso renueva la vigencia del token de dispositivo. |
 | `POST /v1/refresh` | - | `{refreshToken}` -> tokens nuevos. Rotativo (12 h); reusar uno viejo cierra las sesiones del dispositivo. |
 | `POST /v1/logout` | - | `{refreshToken}` -> `{ok:true}`. Revoca la sesion (y su access token). |
 | `POST /v1/users` | super | `{name, role, pin, branchId?, cocinaOperar?, id?}` |
 | `PATCH /v1/users/:id` | super | `{name?, role?, active?, cocinaOperar?, branchId?}` |
 | `POST /v1/users/:id/reset-pin` | super | `{pin}` (desbloquea y cierra sesiones) |
+| `POST /v1/users/:id/unlock` | super | Quita el bloqueo (global y de todos los dispositivos) sin cambiar el PIN. |
+| `GET /v1/devices` | super | Dispositivos vigentes del restaurante: `{devices:[{id,name,branchId,lastSeenAt,expiresAt,createdAt,current}]}`. Nunca el token. |
+| `DELETE /v1/devices/:id` | super | Revoca el dispositivo (solo de su restaurante) y todas sus sesiones. |
 | `DELETE /v1/users/:id` | super | Baja logica. |
 | `GET /v1/admin/users` | super | Listado completo (activos e inactivos) sin hashes. Extension al contrato. |
 | `GET /v1/audit?limit=&before=&action=` | super | Eventos recientes primero. |
@@ -71,7 +74,20 @@ Al rotar el refresh token se revoca la sesion anterior (y con ella su access tok
 
 Pruebas: `test/local.integration.test.ts` arranca esta app en un puerto efimero y la usa con `apps/crew/src/lib/auth/localClient.ts` y `localSession.ts`; `test/tsconfig.json` las tipa con resolucion `bundler` (el cliente usa imports sin extension).
 
-PIN: 4 a 8 digitos, scrypt con sal unica, comparacion en tiempo constante. Errores de validacion: `400 {error:"invalid_request"}`.
+PIN: 4 a 8 digitos (6 a 8 para el rol `super`), scrypt con sal unica, comparacion en tiempo constante. Errores de validacion: `400 {error:"invalid_request"}`. Al promover un usuario a super (`PATCH` con `role: "super"`) hay que enviar tambien un `pin` de 6+ digitos (no se conoce la longitud del actual).
+
+### Dispositivos
+
+El token de dispositivo vence a los 90 dias y se renueva con cada login exitoso en ese dispositivo (los que no se usan se caen solos). Un super puede revocar cualquier dispositivo de su restaurante: el token deja de valer y todas sus sesiones se cierran al instante (el access token tambien, por `sid`). Si un equipo se pierde o lo roban: Ajustes > Equipos vinculados > Revocar.
+
+### Lockout
+
+La reserva del intento es atomica y ocurre **antes** de verificar el PIN (con peticiones en paralelo no se prueban mas PIN de los permitidos): si el ciclo esta agotado o hay un bloqueo vigente se responde 401 generico sin verificar. Dos contadores:
+
+- por (usuario, dispositivo): 5 fallos por ciclo. Un dispositivo no bloquea al usuario en los demas.
+- por usuario (todos los dispositivos): 15 fallos por ciclo, contra el ataque repartido.
+
+Al agotar el ciclo se bloquea con backoff exponencial: 15 min, 30 min, 1 h, ... hasta 24 h. Los contadores **no se reinician al bloquear**: solo con un login exitoso (el del usuario y el de ese dispositivo), un reset de PIN o `unlock`. Cada bloqueo queda en el audit (`user.locked`, con `scope: device|user`, `until`, `lockCount`); los intentos contra un bloqueo vigente, como `login.blocked` (a lo mas uno por minuto y usuario). Limitacion conocida: un dispositivo hostil ya vinculado puede, tras tres ciclos (~45 min), agotar el umbral global del usuario; el super lo desbloquea (`unlock`).
 
 ## Despliegue en Railway (con volumen)
 

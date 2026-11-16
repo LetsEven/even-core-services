@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
-import { pinSchema } from '../auth/pin.js'
+import { superPinSchema } from '../auth/pin.js'
 import { loadConfig } from '../config.js'
 import { writeAudit } from '../db/audit.js'
 import { openDb } from '../db/index.js'
@@ -13,8 +13,8 @@ export async function createSuperUser(
   input: { branchId: string; restaurantId?: string; name: string; pin: string },
   now = Date.now(),
 ): Promise<{ id: string; branchId: string }> {
-  const pin = pinSchema.safeParse(input.pin)
-  if (!pin.success) throw new Error('El PIN debe tener de 4 a 8 digitos')
+  const pin = superPinSchema.safeParse(input.pin)
+  if (!pin.success) throw new Error('El PIN de un super debe tener de 6 a 8 digitos')
   const user = await insertUser(db, now, {
     branchId: input.branchId,
     restaurantId: input.restaurantId ?? input.branchId,
@@ -31,7 +31,7 @@ async function readPin(): Promise<string> {
   if (fromEnv) return fromEnv
   const stdin = process.stdin
   if (stdin.isTTY) {
-    process.stderr.write('PIN (4-8 digitos, no se muestra): ')
+    process.stderr.write('PIN (6-8 digitos, no se muestra): ')
     return new Promise((resolve) => {
       let buf = ''
       stdin.setRawMode(true)

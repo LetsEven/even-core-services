@@ -203,6 +203,21 @@ describe('crew-auth + cliente de Crew, extremo a extremo', () => {
     expect(await status(client.login(deviceToken, ctx.meseroId, '8765'))).toBe(401)
   })
 
+  it('el super ve el bloqueo y lo quita sin cambiar el PIN; el PIN de un super exige 6 digitos', async () => {
+    const token = (await ctx.auth.getToken())!
+    const { deviceToken } = stored<{ deviceToken: string }>(ctx.storage, DEVICE_KEY)
+    const locked = (await client.adminListUsers(token, BRANCH)).find((u) => u.id === ctx.meseroId)!
+    expect(locked.lockedUntil).toBeGreaterThan(Date.now())
+    expect(await status(client.login(deviceToken, ctx.meseroId, '8765'))).toBe(401)
+
+    await client.adminUnlockUser(token, ctx.meseroId)
+    expect((await client.adminListUsers(token, BRANCH)).find((u) => u.id === ctx.meseroId)?.lockedUntil).toBeNull()
+    expect(await status(client.login(deviceToken, ctx.meseroId, '8765'))).toBe(200)
+
+    expect(await status(client.adminCreateUser(token, { branchId: BRANCH, name: 'Socio', role: 'super', pin: '12345' }))).toBe(400)
+    expect(await status(client.adminCreateUser(token, { branchId: BRANCH, name: 'Socio', role: 'super', pin: '123456' }))).toBe(200)
+  })
+
   it('dispositivo desconocido: la lista y el login dan 401', async () => {
     expect(await status(client.listUsers('token-inexistente', BRANCH))).toBe(401)
     expect(await status(client.login('token-inexistente', ctx.superId, SUPER_PIN))).toBe(401)

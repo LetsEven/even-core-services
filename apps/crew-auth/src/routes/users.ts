@@ -1,9 +1,11 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { pinSchema, hashPin } from '../auth/pin.js'
+import { clearLockout } from '../auth/lockout.js'
+import { pinSchema, pinSchemaFor, hashPin } from '../auth/pin.js'
 import { ROLES } from '../auth/roles.js'
 import { writeAudit } from '../db/audit.js'
 import {
+  activeLockUntil,
   branchBelongsToRestaurant,
   countActiveSupers,
   getUser,
@@ -21,14 +23,22 @@ const roleSchema = z.enum(ROLES)
 const nameSchema = z.string().trim().min(1).max(80)
 const idSchema = z.string().min(1).max(64)
 
-const createSchema = z.object({
-  id: z.uuid().optional(),
-  name: nameSchema,
-  role: roleSchema,
-  pin: pinSchema,
-  branchId: idSchema.optional(),
-  cocinaOperar: z.boolean().optional(),
-})
+// El PIN se valida contra el rol (super: 6-8 digitos; el resto 4-8).
+const pinForRole = (v: { role: z.infer<typeof roleSchema>; pin: string }, ctx: z.RefinementCtx) => {
+  const r = pinSchemaFor(v.role).safeParse(v.pin)
+  if (!r.success) ctx.addIssue({ code: 'custom', path: ['pin'], message: r.error.issues[0]?.message ?? 'PIN invalido' })
+}
+
+const createSchema = z
+  .object({
+    id: z.uuid().optional(),
+    name: nameSchema,
+    role: roleSchema,
+    pin: pinSchema,
+    branchId: idSchema.optional(),
+    cocinaOperar: z.boolean().optional(),
+  })
+  .superRefine(pinForRole)
 const patchSchema = z
   .object({
     name: nameSchema,
@@ -36,6 +46,8 @@ const patchSchema = z
     active: z.boolean(),
     cocinaOperar: z.boolean(),
     branchId: idSchema,
+    // Obligatorio al promover a super (no se conoce la longitud del PIN actual).
+    pin: pinSchema,
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Sin cambios')
@@ -70,7 +82,8 @@ export function userRoutes(deps: Deps) {
     const rows = db
       .prepare('SELECT * FROM users WHERE restaurant_id = ? AND deleted_at IS NULL ORDER BY branch_id, name COLLATE NOCASE')
       .all(auth.restaurantId) as UserRow[]
-    return c.json({ users: rows.map(toPublicUser) })
+    const t = now()
+    return c.json({ users: rows.map((u) => toPublicUser(u, activeLockUntil(db, u, t))) })
   })
 
   app.post('/v1/users', superOnly, async (c) => {
@@ -106,6 +119,14 @@ export function userRoutes(deps: Deps) {
     const auth = c.get('auth')
     const target = loadTarget(c, c.req.param('id'), auth.restaurantId)
     const role = body.role ?? target.role
+    const promotes = role === 'super' && target.role !== 'super'
+    if (promotes && body.pin === undefined) {
+      return fail(c, 400, 'invalid_request', 'Al promover a super hay que fijar un PIN de 6 a 8 digitos')
+    }
+    if (body.pin !== undefined) {
+      const r = pinSchemaFor(role).safeParse(body.pin)
+      if (!r.success) return fail(c, 400, 'invalid_request', r.error.issues[0]?.message)
+    }
     const active = body.active ?? target.active === 1
     const branchId = body.branchId ?? target.branch_id
     if (branchId !== target.branch_id && !branchBelongsToRestaurant(db, branchId, auth.restaurantId)) {
@@ -120,8 +141,15 @@ export function userRoutes(deps: Deps) {
     db.prepare(
       `UPDATE users SET name = ?, role = ?, active = ?, cocina_operar = ?, branch_id = ?, updated_at = ? WHERE id = ?`,
     ).run(body.name ?? target.name, role, active ? 1 : 0, cocinaOperar ? 1 : 0, branchId, t, target.id)
+    if (body.pin !== undefined) {
+      const { hash, salt } = await hashPin(body.pin)
+      db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE id = ?').run(hash, salt, target.id)
+      clearLockout(db, target.id, t)
+    }
     // Cambio de rol, sucursal o baja: se cierran sus sesiones para que el nuevo alcance aplique ya.
-    if (role !== target.role || branchId !== target.branch_id || !active) revokeUserSessions(db, t, target.id)
+    if (role !== target.role || branchId !== target.branch_id || !active || body.pin !== undefined) {
+      revokeUserSessions(db, t, target.id)
+    }
     writeAudit(db, t, {
       actorId: auth.userId,
       action: 'user.update',
@@ -129,20 +157,32 @@ export function userRoutes(deps: Deps) {
       ip: ip(c),
       meta: { fields: Object.keys(body) },
     })
-    return c.json({ user: toPublicUser(getUser(db, target.id) as UserRow) })
+    const updated = getUser(db, target.id) as UserRow
+    return c.json({ user: toPublicUser(updated, activeLockUntil(db, updated, t)) })
   })
 
   app.post('/v1/users/:id/reset-pin', superOnly, async (c) => {
     const body = await parseJson(c, resetPinSchema)
     const auth = c.get('auth')
     const target = loadTarget(c, c.req.param('id'), auth.restaurantId)
+    const rule = pinSchemaFor(target.role).safeParse(body.pin)
+    if (!rule.success) return fail(c, 400, 'invalid_request', rule.error.issues[0]?.message)
     const { hash, salt } = await hashPin(body.pin)
     const t = now()
-    db.prepare(
-      'UPDATE users SET pin_hash = ?, pin_salt = ?, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?',
-    ).run(hash, salt, t, target.id)
+    db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ?, updated_at = ? WHERE id = ?').run(hash, salt, t, target.id)
+    clearLockout(db, target.id, t)
     revokeUserSessions(db, t, target.id)
     writeAudit(db, t, { actorId: auth.userId, action: 'user.reset_pin', target: target.id, ip: ip(c) })
+    return c.json({ ok: true })
+  })
+
+  // Desbloquea sin tocar el PIN: limpia contadores y bloqueos (global y por dispositivo).
+  app.post('/v1/users/:id/unlock', superOnly, (c) => {
+    const auth = c.get('auth')
+    const target = loadTarget(c, c.req.param('id'), auth.restaurantId)
+    const t = now()
+    clearLockout(db, target.id, t)
+    writeAudit(db, t, { actorId: auth.userId, action: 'user.unlock', target: target.id, ip: ip(c) })
     return c.json({ ok: true })
   })
 

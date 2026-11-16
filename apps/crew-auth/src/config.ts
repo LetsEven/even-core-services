@@ -19,8 +19,13 @@ export interface Config {
   pairingTtlMs: number
   /** Vigencia del token de dispositivo; se renueva con cada login exitoso. */
   deviceTtlMs: number
+  /** Fallos por ciclo para un (usuario, dispositivo). */
   maxFailedAttempts: number
+  /** Fallos por ciclo para el usuario en total (todos los dispositivos); mayor que el anterior. */
+  maxFailedAttemptsUser: number
+  /** Primer bloqueo; cada bloqueo siguiente duplica la espera hasta `lockoutMaxMs`. */
   lockoutMs: number
+  lockoutMaxMs: number
 }
 
 export const AUDIENCE = 'even-crew'
@@ -31,7 +36,9 @@ export const DEFAULTS = {
   pairingTtlMs: 10 * 60 * 1000,
   deviceTtlMs: 90 * 24 * 60 * 60 * 1000,
   maxFailedAttempts: 5,
+  maxFailedAttemptsUser: 15,
   lockoutMs: 15 * 60 * 1000,
+  lockoutMaxMs: 24 * 60 * 60 * 1000,
   rateLimit: {
     windowMs: 60_000,
     loginPerIp: 60,
@@ -66,6 +73,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     pairingTtlMs: DEFAULTS.pairingTtlMs,
     deviceTtlMs: DEFAULTS.deviceTtlMs,
     maxFailedAttempts: DEFAULTS.maxFailedAttempts,
+    maxFailedAttemptsUser: DEFAULTS.maxFailedAttemptsUser,
     lockoutMs: DEFAULTS.lockoutMs,
+    lockoutMaxMs: DEFAULTS.lockoutMaxMs,
   }
 }

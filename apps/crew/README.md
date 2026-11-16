@@ -39,7 +39,7 @@ Antes de un PR: `npx turbo run typecheck lint test build --filter=@even/crew`.
 |---|---|
 | `VITE_API_BASE_URL` | URL base del backend (REST y sockets). Obligatoria. |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clave pública de Clerk para el login del restaurante. |
-| `VITE_CREW_SOCKET_SECRET` | Secreto del socket de Crew (si falta usa un valor por defecto de desarrollo). |
+| `VITE_CREW_SOCKET_SECRET` | Secreto legado del socket, solo con `provider=clerk` y solo si se define (fallback para backends sin `auth.token`; sin valor por defecto). Se retirará. |
 | `VITE_APP_LABEL` | Nombre mostrado en la vista de Cocina (por defecto "Even Crew"). |
 | `VITE_AUTH_PROVIDER` | Autenticación: `clerk` (por defecto), `local` (servicio `crew-auth`, PIN por persona) o `demo`. Ver "Autenticación". |
 | `VITE_CREW_AUTH_URL` | URL base del servicio `crew-auth`. Obligatoria con `VITE_AUTH_PROVIDER=local`. |
@@ -131,4 +131,12 @@ Crew ya tiene el cliente y la UI preparados; falta que el backend exponga:
 
 `index.html` lleva un `<meta http-equiv="Content-Security-Policy" content="%CREW_CSP%">`; el plugin `crew-csp` de `vite.config.ts` lo rellena en cada build con `src/lib/csp.ts` segun las `VITE_*`: `self`, la API (`VITE_API_BASE_URL`, https y wss), `VITE_CREW_AUTH_URL` solo con `provider=local`, Clerk (host del Frontend API sacado de la clave publica) solo con `provider=clerk`, Firebase push (salvo demo), IPC de Tauri. Una URL o proveedor invalido rompe el build. Las fuentes son las propias (@fontsource; ya no se cargan de Google Fonts).
 
-`src-tauri/tauri.conf.json` (`app.security.csp`) es estatico: es un superconjunto de lo que pide cualquier build (api.letseven.io, `*.up.railway.app`, Clerk, Firebase); la politica efectiva es la interseccion con el meta del build. Un build de Tauri con `provider=local` hacia un host fuera de `*.up.railway.app` (p. ej. una Pi en la LAN) debe anadirlo en `connect-src` con `tauri build --config`. `frame-ancestors` no funciona por meta: para la web conviene la cabecera `Content-Security-Policy: frame-ancestors 'none'` en Caddy.
+`src-tauri/tauri.conf.json` (`app.security.csp`) es estatico: es un superconjunto de lo que pide cualquier build (api.letseven.io, `*.up.railway.app`, Clerk, Firebase); la politica efectiva es la interseccion con el meta del build. Un build de Tauri con `provider=local` hacia un host fuera de `*.up.railway.app` (p. ej. una Pi en la LAN) debe anadirlo en `connect-src` con `tauri build --config`. `frame-ancestors` no funciona por meta: para la web va como cabecera en Caddy (ver "Cabeceras de seguridad").
+
+## Cabeceras de seguridad (Caddy)
+
+`apps/crew/Caddyfile` (copiado a la imagen por el `Dockerfile`) añade a todas las respuestas: `Content-Security-Policy: frame-ancestors 'none'` (la CSP completa va por `<meta>`, ver arriba; `frame-ancestors` solo funciona como cabecera), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` y `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()` (Crew no usa ninguna de esas APIs; si se añade una, hay que quitarla de la lista). Caché: `/assets/*` (nombres con hash) es `public, max-age=31536000, immutable`; el resto (`index.html`, service workers y el fallback de rutas) es `no-cache`. La forma de servir no cambia (`try_files {path} /index.html`).
+
+## Socket de Crew
+
+El handshake envía `auth.token` (access token vigente de `useAuth().getToken()`, pedido en cada reconexión) y el backend deriva restaurante y sucursal de los claims. Al recibir `auth_expired` se renueva el token y se reconecta; sin sesión el socket se cierra. `VITE_CREW_SOCKET_SECRET` ya no tiene valor por defecto y solo se envía como fallback legado con `provider=clerk` si está definida; nunca con `local` ni `demo`. Con `local`, el `branchId` del handshake es el del dispositivo emparejado. Retiro del secreto: ver `crew-auth-backend.md` del backend (medir conexiones `legacy_secret`, apagar la bandera y luego quitar la variable del build).

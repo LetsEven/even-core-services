@@ -37,7 +37,7 @@ RUN npx turbo@2.11.8 run build --filter=@even/crew
 
 # ---- Etapa 2: runtime ----
 FROM caddy:2-alpine
-RUN printf ':{$PORT} {\n\troot * /srv\n\tencode gzip\n\ttry_files {path} /index.html\n\tfile_server\n}\n' > /etc/caddy/Caddyfile
+COPY --from=builder /app/apps/crew/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/out-install/apps/crew/dist /srv
 EXPOSE 8080
 ENV PORT=8080

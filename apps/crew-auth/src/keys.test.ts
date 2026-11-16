@@ -12,10 +12,10 @@ describe('clave privada', () => {
     const dir = mkdtempSync(join(tmpdir(), 'crew-auth-'))
     try {
       const dataDir = join(dir, 'data')
-      const first = await resolvePrivateKeyPem({ privateKeyPem: undefined, dataDir })
+      const first = await resolvePrivateKeyPem({ privateKeyPem: undefined, dataDir, production: false })
       const file = join(dataDir, 'crew-auth-private-key.pem')
       expect(statSync(file).mode & 0o777).toBe(0o600)
-      const second = await resolvePrivateKeyPem({ privateKeyPem: undefined, dataDir })
+      const second = await resolvePrivateKeyPem({ privateKeyPem: undefined, dataDir, production: false })
       expect(second).toBe(first)
       expect((await createSigner(first, 'crew-auth')).kid).toBe((await createSigner(second, 'crew-auth')).kid)
     } finally {
@@ -39,10 +39,10 @@ describe('clave privada', () => {
 describe('create-super', () => {
   it('crea un super con PIN valido y rechaza uno invalido', async () => {
     const db = openDb(':memory:')
-    const r = await createSuperUser(db, { branchId: 'b1', name: 'Dueno', pin: '123456' })
+    const r = await createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'Dueno', pin: '123456' })
     const row = db.prepare('SELECT role, restaurant_id FROM users WHERE id = ?').get(r.id)
-    expect(row).toEqual({ role: 'super', restaurant_id: 'b1' })
-    await expect(createSuperUser(db, { branchId: 'b1', name: 'X', pin: '12' })).rejects.toThrow()
-    await expect(createSuperUser(db, { branchId: 'b1', name: 'X', pin: '12345' })).rejects.toThrow(/6 a 8/)
+    expect(row).toEqual({ role: 'super', restaurant_id: 'r1' })
+    await expect(createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'X', pin: '12' })).rejects.toThrow()
+    await expect(createSuperUser(db, { branchId: 'b1', restaurantId: 'r1', name: 'X', pin: '12345' })).rejects.toThrow(/6 a 8/)
   })
 })

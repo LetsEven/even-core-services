@@ -2,11 +2,12 @@ import { serve } from '@hono/node-server'
 import { createApp } from './app.js'
 import { createSigner, resolvePrivateKeyPem } from './auth/tokens.js'
 import { loadConfig } from './config.js'
-import { openDb } from './db/index.js'
+import { openSecureDb, warnIfRoot } from './storage.js'
 
 async function main() {
   const config = loadConfig()
-  const db = openDb(config.dbPath)
+  warnIfRoot()
+  const db = openSecureDb(config)
   const pem = await resolvePrivateKeyPem(config)
   const signer = await createSigner(pem, config.issuer)
   const app = createApp({ db, config, signer, now: () => Date.now() })

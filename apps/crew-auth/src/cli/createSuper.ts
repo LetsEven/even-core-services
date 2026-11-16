@@ -3,21 +3,21 @@ import { pathToFileURL } from 'node:url'
 import { superPinSchema } from '../auth/pin.js'
 import { loadConfig } from '../config.js'
 import { writeAudit } from '../db/audit.js'
-import { openDb } from '../db/index.js'
+import { openSecureDb } from '../storage.js'
 import { insertPairingCode } from '../db/pairing.js'
 import type { Db } from '../db/index.js'
 import { insertUser } from '../db/users.js'
 
 export async function createSuperUser(
   db: Db,
-  input: { branchId: string; restaurantId?: string; name: string; pin: string },
+  input: { branchId: string; restaurantId: string; name: string; pin: string },
   now = Date.now(),
 ): Promise<{ id: string; branchId: string }> {
   const pin = superPinSchema.safeParse(input.pin)
   if (!pin.success) throw new Error('El PIN de un super debe tener de 6 a 8 digitos')
   const user = await insertUser(db, now, {
     branchId: input.branchId,
-    restaurantId: input.restaurantId ?? input.branchId,
+    restaurantId: input.restaurantId,
     name: input.name,
     role: 'super',
     pin: input.pin,
@@ -69,14 +69,15 @@ async function main() {
       'pairing-code': { type: 'boolean', default: false },
     },
   })
-  if (!values.branch || !values.name) {
-    console.error('Uso: npm run create-super -w @even/crew-auth -- --branch <id> --name <nombre> [--restaurant <id>] [--pairing-code]')
-    console.error('PIN por stdin o variable CREW_AUTH_SUPER_PIN. Si falta --restaurant se usa el id de la sucursal.')
+  if (!values.branch || !values.restaurant || !values.name) {
+    console.error('Uso: npm run create-super -w @even/crew-auth -- --restaurant <id> --branch <id> --name <nombre> [--pairing-code]')
+    console.error('--restaurant es obligatorio (no hay default): un super administra todo ese restaurante.')
+    console.error('PIN (6 a 8 digitos) por stdin o variable CREW_AUTH_SUPER_PIN.')
     process.exit(2)
   }
   const pin = await readPin()
   const config = loadConfig()
-  const db = openDb(config.dbPath)
+  const db = openSecureDb(config)
   try {
     const created = await createSuperUser(db, {
       branchId: values.branch,

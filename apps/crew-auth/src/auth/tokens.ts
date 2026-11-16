@@ -37,9 +37,18 @@ export async function generatePem(): Promise<string> {
   return exportPKCS8(privateKey)
 }
 
-/** PEM por env; si falta, lo lee de DATA_DIR o genera uno y lo persiste con permisos 600. */
-export async function resolvePrivateKeyPem(config: Pick<Config, 'privateKeyPem' | 'dataDir'>): Promise<string> {
+/**
+ * PEM por env. En produccion es obligatoria: una clave autogenerada vive en el volumen junto a la base
+ * (quien lea el volumen firmaria tokens) y se pierde con el. Fuera de produccion, si falta se lee de
+ * DATA_DIR o se genera y persiste con permisos 600.
+ */
+export async function resolvePrivateKeyPem(config: Pick<Config, 'privateKeyPem' | 'dataDir' | 'production'>): Promise<string> {
   if (config.privateKeyPem) return config.privateKeyPem
+  if (config.production) {
+    throw new Error(
+      'CREW_AUTH_PRIVATE_KEY es obligatoria con NODE_ENV=production (clave Ed25519 en PEM PKCS8); no se autogenera. Ver README.',
+    )
+  }
   const file = join(config.dataDir, 'crew-auth-private-key.pem')
   if (existsSync(file)) {
     chmodSync(file, 0o600)

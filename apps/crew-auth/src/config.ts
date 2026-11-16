@@ -10,6 +10,8 @@ export interface Config {
   dataDir: string
   dbPath: string
   origins: string[]
+  /** NODE_ENV=production: la clave privada es obligatoria y no se autogenera. */
+  production: boolean
   privateKeyPem: string | undefined
   issuer: string
   /** Saltos de proxy de confianza: 0 = ninguno (IP del socket); N = la IP es la N-esima desde la derecha de X-Forwarded-For. */
@@ -79,6 +81,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir,
     dbPath: `${dataDir.replace(/\/+$/, '')}/crew-auth.db`,
     origins,
+    production: env.NODE_ENV === 'production',
     privateKeyPem: pem || undefined,
     issuer: env.CREW_AUTH_ISSUER?.trim() || 'crew-auth',
     trustProxyHops,

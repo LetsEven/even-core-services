@@ -23,7 +23,8 @@ Produccion: `npm run build -w @even/crew-auth && npm run start -w @even/crew-aut
 | `PORT` | `8787` | Puerto HTTP (la imagen Docker usa `8080`). |
 | `DATA_DIR` | `./data` | Directorio de datos. SQLite en `DATA_DIR/crew-auth.db`. |
 | `CREW_AUTH_ORIGINS` | vacio | Origenes CORS permitidos, separados por coma. Vacio = ningun origen de navegador. |
-| `CREW_AUTH_PRIVATE_KEY` | generada | Clave privada Ed25519 en PEM PKCS8. Si falta se genera y se guarda en `DATA_DIR/crew-auth-private-key.pem` con permisos 600. Se aceptan `\n` literales. |
+| `NODE_ENV` | | Con `production` (la imagen Docker ya lo fija) la clave privada es **obligatoria** y no se autogenera. |
+| `CREW_AUTH_PRIVATE_KEY` | generada (solo fuera de produccion) | Clave privada Ed25519 en PEM PKCS8. **Obligatoria con `NODE_ENV=production`**: el servicio no arranca sin ella. Fuera de produccion, si falta se genera y se guarda en `DATA_DIR/crew-auth-private-key.pem` con permisos 600. Se aceptan `\n` literales. |
 | `CREW_AUTH_ISSUER` | `crew-auth` | Claim `iss` de los tokens. Los verificadores deben usar el mismo valor. |
 | `CREW_AUTH_TRUST_PROXY` | `0` | Con `1` hay un proxy de confianza delante (Railway): la IP del cliente es la entrada **mas a la derecha** de `X-Forwarded-For` (la que agrego el proxy; lo de la izquierda lo controla el cliente). Nunca activarlo si el servicio es accesible directamente. |
 | `CREW_AUTH_TRUST_PROXY_HOPS` | | N proxies de confianza en cadena: la IP es la N-esima desde la derecha. Manda sobre `CREW_AUTH_TRUST_PROXY` (`0` lo desactiva). Si la cabecera trae menos de N entradas o no es una IP valida, se usa la del socket. |
@@ -36,12 +37,12 @@ Generar una clave: `node -e "const c=require('node:crypto');console.log(c.genera
 Sin un dispositivo vinculado nadie puede iniciar sesion, y para vincular hace falta un super. `create-super` rompe el circulo: crea el super y, con `--pairing-code`, imprime un primer codigo de vinculacion (un uso, 10 min).
 
 ```bash
-npm run create-super -w @even/crew-auth -- --branch <branchId> --name "Dueno" --pairing-code
+npm run create-super -w @even/crew-auth -- --restaurant <restaurantId> --branch <branchId> --name "Dueno" --pairing-code
 # PIN: se pide sin eco, o por stdin / CREW_AUTH_SUPER_PIN
-echo 123456 | npm run create-super -w @even/crew-auth -- --branch suc-1 --name Dueno --pairing-code
+echo 123456 | npm run create-super -w @even/crew-auth -- --restaurant rest-1 --branch suc-1 --name Dueno --pairing-code
 ```
 
-`--restaurant <id>` fija el restaurante (por defecto, el id de la sucursal). Los PINs y tokens nunca se imprimen ni se registran. En la imagen Docker: `node dist/cli/createSuper.js ...` (no incluye `tsx`).
+`--restaurant <id>` es **obligatorio** (no hay default a la sucursal: un super administra todo ese restaurante, asi que el id debe ser deliberado). El PIN del super: 6 a 8 digitos. Los PINs y tokens nunca se imprimen ni se registran. En la imagen Docker: `node dist/cli/createSuper.js ...` (no incluye `tsx`).
 
 El mismo comando con otro `--name` crea un super adicional (util para recuperar el acceso si se pierden todos los dispositivos).
 
@@ -104,10 +105,11 @@ Al agotar el ciclo se bloquea con backoff exponencial: 15 min, 30 min, 1 h, ... 
 
 1. Servicio nuevo desde este repo con `apps/crew-auth/railway.json` (Dockerfile, contexto raiz del monorepo).
 2. Volumen montado en `/data` (SQLite y, si no se define la clave, la clave privada viven ahi).
-3. Variables: `CREW_AUTH_ORIGINS`, `CREW_AUTH_TRUST_PROXY=1`, y preferiblemente `CREW_AUTH_PRIVATE_KEY` (asi la clave no depende del volumen). Railway inyecta `PORT`.
+3. Variables: `CREW_AUTH_ORIGINS`, `CREW_AUTH_TRUST_PROXY=1` y **`CREW_AUTH_PRIVATE_KEY`** (obligatoria: la imagen fija `NODE_ENV=production`, y sin la clave el servicio no arranca). Railway inyecta `PORT`.
+   - *Despliegue existente que usaba la clave autogenerada*: antes de subir esta version, copiar la clave actual a la variable para que los tokens vigentes sigan verificandose: `railway ssh` y `cat /data/crew-auth-private-key.pem`, pegar el contenido (con saltos de linea o `\n`) en `CREW_AUTH_PRIVATE_KEY`. Despues se puede borrar el archivo del volumen.
 4. Un solo replica: SQLite y el rate limit en memoria no son compartidos.
-5. Los volumenes de Railway se montan como root; si el proceso (usuario `node`) no puede escribir en `/data`, definir `RAILWAY_RUN_UID=0` en el servicio.
-6. Bootstrap: `railway ssh` (o shell del servicio) y `node dist/cli/createSuper.js --branch <id> --name <n> --pairing-code`.
+5. Volumen y usuario: ver "Archivos, permisos y root".
+6. Bootstrap: `railway ssh` (o shell del servicio) y `node dist/cli/createSuper.js --restaurant <id> --branch <id> --name <n> --pairing-code`.
 
 ## Correr en la Pi
 
@@ -115,11 +117,18 @@ Al agotar el ciclo se bloquea con backoff exponencial: 15 min, 30 min, 1 h, ... 
 git clone <repo> && cd even-core-services && npm ci   # Node 22; better-sqlite3 compila si no hay binario (apt install build-essential python3)
 npm run build -w @even/crew-auth
 export DATA_DIR=/var/lib/crew-auth CREW_AUTH_ORIGINS=http://<host-crew>
-npm run create-super -w @even/crew-auth -- --branch <id> --name Dueno --pairing-code
+npm run create-super -w @even/crew-auth -- --restaurant <id> --branch <id> --name Dueno --pairing-code
 npm run start -w @even/crew-auth
 ```
 
 O con Docker: `docker build -f apps/crew-auth/Dockerfile -t crew-auth . && docker run -d -p 8080:8080 -v crew-auth-data:/data -e CREW_AUTH_ORIGINS=... crew-auth`. Para correrlo como servicio, un unit de systemd con `WorkingDirectory=apps/crew-auth` y `ExecStart=node dist/server.js`.
+
+## Archivos, permisos y root
+
+- Al arrancar (servicio y CLI) se fija `umask 077`, `DATA_DIR` queda en `0700` y la base (`crew-auth.db`, `-wal`, `-shm`) en `0600`; la clave autogenerada (solo fuera de produccion) en `0600`. Si no se puede (el directorio es de otro usuario, sistema de archivos sin permisos POSIX) el proceso **no arranca** y el error nombra `DATA_DIR`.
+- **No correr como root.** No hace falta, y con root un fallo del servicio tendria alcance de root sobre el volumen; si detecta uid 0 avisa en el log. La imagen Docker ya usa el usuario `node`.
+- **Volumen de Railway:** se monta como root, asi que el usuario `node` no puede escribir ni hacer `chmod` en `/data` y el servicio no arranca (error de `DATA_DIR`). Opciones: (1) lo recomendable: que el contenedor arranque como root solo para `chown -R node:node /data` y baje privilegios a `node` antes de ejecutar el servicio (entrypoint con `su-exec`); no esta incluido en esta imagen. (2) Si no, `RAILWAY_RUN_UID=0` ejecuta todo como root: funciona, los archivos quedan 0700/0600 de root y el servicio avisa; es el riesgo aceptado hasta tener (1). No dejar el volumen con permisos abiertos para "arreglarlo".
+- La clave privada y el pepper de PIN van por variables de entorno (secretos del proveedor), no en el volumen ni en el repo.
 
 ## Respaldo
 

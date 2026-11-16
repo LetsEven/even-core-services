@@ -37,5 +37,5 @@ USER node
 VOLUME /data
 EXPOSE 8080
 WORKDIR /app/apps/crew-auth
-# Alta del primer super: docker exec -it <contenedor> node dist/cli/createSuper.js --branch <id> --name <n> --pairing-code
+# Alta del primer super: docker exec -it <contenedor> node dist/cli/createSuper.js --restaurant <id> --branch <id> --name <n> --pairing-code
 CMD ["node", "dist/server.js"]

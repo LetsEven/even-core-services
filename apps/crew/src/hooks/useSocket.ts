@@ -1,14 +1,18 @@
-import { useEffect, useRef, useCallback } from "react";
-import { io, Socket } from "socket.io-client";
+import { useContext, useEffect, useRef, useCallback } from "react";
+import type { Socket } from "socket.io-client";
 import type { DishStatus, Order } from "../types";
 import type { PrintJobData } from "./usePrinting";
 import { isTauri } from "../lib/platform";
 import { isDemoMode } from "../lib/demoMode";
 import type { DemoSocket } from "../demo/socket";
+import { useAuth } from "../lib/auth";
+import { LocalAuthContext } from "../lib/auth/localContext";
+import { openCrewSocket } from "./crewSocket";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const CREW_SECRET =
-  import.meta.env.VITE_CREW_SOCKET_SECRET || "even-crew-secret";
+// Fallback legado: solo se envia con provider clerk y si el build lo define
+// (ver legacySecretFor). Sin valor por defecto.
+const CREW_SECRET: string | undefined = import.meta.env.VITE_CREW_SOCKET_SECRET;
 
 export interface CrewDevice {
   deviceId: string;
@@ -89,6 +93,16 @@ export function useSocket({
     onTurnoClosedRef.current = onTurnoClosed;
   });
 
+  const { kind, getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  });
+  // Con provider local la sucursal del handshake es la del dispositivo emparejado.
+  const localCtx = useContext(LocalAuthContext);
+  const deviceBranchId = localCtx?.branchId ?? null;
+  const handshakeBranchId = kind === "local" ? deviceBranchId : branchId;
+
   const socketRef = useRef<Socket | null>(null);
   // Modo demo: socket simulado sin red (ver src/demo/socket.ts)
   const demoSocketRef = useRef<DemoSocket | null>(null);
@@ -98,14 +112,14 @@ export function useSocket({
     console.log(
       `[CREW:SOCKET] Iniciando — branchId=${branchId} deviceId=${deviceId}`,
     );
-    if (!branchId) {
+    if (!branchId || !handshakeBranchId) {
       console.warn(
         "[CREW:SOCKET] No branchId configurado, socket no conectado",
       );
       return;
     }
 
-    if (isDemoMode()) {
+    if (isDemoMode() || kind === "demo") {
       let cancelled = false;
       let stop = () => {};
       void import("../demo/socket").then(({ connectDemoSocket }) => {
@@ -127,18 +141,14 @@ export function useSocket({
     }
 
     console.log(`[CREW:SOCKET] Conectando a ${BASE_URL}`);
-    const socket = io(BASE_URL, {
-      auth: {
-        branchId,
-        secret: CREW_SECRET,
-        clientType: "crew",
-        deviceId,
-        platform: isTauri() ? "native" : "web",
-      },
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+    const { socket, stop } = openCrewSocket({
+      url: BASE_URL,
+      branchId: handshakeBranchId,
+      deviceId,
+      platform: isTauri() ? "native" : "web",
+      kind,
+      getToken: () => getTokenRef.current(),
+      legacySecret: CREW_SECRET,
     });
 
     socketRef.current = socket;
@@ -285,10 +295,10 @@ export function useSocket({
 
     return () => {
       console.log("[CREW:SOCKET] Cleanup — desconectando socket");
-      socket.disconnect();
+      stop();
       socketRef.current = null;
     };
-  }, [branchId, deviceId]); // reconecta si cambia la sucursal
+  }, [branchId, handshakeBranchId, deviceId, kind]); // reconecta si cambia la sucursal
 
   const setMaster = useCallback((targetDeviceId: string) => {
     if (demoSocketRef.current) {

@@ -208,6 +208,36 @@ describe('crew-auth + cliente de Crew, extremo a extremo', () => {
     expect(await status(client.login('token-inexistente', ctx.superId, SUPER_PIN))).toBe(401)
   })
 
+  it('el super revoca un dispositivo: pierde sesion, login y token; el resto sigue', async () => {
+    const token = (await ctx.auth.getToken())!
+    const before = new Set((await client.adminListDevices(token)).map((d) => d.id))
+    const { code } = await client.adminCreatePairingCode(token, BRANCH)
+    const robado = createLocalAuth({ client, storage: memoryStorage() })
+    await robado.pair(code)
+    await robado.login(ctx.superId, SUPER_PIN)
+    const robadoAccess = (await robado.getToken())!
+
+    const devices = await client.adminListDevices(token)
+    expect(devices.length).toBeGreaterThanOrEqual(2)
+    expect(devices.filter((d) => d.current)).toHaveLength(1)
+    const victim = devices.find((d) => !before.has(d.id))!
+    expect(victim).toBeDefined()
+    expect(victim.current).toBe(false)
+
+    await client.adminRevokeDevice(token, victim.id)
+    expect((await client.adminListDevices(token)).map((d) => d.id)).not.toContain(victim.id)
+
+    // Sus sesiones y su token ya no sirven.
+    expect(await status(client.adminListUsers(robadoAccess, BRANCH))).toBe(401)
+    await expect(robado.listUsers()).rejects.toMatchObject({ status: 401 })
+    expect(robado.getSnapshot()).toMatchObject({ paired: false, status: 'signedOut' })
+    await expect(robado.login(ctx.superId, SUPER_PIN)).rejects.toMatchObject({ status: 401 })
+    // El dispositivo del super sigue operativo.
+    expect((await ctx.auth.listUsers()).length).toBeGreaterThan(0)
+    expect(await status(client.adminListDevices(token))).toBe(200)
+    robado.stop()
+  })
+
   it('dos pestanas (mismo storage) que recargan a la vez no se invalidan por la rotacion', async () => {
     const off = { v: 0 }
     const tabs = [

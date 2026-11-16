@@ -137,6 +137,8 @@ export function sessionRoutes(deps: Deps) {
       }
 
       db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?').run(t, user.id)
+      // Renueva la vigencia del token de dispositivo con cada login exitoso.
+      db.prepare('UPDATE devices SET expires_at = ?, updated_at = ? WHERE id = ?').run(t + config.deviceTtlMs, t, device.id)
       const s = createSession(deps, user.id, device.id)
       writeAudit(db, t, { actorId: user.id, action: 'login.ok', target: user.id, ip: ip(c), meta: { deviceId: device.id, sid: s.id } })
       return c.json(await issueTokens(deps, user, device.id, s.id, s.refreshToken))
@@ -164,7 +166,9 @@ export function sessionRoutes(deps: Deps) {
     if (old.expires_at <= t) return invalid()
 
     const user = getUser(db, old.user_id)
-    const device = db.prepare('SELECT id FROM devices WHERE id = ? AND deleted_at IS NULL').get(old.device_id)
+    const device = db
+      .prepare('SELECT id FROM devices WHERE id = ? AND deleted_at IS NULL AND revoked_at IS NULL AND expires_at > ?')
+      .get(old.device_id, t)
     if (!user || user.active !== 1 || !device) {
       revokeUserSessions(db, t, old.user_id)
       return invalid()

@@ -65,11 +65,22 @@ export function deviceRoutes(deps: Deps) {
           .run(t, t, hash, t)
         if (used.changes !== 1) return undefined
         const pc = db
-          .prepare('SELECT branch_id, device_name, created_by FROM pairing_codes WHERE code_hash = ?')
-          .get(hash) as { branch_id: string; device_name: string; created_by: string }
+          .prepare('SELECT branch_id, restaurant_id, device_name, created_by FROM pairing_codes WHERE code_hash = ?')
+          .get(hash) as { branch_id: string; restaurant_id: string | null; device_name: string; created_by: string }
         db.prepare(
-          'INSERT INTO devices (id, branch_id, name, token_hash, last_seen_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        ).run(deviceId, pc.branch_id, body.deviceName ?? pc.device_name, sha256Hex(deviceToken), t, t, t)
+          `INSERT INTO devices (id, branch_id, restaurant_id, name, token_hash, last_seen_at, expires_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          deviceId,
+          pc.branch_id,
+          pc.restaurant_id,
+          body.deviceName ?? pc.device_name,
+          sha256Hex(deviceToken),
+          t,
+          t + config.deviceTtlMs,
+          t,
+          t,
+        )
         return pc
       })()
 
@@ -81,6 +92,58 @@ export function deviceRoutes(deps: Deps) {
       return c.json({ deviceToken, branchId: result.branch_id }, 201)
     },
   )
+
+  // Solo super: dispositivos vigentes de su restaurante (nunca el hash del token).
+  app.get('/v1/devices', requireRole(deps, 'super'), (c) => {
+    const auth = c.get('auth')
+    const t = now()
+    const rows = db
+      .prepare(
+        `SELECT id, name, branch_id, last_seen_at, expires_at, created_at FROM devices
+         WHERE restaurant_id = ? AND deleted_at IS NULL AND revoked_at IS NULL AND expires_at > ?
+         ORDER BY branch_id, created_at`,
+      )
+      .all(auth.restaurantId, t) as {
+      id: string
+      name: string
+      branch_id: string
+      last_seen_at: number | null
+      expires_at: number
+      created_at: number
+    }[]
+    return c.json({
+      devices: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        branchId: r.branch_id,
+        lastSeenAt: r.last_seen_at,
+        expiresAt: r.expires_at,
+        createdAt: r.created_at,
+        current: r.id === auth.deviceId,
+      })),
+    })
+  })
+
+  // Solo super y solo de su restaurante: revoca el dispositivo y todas sus sesiones.
+  app.delete('/v1/devices/:id', requireRole(deps, 'super'), (c) => {
+    const auth = c.get('auth')
+    const id = c.req.param('id')
+    const t = now()
+    const revoked = db.transaction(() => {
+      const res = db
+        .prepare(
+          `UPDATE devices SET revoked_at = ?, updated_at = ?
+           WHERE id = ? AND restaurant_id = ? AND deleted_at IS NULL AND revoked_at IS NULL`,
+        )
+        .run(t, t, id, auth.restaurantId)
+      if (res.changes !== 1) return false
+      db.prepare('UPDATE sessions SET revoked_at = ?, updated_at = ? WHERE device_id = ? AND revoked_at IS NULL').run(t, t, id)
+      return true
+    })()
+    if (!revoked) return fail(c, 404, 'not_found', 'Dispositivo no encontrado')
+    writeAudit(db, t, { actorId: auth.userId, action: 'device.revoke', target: id, ip: ip(c) })
+    return c.json({ ok: true })
+  })
 
   return app
 }

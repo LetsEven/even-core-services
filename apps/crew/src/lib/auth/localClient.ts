@@ -72,6 +72,16 @@ export interface PairingCode {
   expiresAt: number | null;
 }
 
+export interface AdminDevice {
+  id: string;
+  name: string;
+  branchId: string;
+  /** ms epoch del ultimo uso, si hubo. */
+  lastSeenAt: number | null;
+  /** Es el dispositivo desde el que se hizo la consulta. */
+  current: boolean;
+}
+
 export interface LocalClient {
   pair(pairingCode: string): Promise<PairResult>;
   listUsers(deviceToken: string, branchId: string): Promise<SelectorUser[]>;
@@ -95,6 +105,10 @@ export interface LocalClient {
     accessToken: string,
     branchId: string,
   ): Promise<PairingCode>;
+  /** Dispositivos vinculados del restaurante del super (GET /v1/devices). */
+  adminListDevices(accessToken: string): Promise<AdminDevice[]>;
+  /** Revoca el dispositivo y todas sus sesiones (DELETE /v1/devices/:id). */
+  adminRevokeDevice(accessToken: string, id: string): Promise<void>;
 }
 
 type Obj = Record<string, unknown>;
@@ -122,6 +136,20 @@ function parseAdminUser(v: unknown): AdminUser {
     active: v.active,
     branchId: str(v.branchId) ?? "",
     cocinaOperar: v.cocinaOperar === true,
+  };
+}
+
+function parseAdminDevice(v: unknown): AdminDevice {
+  if (!isObj(v)) return bad();
+  const id = str(v.id);
+  const name = str(v.name);
+  if (!id || name === null) return bad();
+  return {
+    id,
+    name,
+    branchId: str(v.branchId) ?? "",
+    lastSeenAt: typeof v.lastSeenAt === "number" ? v.lastSeenAt : null,
+    current: v.current === true,
   };
 }
 
@@ -281,6 +309,18 @@ export function createLocalClient(opts: {
         code,
         expiresAt: typeof b.expiresAt === "number" ? b.expiresAt : null,
       };
+    },
+
+    async adminListDevices(accessToken) {
+      const b = await call("GET", "/v1/devices", { bearer: accessToken });
+      if (!isObj(b) || !Array.isArray(b.devices)) return bad();
+      return b.devices.map(parseAdminDevice);
+    },
+
+    async adminRevokeDevice(accessToken, id) {
+      await call("DELETE", `/v1/devices/${encodeURIComponent(id)}`, {
+        bearer: accessToken,
+      });
     },
   };
 }

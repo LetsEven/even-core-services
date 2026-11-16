@@ -256,6 +256,8 @@ describe('permisos por rol en endpoints admin', () => {
       ['GET', '/v1/audit'],
       ['GET', '/v1/admin/users'],
       ['POST', '/v1/devices/pairing-codes', {}],
+      ['GET', '/v1/devices'],
+      ['DELETE', '/v1/devices/no-existe'],
     ]
     for (const role of ['cajero', 'mesero', 'cocina'] as const) {
       const id = await h.addUser(role, role)

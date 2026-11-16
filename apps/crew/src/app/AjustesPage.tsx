@@ -22,6 +22,7 @@ import { useSession } from "./session/context";
 
 // Solo se descarga con provider local y permiso de administrar usuarios.
 const LocalUsersAdmin = lazy(() => import("./ajustes/LocalUsersAdmin"));
+const LocalDevicesAdmin = lazy(() => import("./ajustes/LocalDevicesAdmin"));
 
 function Row({
   to,
@@ -141,6 +142,7 @@ export default function AjustesPage() {
           {showUsersAdmin && (
             <Suspense fallback={null}>
               <LocalUsersAdmin />
+              <LocalDevicesAdmin />
             </Suspense>
           )}
 

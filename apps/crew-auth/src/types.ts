@@ -14,6 +14,7 @@ export interface Deps {
 export interface DeviceCtx {
   id: string
   branchId: string
+  restaurantId: string | null
   name: string
 }
 

@@ -17,6 +17,8 @@ export interface Config {
   accessTtlSec: number
   refreshTtlMs: number
   pairingTtlMs: number
+  /** Vigencia del token de dispositivo; se renueva con cada login exitoso. */
+  deviceTtlMs: number
   maxFailedAttempts: number
   lockoutMs: number
 }
@@ -27,6 +29,7 @@ export const DEFAULTS = {
   accessTtlSec: 15 * 60,
   refreshTtlMs: 12 * 60 * 60 * 1000,
   pairingTtlMs: 10 * 60 * 1000,
+  deviceTtlMs: 90 * 24 * 60 * 60 * 1000,
   maxFailedAttempts: 5,
   lockoutMs: 15 * 60 * 1000,
   rateLimit: {
@@ -61,6 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     accessTtlSec: DEFAULTS.accessTtlSec,
     refreshTtlMs: DEFAULTS.refreshTtlMs,
     pairingTtlMs: DEFAULTS.pairingTtlMs,
+    deviceTtlMs: DEFAULTS.deviceTtlMs,
     maxFailedAttempts: DEFAULTS.maxFailedAttempts,
     lockoutMs: DEFAULTS.lockoutMs,
   }

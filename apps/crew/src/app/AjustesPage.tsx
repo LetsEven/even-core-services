@@ -3,6 +3,8 @@ import { Link } from "react-router";
 import { useAuth } from "../lib/auth";
 import {
   Bell,
+  Building2,
+  Check,
   ChevronRight,
   LogOut,
   Monitor,
@@ -56,7 +58,14 @@ export default function AjustesPage() {
   const { getToken, signOut, kind, hasPermission } = useAuth();
   const showUsersAdmin = kind === "local" && hasPermission("usuarios.administrar");
   const canPrinters = hasPermission("ajustes.impresoras");
-  const { waiterSession, requireWaiterLogin } = useSession();
+  const {
+    waiterSession,
+    requireWaiterLogin,
+    branches,
+    branchId,
+    currentBranch,
+    changeBranch,
+  } = useSession();
 
   const [pushStatus, setPushStatus] = useState<WebPushStatus>("unsupported");
   useEffect(() => {
@@ -108,6 +117,35 @@ export default function AjustesPage() {
       </h1>
       <div className="flex-1 rounded-t-lg px-5 pt-6 pb-6 bg-even-offwhite text-even-evergreen">
         <div className="mx-auto w-full max-w-xl flex flex-col gap-3">
+          <section className="rounded-xl bg-white border border-even-evergreen/10 text-even-evergreen">
+            <div className="flex items-center gap-3 px-4 min-h-14">
+              <Building2 className="w-5 h-5 shrink-0 text-even-evergreen/60" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-medium">Sucursal</span>
+                <span className="block text-xs text-even-evergreen/50 truncate">
+                  {currentBranch?.name ?? "Sin sucursal"}
+                </span>
+              </span>
+            </div>
+            {branches.length > 1 && (
+              <ul className="border-t border-even-evergreen/10">
+                {branches.map((b) => (
+                  <li key={b.id}>
+                    <button
+                      onClick={() => changeBranch(b.id)}
+                      className="w-full flex items-center justify-between gap-3 px-4 min-h-11 text-sm hover:bg-even-evergreen/5 transition-colors cursor-pointer"
+                    >
+                      <span className="truncate">{b.name}</span>
+                      {b.id === branchId && (
+                        <Check className="w-4 h-4 text-even-evergreen shrink-0" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <button
             onClick={() => requireWaiterLogin(() => {}, { forcePicker: true })}
             className="flex items-center gap-3 px-4 min-h-14 rounded-xl bg-white border border-even-evergreen/10 text-left hover:bg-even-evergreen/5 transition-colors cursor-pointer"

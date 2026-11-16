@@ -74,7 +74,6 @@ function renderAs(role: Role, path: string, extra: Permission[] = []) {
     branchesLoading: false,
     currentBranch: { id: "b" },
     activeOrderTypes: ["flex_bill"],
-    resolvedOrderType: "flex_bill",
   } as unknown as SessionValue;
   render(
     <AuthContext.Provider value={authFor(role, extra)}>

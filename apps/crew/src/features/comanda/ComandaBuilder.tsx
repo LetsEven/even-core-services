@@ -280,8 +280,7 @@ export default function ComandaBuilder({
                     price={getItemDisplayPrice(item.price)}
                     finalPrice={getItemDisplayPrice(basePriceOf(item))}
                     discountPercent={item.discount}
-                    imageUrl={item.image_url}
-                    variant={item.image_url ? "image" : "compact"}
+                    variant="compact"
                     outOfStock={item.is_out_of_stock}
                     quantity={qty}
                     onOpen={() => openOrAdd(item)}

@@ -14,7 +14,8 @@ export function auditRoutes(deps: Deps) {
   const { db } = deps
   const app = new Hono<AppEnv>()
 
-  // Solo eventos del propio restaurante (actor o destino de un usuario del restaurante) y los sin actor.
+  // Solo eventos del propio restaurante (columna restaurant_id). Los no atribuibles (NULL, p. ej. fallos
+  // de emparejamiento de IPs anonimas) no los ve ningun super.
   app.get('/v1/audit', requireRole(deps, 'super'), (c) => {
     const q = parseQuery(c, querySchema)
     const auth = c.get('auth')
@@ -22,8 +23,7 @@ export function auditRoutes(deps: Deps) {
       .prepare(
         `SELECT a.id, a.at, a.actor_id, a.action, a.target, a.ip, a.meta_json
          FROM audit_log a
-         LEFT JOIN users u ON u.id = a.actor_id
-         WHERE (u.restaurant_id = ? OR a.actor_id IS NULL)
+         WHERE a.restaurant_id = ?
            AND (? IS NULL OR a.at < ?)
            AND (? IS NULL OR a.action = ?)
          ORDER BY a.at DESC, a.rowid DESC LIMIT ?`,

@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import type { Db } from './index.js'
 
 export interface AuditEntry {
+  /** Restaurante al que pertenece el evento (null = no atribuible: no lo ve ningun super). Obligatorio a proposito. */
+  restaurantId: string | null
   actorId?: string | null
   action: string
   target?: string | null
@@ -12,11 +14,12 @@ export interface AuditEntry {
 /** Nunca incluir PINs ni tokens en `meta`. */
 export function writeAudit(db: Db, now: number, entry: AuditEntry): void {
   db.prepare(
-    `INSERT INTO audit_log (id, at, actor_id, action, target, ip, meta_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO audit_log (id, at, restaurant_id, actor_id, action, target, ip, meta_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     randomUUID(),
     now,
+    entry.restaurantId,
     entry.actorId ?? null,
     entry.action,
     entry.target ?? null,
@@ -54,7 +57,7 @@ export function recordPairFail(db: Db, now: number, ip: string): void {
     }
   }
   if (!row) {
-    writeAudit(db, now, { action: 'device.pair_fail', ip: key, meta: { count: 1, firstAt: now } })
+    writeAudit(db, now, { restaurantId: null, action: 'device.pair_fail', ip: key, meta: { count: 1, firstAt: now } })
     return
   }
   const prev = row.meta_json ? (JSON.parse(row.meta_json) as { count?: number; firstAt?: number }) : {}

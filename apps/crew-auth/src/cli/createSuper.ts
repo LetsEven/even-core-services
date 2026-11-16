@@ -22,7 +22,7 @@ export async function createSuperUser(
     role: 'super',
     pin: input.pin,
   })
-  writeAudit(db, now, { actorId: null, action: 'user.create_super', target: user.id, meta: { branchId: input.branchId } })
+  writeAudit(db, now, { restaurantId: user.restaurant_id, actorId: null, action: 'user.create_super', target: user.id, meta: { branchId: input.branchId } })
   return { id: user.id, branchId: user.branch_id }
 }
 

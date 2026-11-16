@@ -67,7 +67,7 @@ Auth: `Authorization: Bearer <accessToken>` (JWT) y/o `X-Device-Token: <deviceTo
 | `DELETE /v1/devices/:id` | super | Revoca el dispositivo (solo de su restaurante) y todas sus sesiones. |
 | `DELETE /v1/users/:id` | super | Baja logica. |
 | `GET /v1/admin/users` | super | Listado completo (activos e inactivos) sin hashes. Extension al contrato. |
-| `GET /v1/audit?limit=&before=&action=` | super | Eventos recientes primero. |
+| `GET /v1/audit?limit=&before=&action=` | super | Eventos recientes primero, solo del propio restaurante (`audit_log.restaurant_id`). Los eventos no atribuibles a un restaurante (p. ej. fallos de emparejamiento anonimos) no los ve ningun super. |
 
 JWT de acceso (EdDSA, 15 min): `iss`, `aud=even-crew`, `sub`, `role`, `permissions[]`, `branchId`, `restaurantId`, `deviceId`, y `sid` (id de sesion). El servicio valida ademas que la sesion siga vigente en cada llamada admin; otros verificadores (p. ej. el backend con JWKS) solo ven la firma y la expiracion, por lo que un logout corta el access token en este servicio pero no en otros hasta que vence (max. 15 min).
 

@@ -39,7 +39,7 @@ export function deviceRoutes(deps: Deps) {
       deviceName: body.deviceName ?? 'Dispositivo',
       createdBy: auth.userId,
     })
-    writeAudit(db, t, { actorId: auth.userId, action: 'pairing_code.create', target: branchId, ip: ip(c) })
+    writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'pairing_code.create', target: branchId, ip: ip(c) })
     return c.json({ pairingCode: code, branchId, expiresAt }, 201)
   })
 
@@ -85,7 +85,7 @@ export function deviceRoutes(deps: Deps) {
         recordPairFail(db, t, ip(c))
         return fail(c, 401, 'invalid_code', 'Codigo invalido o vencido')
       }
-      writeAudit(db, t, { actorId: result.created_by, action: 'device.pair', target: deviceId, ip: ip(c), meta: { branchId: result.branch_id } })
+      writeAudit(db, t, { restaurantId: result.restaurant_id, actorId: result.created_by, action: 'device.pair', target: deviceId, ip: ip(c), meta: { branchId: result.branch_id } })
       return c.json({ deviceToken, branchId: result.branch_id }, 201)
     },
   )
@@ -138,7 +138,7 @@ export function deviceRoutes(deps: Deps) {
       return true
     })()
     if (!revoked) return fail(c, 404, 'not_found', 'Dispositivo no encontrado')
-    writeAudit(db, t, { actorId: auth.userId, action: 'device.revoke', target: id, ip: ip(c) })
+    writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'device.revoke', target: id, ip: ip(c) })
     return c.json({ ok: true })
   })
 

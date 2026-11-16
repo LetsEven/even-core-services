@@ -90,12 +90,15 @@ export function sessionRoutes(deps: Deps) {
       const device = c.get('device')
       const t = now()
       const user = getUser(db, body.userId)
+      // El evento es del restaurante del dispositivo (aunque el usuario no exista o sea de otro).
+      const restaurantId = device.restaurantId ?? user?.restaurant_id ?? null
       const eligible = user !== undefined && user.active === 1 && user.branch_id === device.branchId
       const generic = () => fail(c, 401, 'invalid_credentials', 'Credenciales invalidas')
 
       if (!eligible) {
         await burnPinVerification(body.pin)
         writeAudit(db, t, {
+          restaurantId,
           actorId: user?.id ?? null,
           action: 'login.fail',
           target: body.userId,
@@ -115,6 +118,7 @@ export function sessionRoutes(deps: Deps) {
           .get(user.id, t - 60_000)
         if (!recent) {
           writeAudit(db, t, {
+            restaurantId,
             actorId: user.id,
             action: 'login.blocked',
             target: user.id,
@@ -128,6 +132,7 @@ export function sessionRoutes(deps: Deps) {
       const ok = await verifyPin(body.pin, user.pin_hash, user.pin_salt)
       if (!ok) {
         writeAudit(db, t, {
+          restaurantId,
           actorId: user.id,
           action: 'login.fail',
           target: user.id,
@@ -136,6 +141,7 @@ export function sessionRoutes(deps: Deps) {
         })
         for (const lock of applyFailure(db, config, user.id, device.id, reserved.reservation, t)) {
           writeAudit(db, t, {
+            restaurantId,
             actorId: user.id,
             action: 'user.locked',
             target: user.id,
@@ -150,7 +156,7 @@ export function sessionRoutes(deps: Deps) {
       // Renueva la vigencia del token de dispositivo con cada login exitoso.
       db.prepare('UPDATE devices SET expires_at = ?, updated_at = ? WHERE id = ?').run(t + config.deviceTtlMs, t, device.id)
       const s = createSession(deps, user.id, device.id)
-      writeAudit(db, t, { actorId: user.id, action: 'login.ok', target: user.id, ip: ip(c), meta: { deviceId: device.id, sid: s.id } })
+      writeAudit(db, t, { restaurantId, actorId: user.id, action: 'login.ok', target: user.id, ip: ip(c), meta: { deviceId: device.id, sid: s.id } })
       return c.json(await issueTokens(deps, user, device.id, s.id, s.refreshToken))
     },
   )
@@ -170,7 +176,7 @@ export function sessionRoutes(deps: Deps) {
     const hash = sha256Hex(body.refreshToken)
     const invalid = () => fail(c, 401, 'invalid_token', 'Sesion invalida')
     const mismatch = (s: SessionRow) => {
-      writeAudit(db, t, { actorId: s.user_id, action: 'refresh.device_mismatch', target: s.id, ip: ip(c), meta: { deviceId: device.id } })
+      writeAudit(db, t, { restaurantId: device.restaurantId, actorId: s.user_id, action: 'refresh.device_mismatch', target: s.id, ip: ip(c), meta: { deviceId: device.id } })
       return invalid()
     }
 
@@ -190,7 +196,7 @@ export function sessionRoutes(deps: Deps) {
       db.prepare(
         'UPDATE sessions SET revoked_at = ?, updated_at = ? WHERE user_id = ? AND device_id = ? AND revoked_at IS NULL',
       ).run(t, t, prev.user_id, prev.device_id)
-      writeAudit(db, t, { actorId: prev.user_id, action: 'refresh.reuse', target: prev.id, ip: ip(c), meta: { deviceId: device.id } })
+      writeAudit(db, t, { restaurantId: device.restaurantId, actorId: prev.user_id, action: 'refresh.reuse', target: prev.id, ip: ip(c), meta: { deviceId: device.id } })
       return invalid()
     }
 
@@ -217,7 +223,7 @@ export function sessionRoutes(deps: Deps) {
     // entra por la rama de gracia. La promesa se guarda antes de esperar la firma del access token.
     const response = issueTokens(deps, user, cur.device_id, cur.id, refreshToken)
     grace.set(hash, response)
-    writeAudit(db, t, { actorId: user.id, action: 'refresh', target: cur.id, ip: ip(c) })
+    writeAudit(db, t, { restaurantId: device.restaurantId ?? user.restaurant_id, actorId: user.id, action: 'refresh', target: cur.id, ip: ip(c) })
     return c.json(await response)
   })
 
@@ -231,12 +237,12 @@ export function sessionRoutes(deps: Deps) {
       .prepare('SELECT id, user_id, device_id FROM sessions WHERE (refresh_hash = ? OR prev_refresh_hash = ?) AND revoked_at IS NULL')
       .get(hash, hash) as { id: string; user_id: string; device_id: string } | undefined
     if (s && s.device_id !== device.id) {
-      writeAudit(db, t, { actorId: s.user_id, action: 'refresh.device_mismatch', target: s.id, ip: ip(c), meta: { deviceId: device.id } })
+      writeAudit(db, t, { restaurantId: device.restaurantId, actorId: s.user_id, action: 'refresh.device_mismatch', target: s.id, ip: ip(c), meta: { deviceId: device.id } })
       return fail(c, 401, 'invalid_token', 'Sesion invalida')
     }
     if (s) {
       db.prepare('UPDATE sessions SET revoked_at = ?, updated_at = ? WHERE id = ?').run(t, t, s.id)
-      writeAudit(db, t, { actorId: s.user_id, action: 'logout', target: s.id, ip: ip(c) })
+      writeAudit(db, t, { restaurantId: device.restaurantId, actorId: s.user_id, action: 'logout', target: s.id, ip: ip(c) })
     }
     // Idempotente: no revela si el token existia.
     return c.json({ ok: true })

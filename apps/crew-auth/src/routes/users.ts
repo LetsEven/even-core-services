@@ -104,7 +104,7 @@ export function userRoutes(deps: Deps) {
       pin: body.pin,
       cocinaOperar: body.role === 'cocina' ? body.cocinaOperar : false,
     })
-    writeAudit(db, t, { actorId: auth.userId, action: 'user.create', target: user.id, ip: ip(c), meta: { role: user.role, branchId } })
+    writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'user.create', target: user.id, ip: ip(c), meta: { role: user.role, branchId } })
     return c.json({ user: toPublicUser(user) }, 201)
   })
 
@@ -151,6 +151,7 @@ export function userRoutes(deps: Deps) {
       revokeUserSessions(db, t, target.id)
     }
     writeAudit(db, t, {
+      restaurantId: auth.restaurantId,
       actorId: auth.userId,
       action: 'user.update',
       target: target.id,
@@ -172,7 +173,7 @@ export function userRoutes(deps: Deps) {
     db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ?, updated_at = ? WHERE id = ?').run(hash, salt, t, target.id)
     clearLockout(db, target.id, t)
     revokeUserSessions(db, t, target.id)
-    writeAudit(db, t, { actorId: auth.userId, action: 'user.reset_pin', target: target.id, ip: ip(c) })
+    writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'user.reset_pin', target: target.id, ip: ip(c) })
     return c.json({ ok: true })
   })
 
@@ -182,7 +183,7 @@ export function userRoutes(deps: Deps) {
     const target = loadTarget(c, c.req.param('id'), auth.restaurantId)
     const t = now()
     clearLockout(db, target.id, t)
-    writeAudit(db, t, { actorId: auth.userId, action: 'user.unlock', target: target.id, ip: ip(c) })
+    writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'user.unlock', target: target.id, ip: ip(c) })
     return c.json({ ok: true })
   })
 
@@ -196,7 +197,7 @@ export function userRoutes(deps: Deps) {
     const t = now()
     db.prepare('UPDATE users SET deleted_at = ?, active = 0, updated_at = ? WHERE id = ?').run(t, t, target.id)
     revokeUserSessions(db, t, target.id)
-    writeAudit(db, t, { actorId: auth.userId, action: 'user.delete', target: target.id, ip: ip(c) })
+    writeAudit(db, t, { restaurantId: auth.restaurantId, actorId: auth.userId, action: 'user.delete', target: target.id, ip: ip(c) })
     return c.json({ ok: true })
   })
 

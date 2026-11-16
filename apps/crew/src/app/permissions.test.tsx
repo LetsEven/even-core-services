@@ -23,10 +23,8 @@ vi.mock("../pages/Historial", () => ({ default: () => <p>pantalla ordenes</p> })
 vi.mock("../pages/Comprobantes", () => ({ default: () => <p>pantalla comprobantes</p> }));
 vi.mock("../pages/Printers", () => ({ default: () => <p>pantalla impresoras</p> }));
 vi.mock("../components/DevicesPanel", () => ({ default: () => <p>panel dispositivos</p> }));
-vi.mock("../services/registry", () => ({
-  SERVICE_REGISTRY: {
-    flex_bill: { HomeScreen: () => <p>pantalla mesas</p> },
-  },
+vi.mock("../components/TablesBoard", () => ({
+  default: () => <p>pantalla mesas</p>,
 }));
 vi.mock("../services/homeScreens", () => ({
   PickAndGoHome: ({ readOnly }: { readOnly?: boolean }) => (

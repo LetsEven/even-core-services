@@ -353,7 +353,8 @@
     "subtotal": "Subtotal",
     "loadingCta": "Loading...",
     "billFullyPaid": "The bill is fully paid!",
-    "continueCta": "Continue"
+    "continueCta": "Continue",
+    "remainingLabel": "Remaining"
   },
   "PaymentOptionsPage": {
     "title": "Choose how you want to pay the bill",
@@ -426,6 +427,8 @@
     "orderTimeoutAlert": "We couldn't confirm your order in time. Please check your order status before trying again."
   },
   "PaymentSuccessPage": {
+    "paidStamp": "PAID",
+    "receiptItemsCount": "{count, plural, one {# item} other {# items}}",
     "heroTitle": "Thanks for your order!",
     "heroSubtitle": "We've received your payment and your order is in progress.",
     "thankedForRating": "Thanks for your rating!",

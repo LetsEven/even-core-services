@@ -353,7 +353,8 @@
     "subtotal": "Subtotal",
     "loadingCta": "Cargando...",
     "billFullyPaid": "¡Cuenta pagada completamente!",
-    "continueCta": "Continuar"
+    "continueCta": "Continuar",
+    "remainingLabel": "Restante"
   },
   "PaymentOptionsPage": {
     "title": "Elige cómo quieres pagar la cuenta",
@@ -426,6 +427,8 @@
     "orderTimeoutAlert": "No pudimos confirmar tu pedido a tiempo. Por favor verifica el estado de tu pedido antes de intentar de nuevo."
   },
   "PaymentSuccessPage": {
+    "paidStamp": "PAGADO",
+    "receiptItemsCount": "{count, plural, one {# artículo} other {# artículos}}",
     "heroTitle": "¡Gracias por tu pedido!",
     "heroSubtitle": "Hemos recibido tu pago y tu orden está en proceso.",
     "thankedForRating": "¡Gracias por tu calificación!",

@@ -10,6 +10,7 @@ import { getRestaurantData } from "../utils/restaurantData";
 import MenuHeaderBackOrder from "./headers/MenuHeaderBackOrder";
 import ItemCustomizations from "@/app/components/ItemCustomizations";
 import { useRestaurant } from "@/app/context/RestaurantContext";
+import { ReceiptPaper, ReceiptRow, ReceiptRule } from "@even/ui";
 
 export default function OrderStatus() {
   const { restaurant: menuRestaurant } = useRestaurant();
@@ -122,6 +123,62 @@ export default function OrderStatus() {
     }
   }, [state.tableNumber]); // Removed loadTableData from dependencies
 
+  const isTableClosed = state.tableSummary?.data?.data?.status === "paid";
+  // La hoja se monta hasta tener la primera carga (si no, la animación corre
+  // sobre una cuenta vacía); los refrescos posteriores no la reinician.
+  const [receiptReady, setReceiptReady] = useState(false);
+  useEffect(() => {
+    if (!state.isLoading) setReceiptReady(true);
+  }, [state.isLoading]);
+
+  const statusMap: Record<string, string> = {
+    preparing: tc("statusPreparing"),
+    ready: tc("statusReady"),
+    delivered: tc("statusDelivered"),
+  };
+
+  const renderDishRow = (dish: (typeof unpaidDishes)[number], paid: boolean) => {
+    const lineTotal = dish.total_display_price ?? dish.total_price;
+    const promoLabel = dish.is_promo_item
+      ? dish.promo_discount_percentage != null &&
+        dish.promo_discount_percentage >= 100
+        ? t("freeLabel")
+        : dish.promo_discount_percentage != null
+          ? t("percentOff", { percent: dish.promo_discount_percentage })
+          : t("promoBadge")
+      : null;
+    return (
+      <ReceiptRow
+        key={`${paid ? "paid-" : ""}${dish.dish_order_id}`}
+        left={
+          <span className="capitalize">
+            {dish.quantity}x {dish.item}
+          </span>
+        }
+        right={`$${lineTotal.toFixed(2)}`}
+        sub={
+          <>
+            <span className="uppercase">{dish.guest_name}</span>
+            {paid ? (
+              <span className="text-even-shamrock"> · {t("paidBadge")}</span>
+            ) : (
+              <span> · {statusMap[dish.status] || dish.status}</span>
+            )}
+            {promoLabel && (
+              <span className="uppercase text-even-shamrock"> · {promoLabel}</span>
+            )}
+            <ItemCustomizations
+              customFields={dish.custom_fields}
+              formatPrice={(price) =>
+                price * (lineTotal / (dish.total_price || 1))
+              }
+            />
+          </>
+        }
+      />
+    );
+  };
+
   return (
     <div className="min-h-dvh brand-evergreen flex flex-col app-root">
       <MenuHeaderBackOrder
@@ -142,9 +199,13 @@ export default function OrderStatus() {
         </div>
 
         <div className="flex-1 h-full flex flex-col overflow-hidden">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col overflow-hidden">
+          <div
+            className={`rounded-t-4xl flex-1 z-5 flex flex-col overflow-hidden ${
+              isTableClosed ? "bg-white" : "bg-even-evergreen"
+            }`}
+          >
             {/* Table Closed Message */}
-            {state.tableSummary?.data?.data?.status === "paid" ? (
+            {isTableClosed ? (
               <div className="flex-1 flex items-center justify-center py-8 md:py-12 text-center">
                 <div>
                   <div className="mb-4 md:mb-6">
@@ -180,329 +241,119 @@ export default function OrderStatus() {
               </div>
             ) : (
               <>
-                {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pb-35 md:pb-40 lg:pb-45">
-                  {/* Ordered Items */}
-                  <div className="w-full mx-auto pb-6 md:pb-8">
-                    <div className="flex justify-center items-start relative mt-6 md:mt-8">
-                      <h2 className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-base md:text-lg lg:text-xl font-medium text-black">
-                        {t("sharedBillTitle")}
-                      </h2>
-                      <div className="absolute right-0">
-                        <button
-                          onClick={handleRefresh}
-                          disabled={state.isLoading}
-                          className="flex items-center gap-2 text-even-shamrock hover:text-even-evergreen transition-colors disabled:text-tone-400 cursor-pointer"
-                        >
-                          <svg
-                            className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 ${state.isLoading ? "animate-spin" : ""}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
-                        </button>
-                      </div>
+                {/* Scrollable content: la cuenta como ticket de papel */}
+                <div className="flex-1 overflow-y-auto px-3 md:px-6 pt-6 pb-35 md:pb-40 lg:pb-45">
+                  {!receiptReady ? (
+                    <div className="flex justify-center pt-16">
+                      <Loader className="h-8 w-8 md:h-10 md:w-10 animate-spin text-even-grass" />
                     </div>
+                  ) : (
+                    <div className="mx-auto w-full max-w-xl">
+                      <ReceiptPaper mode="appear">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h2 className="font-mono text-base font-bold uppercase tracking-wide">
+                              {restaurantData.name}
+                            </h2>
+                            <p className="text-xs text-even-ink/55">
+                              {t("sharedBillTitle")} ·{" "}
+                              {tc("tableLabel", { table: state.tableNumber })}
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleRefresh}
+                            disabled={state.isLoading}
+                            aria-label={t("refreshCta")}
+                            className="shrink-0 text-even-shamrock disabled:text-tone-400 cursor-pointer"
+                          >
+                            <svg
+                              className={`size-5 ${state.isLoading ? "animate-spin" : ""}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                        <ReceiptRule />
 
-                    {state.isLoading ? (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 animate-spin text-even-shamrock" />
-                      </div>
-                    ) : unpaidDishes.length === 0 ? (
-                      <div className="flex-1 flex items-center justify-center py-8 md:py-12 text-center">
-                        <div>
-                          <p className="text-black text-2xl md:text-3xl lg:text-4xl">
+                        {unpaidDishes.length === 0 ? (
+                          <p className="py-6 text-center text-sm">
                             {t("noOrdersYet")}
                           </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-14 justify-end translate-y-4">
-                          <span>{t("qtyLabel")}</span>
-                          <span>{t("priceLabel")}</span>
-                        </div>
-                        <div className="divide-y divide-stroke/50">
-                          {unpaidDishes.map((dish, dishIndex) => {
-                            const statusMap: Record<string, string> = {
-                              preparing: tc("statusPreparing"),
-                              ready: tc("statusReady"),
-                              delivered: tc("statusDelivered"),
-                            };
-                            const statusColorMap: Record<string, string> = {
-                              preparing:
-                                "bg-caution-100 text-caution-800 border-caution-300",
-                              ready:
-                                "bg-info-100 text-info-800 border-info-300",
-                              delivered:
-                                "bg-positive-100 text-positive-800 border-positive-300",
-                            };
-
-                            return (
-                              <div
-                                key={dish.dish_order_id}
-                                className="py-3 md:py-4 lg:py-5"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3 md:gap-4 lg:gap-5">
-                                    {showImages && (
-                                      <div className="shrink-0 mt-1">
-                                        <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
-                                          {dish.images?.[0] ? (
-                                            <img
-                                              src={dish.images[0]}
-                                              alt="Dish Image"
-                                              className="w-full h-full object-cover rounded-sm md:rounded-md"
-                                            />
-                                          ) : (
-                                            <img
-                                              src="/even/even-asterisk-evergreen.svg"
-                                              alt="Logo Even"
-                                              className="size-10 md:size-12 lg:size-14 object-contain"
-                                            />
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <h3 className="text-xs md:text-sm lg:text-base text-black/60 font-medium">
-                                        {dish.guest_name.toUpperCase()}
-                                      </h3>
-                                      <h4 className="text-base md:text-lg lg:text-xl text-black capitalize">
-                                        {dish.item}
-                                      </h4>
-                                      {dish.is_promo_item && (
-                                        <span className="inline-block mt-1 text-[10px] md:text-xs bg-even-grass/20 text-even-evergreen px-2 py-0.5 rounded-full uppercase tracking-wide">
-                                          {dish.promo_discount_percentage !=
-                                            null &&
-                                          dish.promo_discount_percentage >= 100
-                                            ? t("freeLabel")
-                                            : dish.promo_discount_percentage !=
-                                                null
-                                              ? t("percentOff", {
-                                                  percent:
-                                                    dish.promo_discount_percentage,
-                                                })
-                                              : t("promoBadge")}
-                                        </span>
-                                      )}
-                                      <ItemCustomizations
-                                        customFields={dish.custom_fields}
-                                        formatPrice={(price) =>
-                                          price *
-                                          ((dish.total_display_price ??
-                                            dish.total_price) /
-                                            (dish.total_price || 1))
-                                        }
-                                      />
-                                      <div className="mt-1 md:mt-1.5 lg:mt-2">
-                                        <span
-                                          className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${statusColorMap[dish.status] || "bg-caution-100 text-caution-800 border-caution-300"}`}
-                                        >
-                                          {statusMap[dish.status] ||
-                                            dish.status}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right flex gap-10 md:gap-12 lg:gap-14">
-                                    <p className="text-black text-base md:text-lg lg:text-xl">
-                                      {dish.quantity}
-                                    </p>
-                                    <div className="w-14 md:w-16 lg:w-20">
-                                      {dish.is_promo_item &&
-                                        dish.promo_discount_percentage !=
-                                          null &&
-                                        dish.promo_discount_percentage <
-                                          100 && (
-                                          <p className="text-xs md:text-sm text-tone-400 line-through">
-                                            $
-                                            {(
-                                              (dish.total_display_price ??
-                                                dish.total_price) /
-                                              dish.quantity /
-                                              (1 -
-                                                dish.promo_discount_percentage /
-                                                  100)
-                                            ).toFixed(2)}
-                                          </p>
-                                        )}
-                                      <p className="text-black text-base md:text-lg lg:text-xl">
-                                        $
-                                        {(
-                                          (dish.total_display_price ??
-                                            dish.total_price) / dish.quantity
-                                        ).toFixed(2)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Paid Orders Section */}
-                  {paidDishes.length > 0 && (
-                    <div className="w-full mx-auto pb-6 md:pb-8">
-                      <div className="flex justify-between items-center mb-4 md:mb-6">
-                        <h2 className="bg-surface border border-stroke rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-base md:text-lg lg:text-xl font-medium text-black justify-self-center">
-                          {t("paidItemsTitle")}
-                        </h2>
-                        <button
-                          onClick={() => setShowPaidOrders(!showPaidOrders)}
-                          className="text-even-shamrock hover:text-even-evergreen transition-colors cursor-pointer text-sm md:text-base lg:text-lg"
-                        >
-                          {showPaidOrders ? (
-                            <div className="flex items-center gap-1 md:gap-1.5">
-                              <EyeClosed className="size-4 md:size-5 lg:size-6" />
-                              {t("hideCta")}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 md:gap-1.5">
-                              <Eye className="size-4 md:size-5 lg:size-6" />
-                              {t("showCta")}
-                            </div>
-                          )}
-                        </button>
-                      </div>
-
-                      {showPaidOrders && (
-                        <>
-                          <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-5 md:gap-6 lg:gap-7 justify-end translate-y-3">
-                            <span>{t("qtyLabel")}</span>
-                            <span>{t("priceLabel")}</span>
+                        ) : (
+                          <div>
+                            {unpaidDishes.map((dish) =>
+                              renderDishRow(dish, false),
+                            )}
                           </div>
+                        )}
 
-                          <div className="divide-y divide-stroke/50">
-                            {paidDishes.map((dish, dishIndex) => (
-                              <div
-                                key={`paid-${dish.dish_order_id}`}
-                                className="py-3 md:py-4 lg:py-5"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3 md:gap-4 lg:gap-5">
-                                    {showImages && (
-                                      <div className="shrink-0 mt-1">
-                                        <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
-                                          {dish.images?.[0] ? (
-                                            <img
-                                              src={dish.images[0]}
-                                              alt="Dish Image"
-                                              className="w-full h-full object-cover rounded-sm md:rounded-md"
-                                            />
-                                          ) : (
-                                            <img
-                                              src="/even/even-asterisk-evergreen.svg"
-                                              alt="Logo Even"
-                                              className="size-10 md:size-12 lg:size-14 object-contain"
-                                            />
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <h3 className="text-sm md:text-base lg:text-lg text-stroke">
-                                        {dish.guest_name.toUpperCase()}
-                                      </h3>
-                                      <h4 className="text-base md:text-lg lg:text-xl text-black">
-                                        {dish.item}
-                                      </h4>
-                                      {dish.is_promo_item && (
-                                        <span className="inline-block mt-1 text-[10px] md:text-xs bg-even-grass/20 text-even-evergreen px-2 py-0.5 rounded-full uppercase tracking-wide">
-                                          {dish.promo_discount_percentage !=
-                                            null &&
-                                          dish.promo_discount_percentage >= 100
-                                            ? t("freeLabel")
-                                            : dish.promo_discount_percentage !=
-                                                null
-                                              ? t("percentOff", {
-                                                  percent:
-                                                    dish.promo_discount_percentage,
-                                                })
-                                              : t("promoBadge")}
-                                        </span>
-                                      )}
-                                      <ItemCustomizations
-                                        customFields={dish.custom_fields}
-                                        formatPrice={(price) =>
-                                          price *
-                                          ((dish.total_display_price ??
-                                            dish.total_price) /
-                                            (dish.total_price || 1))
-                                        }
-                                      />
-                                      <div className="mt-1 flex items-center gap-2">
-                                        <p className="text-xs md:text-sm lg:text-base text-even-shamrock">
-                                          {t("paidBadge")}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right flex gap-10 md:gap-12 lg:gap-14">
-                                    <p className="text-black text-base md:text-lg lg:text-xl">
-                                      {dish.quantity}
-                                    </p>
-                                    <div>
-                                      {dish.is_promo_item &&
-                                        dish.promo_discount_percentage !=
-                                          null &&
-                                        dish.promo_discount_percentage <
-                                          100 && (
-                                          <p className="text-xs md:text-sm text-tone-400 line-through">
-                                            $
-                                            {(
-                                              (dish.total_display_price ??
-                                                dish.total_price) /
-                                              dish.quantity /
-                                              (1 -
-                                                dish.promo_discount_percentage /
-                                                  100)
-                                            ).toFixed(2)}
-                                          </p>
-                                        )}
-                                      <p className="text-black text-base md:text-lg lg:text-xl">
-                                        $
-                                        {(
-                                          (dish.total_display_price ??
-                                            dish.total_price) / dish.quantity
-                                        ).toFixed(2)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                        {unpaidDishes.length > 0 && (
+                          <>
+                            <ReceiptRule />
+                            <ReceiptRow
+                              strong
+                              left={t("subtotal")}
+                              right={`$${tableTotalPrice.toFixed(2)}`}
+                            />
+                            {tablePaidAmount > 0 && (
+                              <>
+                                <ReceiptRow
+                                  left={t("totalPaid")}
+                                  right={`-$${tablePaidAmount.toFixed(2)}`}
+                                />
+                                <ReceiptRow
+                                  strong
+                                  left={t("remainingLabel")}
+                                  right={`$${tableRemainingAmount.toFixed(2)}`}
+                                />
+                              </>
+                            )}
+                          </>
+                        )}
 
-                            {/* Paid Orders Total */}
-                            <div className="pt-4 md:pt-6">
-                              <div className="flex justify-between items-center text-black">
-                                <span className="text-lg md:text-xl lg:text-2xl font-medium">
-                                  {t("totalPaid")}
-                                </span>
-                                <span className="font-medium text-base md:text-lg lg:text-xl">
-                                  ${paidTotalPrice.toFixed(2)}
-                                </span>
+                        {/* Artículos pagados */}
+                        {paidDishes.length > 0 && (
+                          <>
+                            <ReceiptRule />
+                            <button
+                              onClick={() => setShowPaidOrders(!showPaidOrders)}
+                              className="flex w-full items-center justify-between text-sm text-even-shamrock cursor-pointer"
+                            >
+                              <span className="font-bold uppercase">
+                                {t("paidItemsTitle")} ({paidTotalItems})
+                              </span>
+                              <span className="flex items-center gap-1">
+                                {showPaidOrders ? (
+                                  <EyeClosed className="size-4" />
+                                ) : (
+                                  <Eye className="size-4" />
+                                )}
+                                {showPaidOrders ? t("hideCta") : t("showCta")}
+                              </span>
+                            </button>
+                            {showPaidOrders && (
+                              <div className="mt-1">
+                                {paidDishes.map((dish) =>
+                                  renderDishRow(dish, true),
+                                )}
+                                <ReceiptRow
+                                  strong
+                                  left={t("totalPaid")}
+                                  right={`$${paidTotalPrice.toFixed(2)}`}
+                                />
                               </div>
-                              <p className="text-sm md:text-base lg:text-lg mt-1 text-black">
-                                {t("paidDishesCount", {
-                                  count: paidTotalItems,
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                            )}
+                          </>
+                        )}
+                      </ReceiptPaper>
                     </div>
                   )}
                 </div>
@@ -510,23 +361,18 @@ export default function OrderStatus() {
                 {/* Fixed bottom section */}
                 {unpaidDishes.length > 0 && tableRemainingAmount > 0 && (
                   <div
-                    className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+                    className="fixed fixed-col bottom-0 bg-even-evergreen mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-50 border-t border-white/10"
                     style={{
                       paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                     }}
                   >
-                    <div className="mb-4 md:mb-5 lg:mb-6"></div>
-                    {/* Table Total */}
-                    <div className="space-y-3 md:space-y-4">
-                      {/* Total de la Mesa */}
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          {t("subtotal")}
-                        </span>
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${tableTotalPrice.toFixed(2)} MXN
-                        </span>
-                      </div>
+                    <div className="pt-4 flex justify-between items-center">
+                      <span className="font-medium text-white/70 text-base md:text-lg lg:text-xl">
+                        {t("subtotal")}
+                      </span>
+                      <span className="font-medium text-white text-base md:text-lg lg:text-xl">
+                        ${tableTotalPrice.toFixed(2)} MXN
+                      </span>
                     </div>
 
                     <button
@@ -534,7 +380,7 @@ export default function OrderStatus() {
                       disabled={
                         isProcessingPayment || tableRemainingAmount <= 0
                       }
-                      className={`mt-5 md:mt-6 lg:mt-7 w-full py-3 md:py-4 lg:py-5 rounded-full font-medium active:scale-95 transition-all bg-even-grass text-even-evergreen text-base md:text-lg lg:text-xl ${
+                      className={`mt-4 md:mt-5 w-full py-3 md:py-4 lg:py-5 rounded-full font-medium active:scale-95 transition-all bg-even-grass text-even-evergreen text-base md:text-lg lg:text-xl ${
                         !isProcessingPayment && tableRemainingAmount > 0
                           ? "cursor-pointer"
                           : "opacity-50 cursor-not-allowed"

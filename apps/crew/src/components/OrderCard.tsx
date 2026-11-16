@@ -68,6 +68,8 @@ interface OrderCardProps {
   onPrepTimeExtraChange?: (orderId: string, extraMinutes: number) => void;
   /** Solo lectura: deshabilita los controles de cambio de estado (Cocina sin cocina.operar). */
   readOnly?: boolean;
+  /** Oculta la acción "Entregado" (Cocina: lo marca el mesero). */
+  hideDelivered?: boolean;
   currentBranch?: Branch | null;
   onPaymentRegistered?: () => void;
   availableWaiters?: { id: string; name: string }[];
@@ -115,6 +117,7 @@ export default function OrderCard({
   onOrderCookingStatusChange,
   onPrepTimeExtraChange,
   readOnly = false,
+  hideDelivered = false,
   currentBranch,
   onPaymentRegistered,
   availableWaiters = [{ id: "EVEN", name: "EVEN" }],
@@ -495,6 +498,7 @@ export default function OrderCard({
             }
             hideStatusButtons={isPickAndGo || order.orderType === "tap_pay"}
             statusReadOnly={readOnly}
+            hideDelivered={hideDelivered}
             hideStatusBadge={order.orderType === "flex_bill"}
             onQuantityChange={
               canEditDishes && onDishQuantityChange
@@ -516,7 +520,7 @@ export default function OrderCard({
       {isPickAndGo && (
         <div className="px-5 pb-5 pt-2 border-t border-even-evergreen/10">
           <div className="flex gap-2">
-            {COOKING_STATUSES.map((s) => (
+            {COOKING_STATUSES.filter((s) => !hideDelivered || s !== "delivered").map((s) => (
               <button
                 key={s}
                 onClick={() => onOrderCookingStatusChange?.(order.id, s)}

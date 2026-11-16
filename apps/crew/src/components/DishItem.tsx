@@ -44,6 +44,8 @@ interface DishItemProps {
   hideStatusBadge?: boolean;
   /** Solo lectura: botones de estado deshabilitados. */
   statusReadOnly?: boolean;
+  /** Oculta el botón "Entregado" (Cocina). */
+  hideDelivered?: boolean;
   onQuantityChange?: (dishId: string, quantity: number) => Promise<void>;
 }
 
@@ -55,6 +57,7 @@ export default function DishItem({
   hideStatusButtons = false,
   hideStatusBadge = false,
   statusReadOnly = false,
+  hideDelivered = false,
   onQuantityChange,
 }: DishItemProps) {
   const [pendingAction, setPendingAction] = useState<
@@ -181,7 +184,7 @@ export default function DishItem({
       {/* Botones de status */}
       {!hideStatusButtons && (
         <div className="flex gap-2">
-          {STATUSES.map((s) => (
+          {STATUSES.filter((s) => !hideDelivered || s !== "delivered").map((s) => (
             <button
               key={s}
               onClick={() => onStatusChange(dish.id, s)}

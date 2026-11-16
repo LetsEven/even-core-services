@@ -12,10 +12,10 @@ import {
   type Column,
 } from "../features/cocina/board";
 
+// "Entregado" lo marca el mesero desde Mesas; Cocina solo ve Preparando y Listo.
 const COLUMNS: { id: Column; label: string; empty: string }[] = [
   { id: "preparing", label: "Preparando", empty: "Nada en preparación" },
   { id: "ready", label: "Listo", empty: "Nada listo por entregar" },
-  { id: "delivered", label: "Entregado", empty: "Sin órdenes entregadas" },
 ];
 
 interface Props {
@@ -141,7 +141,10 @@ export default function KitchenBoard({
       ready: [],
       delivered: [],
     };
-    for (const o of orders) g[getOrderColumn(o)].push(o);
+    for (const o of orders) {
+      const col = getOrderColumn(o);
+      if (col !== "delivered") g[col].push(o);
+    }
     // Más antiguas primero: es lo que la cocina debe atender antes.
     for (const k of Object.keys(g) as Column[]) {
       g[k].sort(
@@ -154,7 +157,7 @@ export default function KitchenBoard({
 
   const selected = orders.find((o) => o.id === selectedId) ?? null;
 
-  // Sin órdenes se conserva el tablero (Preparando / Listo / Entregado) con
+  // Sin órdenes se conserva el tablero (Preparando / Listo) con
   // cada columna vacía y su mensaje, en vez de una pantalla en blanco.
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -179,7 +182,7 @@ export default function KitchenBoard({
         ))}
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2">
         {COLUMNS.map((c) => (
           <section
             key={c.id}
@@ -232,6 +235,7 @@ export default function KitchenBoard({
             onOrderCookingStatusChange={onOrderCookingStatusChange}
             onPrepTimeExtraChange={onPrepTimeExtraChange}
             readOnly={readOnly}
+            hideDelivered
             currentBranch={currentBranch}
             onPaymentRegistered={onOrdersRefresh}
             availableWaiters={availableWaiters}

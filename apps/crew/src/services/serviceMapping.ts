@@ -22,14 +22,3 @@ export function getActiveOrderTypes(
     .filter((t): t is OrderType => t != null);
   return [...new Set(types)];
 }
-
-// Solo para el switcher de servicios (sucursales con 2+ servicios activos) —
-// no reemplaza los ORDER_TYPE_LABELS de Historial.tsx/OrderCard.tsx, que
-// tienen su propio propósito (badges por orden).
-export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
-  tap_pay: "Tap & Pay",
-  tap: "Tap Order & Pay",
-  flex_bill: "Flex Bill",
-  room: "Room Service",
-  pick_and_go: "Pick & Go",
-};

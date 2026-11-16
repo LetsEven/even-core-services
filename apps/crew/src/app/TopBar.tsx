@@ -8,7 +8,6 @@ import {
   LogOut,
 } from "lucide-react";
 import { Badge, IconButton, cn } from "@even/ui";
-import ServiceSwitcher from "../components/ServiceSwitcher";
 import { canPrintHere } from "../lib/platform";
 import { isDemoMode } from "../lib/demoMode";
 import { ROLE_LABELS, useAuth } from "../lib/auth";
@@ -53,9 +52,6 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
     branchId,
     currentBranch,
     changeBranch,
-    activeOrderTypes,
-    resolvedOrderType,
-    setSelectedOrderType,
     waiterSession,
     requireWaiterLogin,
   } = useSession();
@@ -191,11 +187,6 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
         </div>
       </div>
 
-      <ServiceSwitcher
-        activeOrderTypes={activeOrderTypes}
-        selected={resolvedOrderType}
-        onSelect={setSelectedOrderType}
-      />
     </header>
   );
 }

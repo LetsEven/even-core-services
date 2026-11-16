@@ -182,7 +182,9 @@
     "alreadyReviewed": "Ya has calificado este platillo",
     "errorSubmitReview": "Error al enviar la reseña. Intenta de nuevo.",
     "viewImageAlt": "Ver imagen {number}",
-    "defaultSectionName": "Menú"
+    "defaultSectionName": "Menú",
+    "decreaseQuantity": "Quitar uno",
+    "increaseQuantity": "Agregar uno"
   },
   "AddCardPage": {
     "title": "Agrega tu tarjeta para continuar",

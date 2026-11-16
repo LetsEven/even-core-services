@@ -1,4 +1,4 @@
-import DishLoadingShell from "@/components/UI/DishLoadingShell";
+import { DishLoadingShell } from "@even/ui";
 
 export default function DishLoading() {
   return <DishLoadingShell />;

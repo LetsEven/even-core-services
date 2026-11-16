@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 
-type DishBottomBarProps = {
+export type DishBottomBarProps = {
   /** Mientras carga, los botones se quedan y solo su contenido es skeleton. */
   loading?: boolean;
   quantity?: number;
@@ -15,6 +15,8 @@ type DishBottomBarProps = {
   /** Botón principal apagado (agotado o formulario incompleto). */
   muted?: boolean;
   label?: string;
+  /** Nombres accesibles de los botones "−" y "+". */
+  labels?: { decrement: string; increment: string };
 };
 
 const stepButton =
@@ -25,7 +27,7 @@ const stepButton =
  * Es la misma en el esqueleto y en la página real, así los botones nunca aparecen
  * ni desaparecen: solo cambia su contenido. Va por encima de la foto en vuelo (z-90).
  */
-export default function DishBottomBar({
+export function DishBottomBar({
   loading = false,
   quantity = 1,
   minusIsTrash = false,
@@ -35,6 +37,7 @@ export default function DishBottomBar({
   disabled = false,
   muted = false,
   label,
+  labels,
 }: DishBottomBarProps) {
   const off = muted || disabled;
   return (
@@ -48,13 +51,13 @@ export default function DishBottomBar({
       }}
     >
       <div className="flex items-center bg-white border border-tone-300 rounded-2xl shadow-sm shrink-0">
-        <button type="button" onClick={onMinus} disabled={loading} className={stepButton}>
+        <button type="button" onClick={onMinus} disabled={loading} aria-label={labels?.decrement} className={stepButton}>
           {minusIsTrash ? <Trash2 className="size-5 md:size-6 text-danger-500" /> : "−"}
         </button>
         <span className="w-8 text-center text-base md:text-lg font-medium text-black select-none">
           {loading ? <span className="mx-auto block h-5 w-4 animate-pulse rounded bg-tone-200" /> : quantity}
         </span>
-        <button type="button" onClick={onPlus} disabled={loading} className={stepButton}>
+        <button type="button" onClick={onPlus} disabled={loading} aria-label={labels?.increment} className={stepButton}>
           +
         </button>
       </div>

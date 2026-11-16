@@ -139,7 +139,9 @@
     "submitReviewCta": "Enviar reseña",
     "alreadyReviewed": "Ya has calificado este platillo",
     "errorSubmitReview": "Error al enviar la reseña. Intenta de nuevo.",
-    "defaultSectionName": "Menú"
+    "defaultSectionName": "Menú",
+    "decreaseQuantity": "Quitar uno",
+    "increaseQuantity": "Agregar uno"
   },
   "Auth": {
     "phoneStepTitle": "Ingresa tu número",

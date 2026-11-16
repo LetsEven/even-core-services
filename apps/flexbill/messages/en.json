@@ -139,7 +139,9 @@
     "submitReviewCta": "Submit review",
     "alreadyReviewed": "You've already reviewed this dish",
     "errorSubmitReview": "Error submitting review. Please try again.",
-    "defaultSectionName": "Menu"
+    "defaultSectionName": "Menu",
+    "decreaseQuantity": "Remove one",
+    "increaseQuantity": "Add one"
   },
   "Auth": {
     "phoneStepTitle": "Enter your number",

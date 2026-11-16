@@ -1,8 +1,8 @@
 "use client";
 
 import { m } from "motion/react";
-import { SPRING } from "@even/ui";
-import { markDishAnimationDone, useDishFlight } from "@/lib/dish-transition";
+import { SPRING } from "./motion-provider";
+import { markDishAnimationDone, useDishFlight } from "../../lib/dish-transition";
 
 /**
  * Foto en vuelo + hoja blanca + velo desenfocado, al estilo de la App Store. Vive
@@ -10,7 +10,7 @@ import { markDishAnimationDone, useDishFlight } from "@/lib/dish-transition";
  * sobrevive al cambio menú ⇄ detalle. El blur es un `backdrop-filter` fijo: solo se
  * anima su opacidad (animar el radio es muy pesado en iOS).
  */
-export default function DishFlight() {
+export function DishFlight() {
   const flight = useDishFlight();
   if (!flight) return null;
   const open = flight.mode === "open";

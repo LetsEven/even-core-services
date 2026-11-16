@@ -373,7 +373,9 @@
     "errorLoadingTitle": "Error al cargar",
     "errorLoadingMessage": "No pudimos cargar el platillo",
     "backToHomeSubtitle": "Regresar a la página principal",
-    "tryAgainLater": "Por favor intenta de nuevo más tarde"
+    "tryAgainLater": "Por favor intenta de nuevo más tarde",
+    "decreaseQuantity": "Quitar uno",
+    "increaseQuantity": "Agregar uno"
   },
   "CardSelectionPage": {
     "selectPaymentMethodTitle": "Selecciona tu método de pago",

@@ -103,3 +103,10 @@ export { MenuQuickAddModal, type MenuQuickAddModalProps } from "./components/men
 export { MenuRestaurantHeading, type MenuRestaurantHeadingProps } from "./components/menu/menu-restaurant-heading";
 export { MenuSearchInput, type MenuSearchInputProps } from "./components/menu/menu-search-input";
 export { QuantityStepper, type QuantityStepperProps } from "./components/menu/quantity-stepper";
+export { DishFlight } from "./components/menu/dish-flight";
+export { DishHeroImage } from "./components/menu/dish-hero-image";
+export { DishBottomBar, type DishBottomBarProps } from "./components/menu/dish-bottom-bar";
+export { DishLoadingShell } from "./components/menu/dish-loading-shell";
+export { DishScreen, DishSheet } from "./components/menu/dish-layout";
+export { PullToDismiss } from "./components/menu/pull-to-dismiss";
+export { markDishReady, startDishClose, startDishFlight, useDishFlight } from "./lib/dish-transition";

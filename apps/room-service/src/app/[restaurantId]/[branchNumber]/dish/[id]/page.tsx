@@ -8,8 +8,15 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { useValidateAccess } from "@/hooks/useValidateAccess";
 import { ChevronDown, X, Home, AlertCircle, CircleAlert, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
-import Loader from "@/components/UI/Loader";
+import {
+  DishBottomBar,
+  DishHeroImage,
+  DishLoadingShell,
+  DishScreen,
+  DishSheet,
+  PullToDismiss,
+  startDishClose,
+} from "@even/ui";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
 import OutOfStockModal from "@/components/OutOfStockModal";
 import ValidationError from "@/components/ValidationError";
@@ -63,6 +70,10 @@ export default function DishDetailPage() {
   const tc = useTranslations("Common");
   const params = useParams();
   const router = useRouter();
+  const dismiss = () => {
+    startDishClose();
+    router.back();
+  };
   const { validationError } = useValidateAccess();
   const dishId = parseInt(params.id as string);
   const editCartItemId = useSearchParams().get("cartItemId");
@@ -655,8 +666,13 @@ export default function DishDetailPage() {
     }
   };
 
+  // Sin esqueleto: pantalla blanca (la foto en vuelo hace de portada); ya se puede cerrar arrastrando.
   if (dishLoading) {
-    return <Loader />;
+    return (
+      <PullToDismiss onDismiss={dismiss}>
+        <DishLoadingShell />
+      </PullToDismiss>
+    );
   }
 
   if (validationError) {
@@ -763,7 +779,8 @@ export default function DishDetailPage() {
   const { dish, section } = dishData;
 
   return (
-    <div className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto">
+    <PullToDismiss onDismiss={dismiss}>
+    <DishScreen className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto overscroll-y-none">
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}
@@ -780,6 +797,11 @@ export default function DishDetailPage() {
       {/* Slider de imágenes */}
       {showImages && (
         <div className="absolute top-0 left-0 w-full h-96 md:h-112 lg:h-128 z-0">
+          <DishHeroImage
+            src={dish.images[0] ?? null}
+            ready
+            className="absolute inset-0 z-0"
+          />
           <div
             className="relative w-full h-full overflow-hidden"
             onTouchStart={handleTouchStart}
@@ -835,9 +857,7 @@ export default function DishDetailPage() {
         </div>
       )}
 
-      <MenuHeaderDish />
-
-      <main
+      <DishSheet
         className={`app-col ${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}
       >
         <div className="bg-white rounded-t-4xl flex flex-col min-h-[calc(100dvh-16rem)] md:min-h-[calc(100dvh-20rem)] lg:min-h-[calc(100dvh-24rem)] px-6 md:px-8 lg:px-10 pb-25 md:pb-30 lg:pb-35">
@@ -1303,66 +1323,30 @@ export default function DishDetailPage() {
             </div>
 
             {/* Bottom bar */}
-            <div
-              className="fixed fixed-col bottom-0 z-10 flex items-center gap-3 px-4 md:px-6 lg:px-8 pt-4 md:pt-5"
-              style={{
-                paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-                background: "rgba(255, 255, 255, 0.75)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-              }}
-            >
-              <div className="flex items-center bg-white border border-tone-300 rounded-2xl shadow-sm shrink-0">
-                <button
-                  onClick={() =>
-                    isEditMode && dishQuantity === 1
-                      ? setShowRemoveConfirm(true)
-                      : setDishQuantity((q) => Math.max(1, q - 1))
-                  }
-                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light active:scale-90 transition-transform"
-                >
-                  {isEditMode && dishQuantity === 1 ? (
-                    <Trash2 className="size-5 md:size-6 text-danger-500" />
-                  ) : (
-                    "−"
-                  )}
-                </button>
-                <span className="w-8 text-center text-base md:text-lg font-medium text-black select-none">
-                  {dishQuantity}
-                </span>
-                <button
-                  onClick={() => setDishQuantity((q) => q + 1)}
-                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light active:scale-90 transition-transform"
-                >
-                  +
-                </button>
-              </div>
-
-              <button
-                onClick={
-                  isEditMode ? handleUpdateAndReturn : handleAddToCartAndReturn
-                }
-                disabled={!isFormValid}
-                className={`flex-1 py-3.5 md:py-4 lg:py-5 rounded-2xl flex items-center justify-center ${
-                  dishData?.isOutOfStock
-                    ? "bg-tone-400 text-white cursor-not-allowed opacity-60"
-                    : isFormValid
-                      ? "bg-even-grass text-even-evergreen active:scale-95 transition-transform"
-                      : "bg-tone-400 text-white cursor-not-allowed opacity-60"
-                }`}
-              >
-                <span className="text-base md:text-lg font-medium">
-                  {dishData?.isOutOfStock
-                    ? tc("productOutOfStock")
-                    : t(isEditMode ? "updateCartCta" : "addToCartCta", {
-                        amount: (totalPrice * dishQuantity).toFixed(2),
-                      })}
-                </span>
-              </button>
-            </div>
+            <DishBottomBar
+              labels={{ decrement: t("decreaseQuantity"), increment: t("increaseQuantity") }}
+              quantity={dishQuantity}
+              minusIsTrash={isEditMode && dishQuantity === 1}
+              onMinus={() =>
+                isEditMode && dishQuantity === 1
+                  ? setShowRemoveConfirm(true)
+                  : setDishQuantity((q) => Math.max(1, q - 1))
+              }
+              onPlus={() => setDishQuantity((q) => q + 1)}
+              onSubmit={isEditMode ? handleUpdateAndReturn : handleAddToCartAndReturn}
+              disabled={!isFormValid}
+              muted={!!dishData?.isOutOfStock}
+              label={
+                dishData?.isOutOfStock
+                  ? tc("productOutOfStock")
+                  : t(isEditMode ? "updateCartCta" : "addToCartCta", {
+                      amount: (totalPrice * dishQuantity).toFixed(2),
+                    })
+              }
+            />
           </div>
         </div>
-      </main>
+      </DishSheet>
 
       {/* Review Modal */}
       {isReviewModalOpen && (
@@ -1543,6 +1527,7 @@ export default function DishDetailPage() {
           </div>
         </div>
       )}
-    </div>
+    </DishScreen>
+    </PullToDismiss>
   );
 }

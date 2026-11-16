@@ -373,7 +373,9 @@
     "errorLoadingTitle": "Error loading",
     "errorLoadingMessage": "We couldn't load the dish",
     "backToHomeSubtitle": "Return to the home page",
-    "tryAgainLater": "Please try again later"
+    "tryAgainLater": "Please try again later",
+    "decreaseQuantity": "Remove one",
+    "increaseQuantity": "Add one"
   },
   "CardSelectionPage": {
     "selectPaymentMethodTitle": "Select your payment method",

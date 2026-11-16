@@ -10,10 +10,10 @@ import { useCart } from "../../context/CartContext";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useRestaurant } from "../../context/RestaurantContext";
-import { MenuProductCard, rememberMenuPosition } from "@even/ui";
+import { MenuProductCard, rememberMenuPosition, startDishFlight } from "@even/ui";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
 import OutOfStockModal from "../OutOfStockModal";
-import { startDishFlight } from "../../lib/dish-transition";
+
 import { usePersonalItemDiscounts } from "../../hooks/usePersonalItemDiscounts";
 
 interface MenuItemProps {

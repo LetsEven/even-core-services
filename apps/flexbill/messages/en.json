@@ -38,6 +38,7 @@
     "showLessOptions": "Show less"
   },
   "MenuView": {
+    "orderPlaced": "Order sent",
     "categoriesLabel": "Categories",
     "pepperLabel": "Open chat with Pepper",
     "profileAlt": "Profile",
@@ -407,25 +408,6 @@
     "includesTip": "includes ${amount} tip",
     "continueCta": "Continue"
   },
-  "OrderAnimation": {
-    "creatingOrder": "We're creating your order",
-    "restaurantLabel": "Restaurant",
-    "nameFieldLabel": "Name",
-    "orderedDishesLabel": "Ordered dishes",
-    "quantityLabel": "Quantity: {quantity}",
-    "undoOrderCta": "Undo order",
-    "successMessage": "Your order was created successfully",
-    "loadingName": "Loading..."
-  },
-  "ReorderModal": {
-    "subtitle": "Select the items you'd like to reorder",
-    "noItemsAvailable": "No items available to reorder",
-    "subtotalLabel": "Subtotal:",
-    "sendingCta": "Sending...",
-    "errorUnknown": "Unknown error",
-    "orderSubmitError": "Error submitting the order: {message}. Please try again.",
-    "orderTimeoutAlert": "We couldn't confirm your order in time. Please check your order status before trying again."
-  },
   "PaymentSuccessPage": {
     "paidStamp": "PAID",
     "receiptItemsCount": "{count, plural, one {# item} other {# items}}",
@@ -526,7 +508,7 @@
     "nameLabel": "Your name",
     "namePlaceholder": "Name",
     "continueCta": "Continue",
-    "orderTimeoutAlert": "We couldn't confirm your order in time. Please check your order status before trying again."
+    "orderSubmitError": "Error submitting the order: {message}. Please try again."
   },
   "CardSelectionPage": {
     "selectPaymentMethodTitle": "Select your payment method",

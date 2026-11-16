@@ -38,6 +38,7 @@
     "showLessOptions": "Ver menos"
   },
   "MenuView": {
+    "orderPlaced": "Pedido enviado",
     "categoriesLabel": "Categorías",
     "pepperLabel": "Abrir chat con Pepper",
     "profileAlt": "Perfil",
@@ -407,25 +408,6 @@
     "includesTip": "incluye ${amount} propina",
     "continueCta": "Continuar"
   },
-  "OrderAnimation": {
-    "creatingOrder": "Estamos creando tu pedido",
-    "restaurantLabel": "Restaurante",
-    "nameFieldLabel": "Nombre",
-    "orderedDishesLabel": "Platillos ordenados",
-    "quantityLabel": "Cantidad: {quantity}",
-    "undoOrderCta": "Deshacer pedido",
-    "successMessage": "Tu pedido fue creado con éxito",
-    "loadingName": "Cargando..."
-  },
-  "ReorderModal": {
-    "subtitle": "Selecciona los artículos que deseas volver a ordenar",
-    "noItemsAvailable": "No hay artículos disponibles para reordenar",
-    "subtotalLabel": "Subtotal:",
-    "sendingCta": "Enviando...",
-    "errorUnknown": "Error desconocido",
-    "orderSubmitError": "Error al enviar la orden: {message}. Por favor intenta nuevamente.",
-    "orderTimeoutAlert": "No pudimos confirmar tu pedido a tiempo. Por favor verifica el estado de tu pedido antes de intentar de nuevo."
-  },
   "PaymentSuccessPage": {
     "paidStamp": "PAGADO",
     "receiptItemsCount": "{count, plural, one {# artículo} other {# artículos}}",
@@ -526,7 +508,7 @@
     "nameLabel": "Tu nombre",
     "namePlaceholder": "Nombre",
     "continueCta": "Continuar",
-    "orderTimeoutAlert": "No pudimos confirmar tu pedido a tiempo. Por favor verifica el estado de tu pedido antes de intentar de nuevo."
+    "orderSubmitError": "Error al enviar la orden: {message}. Por favor intenta nuevamente."
   },
   "CardSelectionPage": {
     "selectPaymentMethodTitle": "Selecciona tu método de pago",

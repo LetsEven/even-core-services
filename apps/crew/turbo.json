@@ -1,0 +1,1 @@
+{"extends":["//"],"tasks":{"build":{"env":["VITE_*"]}}}

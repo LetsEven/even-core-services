@@ -1,0 +1,7 @@
+{
+  "identifier": "desktop",
+  "description": "Capability for desktop only (Windows/macOS/Linux)",
+  "windows": ["main"],
+  "platforms": ["windows", "macOS", "linux"],
+  "permissions": []
+}

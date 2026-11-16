@@ -3,13 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useState, useRef, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useCart, CartItem } from "@/app/context/CartContext";
+import { useCart } from "@/app/context/CartContext";
 import { useTable } from "@/app/context/TableContext";
 import { useGuest } from "@/app/context/GuestContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { getRestaurantData } from "@/app/utils/restaurantData";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
-import OrderAnimation from "@/app/components/UI/OrderAnimation";
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import TermsCheckbox from "@/app/components/TermsCheckbox";
@@ -29,12 +28,6 @@ export default function UserPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsError, setTermsError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showOrderAnimation, setShowOrderAnimation] = useState(false);
-  const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
-  const [orderUserName, setOrderUserName] = useState("");
-  // Señal para OrderAnimation: true solo una vez que handleConfirmOrder
-  // confirmó el pedido de verdad contra el backend (ver OrderAnimation.tsx).
-  const [orderConfirmed, setOrderConfirmed] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { state: cartState, clearCart } = useCart();
   const { state, dispatch, submitOrder, joinTableWithoutOrdering } = useTable();
@@ -126,64 +119,34 @@ export default function UserPage() {
       return;
     }
 
-    setIsSubmitting(true);
-    setOrderConfirmed(false);
-    // Guardar items antes de que se limpie el carrito
+    // Pedir directo, sin animaciones: es un pedido adicional, no un pago.
+    const name = userName.trim();
     const itemsToOrder = [...cartState.items];
-    setOrderedItems(itemsToOrder);
-    setOrderUserName(userName.trim());
-    // Mostrar animación de orden INMEDIATAMENTE (sin enviar la orden aún)
-    setShowOrderAnimation(true);
-  };
-
-  const handleContinueFromAnimation = () => {
-    navigateWithTable("/order");
-  };
-
-  const handleCancelOrder = () => {
-    setShowOrderAnimation(false);
-    setOrderedItems([]);
-    setOrderUserName("");
-    setIsSubmitting(false);
-    setOrderConfirmed(false);
-  };
-
-  // Red de seguridad de OrderAnimation: la confirmación real nunca llegó
-  // dentro del tiempo de espera — puede que sí se haya creado la orden, así
-  // que no se afirma que falló, solo se saca al usuario de la pantalla
-  // congelada y se le pide verificar antes de reintentar.
-  const handleOrderTimeout = () => {
-    setShowOrderAnimation(false);
-    setIsSubmitting(false);
-    alert(t("orderTimeoutAlert"));
-  };
-
-  const handleConfirmOrder = async () => {
-    // Esta función se ejecuta después de que expira el período de cancelación
-    if (orderUserName && orderedItems.length > 0) {
+    if (itemsToOrder.length === 0) {
+      setIsSubmitting(false);
+      return;
+    }
+    try {
+      // Recordar el nombre para que el siguiente pedido no lo vuelva a pedir.
+      setGuestName(name);
+      await submitOrder(name, itemsToOrder, branchNumber?.toString());
+      clearCart().catch((err) =>
+        console.error("Error clearing cart after order:", err),
+      );
       try {
-        // Enviar la orden a la API con branchNumber
-        await submitOrder(
-          orderUserName,
-          orderedItems,
-          branchNumber?.toString(),
-        );
-        // Limpiar el carrito de la base de datos después de la orden exitosa
-        // (fire-and-forget: clearCart ya atrapa sus propios errores
-        // internamente, esperarla solo agregaba latencia antes de confirmar)
-        clearCart().catch((err) =>
-          console.error("Error clearing cart after order:", err),
-        );
-        // El pedido ya se confirmó de verdad contra el backend — OrderAnimation
-        // esperaba esta señal para avanzar a la pantalla de éxito.
-        setOrderConfirmed(true);
-      } catch (error) {
-        console.error("Error submitting order:", error);
-        // Si hay error, ocultar la animación
-        setShowOrderAnimation(false);
-      } finally {
-        setIsSubmitting(false);
+        sessionStorage.setItem("even-order-placed", "1");
+      } catch {
+        // sin sessionStorage: simplemente no hay aviso
       }
+      navigateWithTable("/menu", true);
+    } catch (error) {
+      console.error("Error submitting order:", error);
+      setIsSubmitting(false);
+      alert(
+        t("orderSubmitError", {
+          message: error instanceof Error ? error.message : "",
+        }),
+      );
     }
   };
 
@@ -312,19 +275,6 @@ export default function UserPage() {
           </button>
         </div>
       </div>
-
-      {/* OrderAnimation overlay - para usuarios invitados */}
-      {showOrderAnimation && (
-        <OrderAnimation
-          userName={orderUserName}
-          orderedItems={orderedItems}
-          orderConfirmed={orderConfirmed}
-          onTimeout={handleOrderTimeout}
-          onContinue={handleContinueFromAnimation}
-          onCancel={handleCancelOrder}
-          onConfirm={handleConfirmOrder}
-        />
-      )}
     </div>
   );
 }

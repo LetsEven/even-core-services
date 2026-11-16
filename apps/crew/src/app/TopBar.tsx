@@ -1,14 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router";
-import {
-  PrinterCheck,
-  RefreshCw,
-  UserRound,
-  LogOut,
-} from "lucide-react";
-import { IconButton, cn } from "@even/ui";
+import { PrinterCheck, RefreshCw, UserRound } from "lucide-react";
+import { Button, IconButton, Modal, cn } from "@even/ui";
 import { canPrintHere } from "../lib/platform";
 import { isDemoMode } from "../lib/demoMode";
-import { ROLE_LABELS, useAuth } from "../lib/auth";
+import { useAuth } from "../lib/auth";
 import { useBridgeStatus } from "../features/impresion/bridgeStatus";
 import { getPrintingStatus } from "../features/impresion/printingStatus";
 import { useSession } from "./session/context";
@@ -47,6 +43,7 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
   const { waiterSession, requireWaiterLogin } = useSession();
   const print = usePrintStatus();
   const { kind, user, signOut, hasPermission } = useAuth();
+  const [confirmExit, setConfirmExit] = useState(false);
 
   const chipClass =
     "flex items-center gap-1.5 min-w-0 max-w-[60%] sm:max-w-64 text-even-offwhite/80 hover:text-even-offwhite bg-white/10 hover:bg-white/15 rounded-full px-3 min-h-11 text-xs transition-colors cursor-pointer";
@@ -76,16 +73,13 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
         {/* Usuario activo: tocar permite cambiar de usuario. */}
         {kind === "local" && user ? (
           <button
-            onClick={() => void signOut()}
+            onClick={() => setConfirmExit(true)}
             title="Cambiar de usuario"
-            aria-label={`${user.name}, ${ROLE_LABELS[user.role]}. Cambiar de usuario`}
+            aria-label={`${user.name}. Cambiar de usuario`}
             className={chipClass}
           >
             <UserRound className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">
-              {user.name} · {ROLE_LABELS[user.role]}
-            </span>
-            <LogOut className="w-3.5 h-3.5 shrink-0 text-even-offwhite/50" />
+            <span className="truncate">{user.name}</span>
           </button>
         ) : (
           <button
@@ -127,6 +121,28 @@ export default function TopBar({ onRefresh, refreshing }: Props) {
           <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
         </IconButton>
       </div>
+      <Modal
+        open={confirmExit}
+        onClose={() => setConfirmExit(false)}
+        title="¿Deseas salir de la sesión?"
+        description={user ? `Sesión de ${user.name}.` : undefined}
+        footer={
+          <div className="flex gap-3">
+            <Button variant="outline" fullWidth onClick={() => setConfirmExit(false)}>
+              Regresar
+            </Button>
+            <Button
+              fullWidth
+              onClick={() => {
+                setConfirmExit(false);
+                void signOut();
+              }}
+            >
+              Salir
+            </Button>
+          </div>
+        }
+      />
     </header>
   );
 }

@@ -158,7 +158,7 @@ describe("administracion de usuarios locales", () => {
 });
 
 describe("visibilidad en Ajustes", () => {
-  const session = { waiterSession: null, requireWaiterLogin: () => {} } as unknown as SessionValue;
+  const session = { waiterSession: null, requireWaiterLogin: () => {}, branches: [], branchId: null, currentBranch: undefined, changeBranch: () => {} } as unknown as SessionValue;
   function mountAjustes(role: Role, kind: AuthKind) {
     fetchMock.mockImplementation(async () => jsonResponse({ users: [] }));
     render(

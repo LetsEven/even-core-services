@@ -2,7 +2,7 @@ import { Navigate, useNavigate } from "react-router";
 import Printers from "../pages/Printers";
 import Historial from "../pages/Historial";
 import Comprobantes from "../pages/Comprobantes";
-import { SERVICE_REGISTRY } from "../services/registry";
+import TablesBoard from "../components/TablesBoard";
 import { PickAndGoHome } from "../services/homeScreens";
 import { AppLoader } from "./guards";
 import { useSession } from "./session/context";
@@ -18,12 +18,20 @@ export function HomeRedirect() {
   return <Navigate to={onlyPickAndGo ? "/cocina" : "/mesas"} replace />;
 }
 
-// Mesas: pantalla principal según el servicio contratado (SERVICE_REGISTRY).
+// Mesas: todas las mesas juntas; el servicio es un atributo de cada cuenta.
 export function MesasPage() {
-  const props = useHomeScreenProps();
-  const { resolvedOrderType } = useSession();
-  const HomeScreen = SERVICE_REGISTRY[resolvedOrderType].HomeScreen;
-  return <HomeScreen {...props} />;
+  const s = useSession();
+  return (
+    <TablesBoard
+      branchId={s.branchId}
+      branches={s.branches}
+      branchesLoading={s.branchesLoading}
+      orders={s.orders}
+      activeOrderTypes={s.activeOrderTypes}
+      crewConfig={s.crewConfig}
+      onOrdersRefresh={() => s.fetchOrders()}
+    />
+  );
 }
 
 export function CocinaPage() {

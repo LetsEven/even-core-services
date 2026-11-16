@@ -22,7 +22,7 @@ vi.mock("../pages/Kitchen", () => ({ default: () => null }));
 vi.mock("../pages/Printers", () => ({ default: () => null }));
 vi.mock("../pages/Historial", () => ({ default: () => null }));
 vi.mock("../pages/Comprobantes", () => ({ default: () => null }));
-vi.mock("../components/SpatialGrid", () => ({ default: () => null }));
+vi.mock("../components/TablesBoard", () => ({ default: () => null }));
 
 function renderAt(path: string, session?: Partial<SessionValue>) {
   const router = createMemoryRouter(

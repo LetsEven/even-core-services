@@ -5,7 +5,7 @@ export function PickAndGoHome(props: HomeScreenProps & { readOnly?: boolean }) {
   return (
     <Kitchen
       readOnly={props.readOnly}
-      orders={props.orders.filter((o) => o.orderType === "pick_and_go")}
+      orders={props.orders}
       loading={props.ordersLoading}
       error={props.ordersError}
       fetchOrders={props.fetchOrders}

@@ -79,21 +79,6 @@ export default function DishItem({
       {/* Info del plato */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          {dish.images?.[0] ? (
-            <img
-              src={dish.images[0]}
-              alt={dish.item}
-              className="w-11 h-11 rounded-md object-cover shrink-0"
-            />
-          ) : (
-            <div className="w-11 h-11 rounded-md bg-even-evergreen/10 shrink-0 flex items-center justify-center overflow-hidden">
-              <img
-                src="/even/even-asterisk-evergreen.svg"
-                alt=""
-                className="w-8 h-8 opacity-30"
-              />
-            </div>
-          )}
           <div className="min-w-0">
             <p className="font-semibold text-even-evergreen truncate">
               {canEdit ? dish.item : `${dish.quantity} ${dish.item}`}

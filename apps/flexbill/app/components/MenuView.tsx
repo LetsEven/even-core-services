@@ -215,6 +215,22 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
     }
   }, []);
 
+  // Aviso de "pedido enviado" al volver del carrito (lo deja CartView).
+  const [orderToast, setOrderToast] = useState(false);
+  useEffect(() => {
+    let flagged = false;
+    try {
+      flagged = sessionStorage.getItem("even-order-placed") === "1";
+      if (flagged) sessionStorage.removeItem("even-order-placed");
+    } catch {
+      // sin sessionStorage: no hay aviso
+    }
+    if (!flagged) return;
+    setOrderToast(true);
+    const timer = setTimeout(() => setOrderToast(false), 2800);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Precargar chunks lazy después de que la página ya es interactiva
   useEffect(() => {
     const t = setTimeout(() => {
@@ -376,6 +392,16 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
 
   return (
     <div className="min-h-screen bg-white md:bg-even-evergreen relative">
+      {orderToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed left-1/2 -translate-x-1/2 z-[100] bg-even-evergreen text-white rounded-full px-5 py-3 text-base shadow-lg animate-simple-fade-in"
+          style={{ top: "max(1rem, env(safe-area-inset-top))" }}
+        >
+          ✓ {t("orderPlaced")}
+        </div>
+      )}
       <img
         src={restaurant.banner_url || DEFAULT_IMAGES.RESTAURANT_BANNER}
         alt=""

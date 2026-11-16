@@ -38,6 +38,7 @@
     "showLessOptions": "Show less"
   },
   "MenuView": {
+    "orderPlaced": "Order sent",
     "categoriesLabel": "Categories",
     "pepperLabel": "Open chat with Pepper",
     "profileAlt": "Profile",

@@ -4,12 +4,11 @@ import { sheetClasses } from "@even/ui";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Minus, Plus, ShoppingBag, ChevronDown } from "lucide-react";
-import { useCart, CartItem } from "@/app/context/CartContext";
+import { useCart } from "@/app/context/CartContext";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { getRestaurantData } from "@/app/utils/restaurantData";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
-import OrderAnimation from "@/app/components/UI/OrderAnimation";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import { useGuest } from "@/app/context/GuestContext";
@@ -85,12 +84,7 @@ export default function CartView() {
   const removeUnavailable = async () => {
     for (const item of unavailableItems) await removeCartItem(item.cartItemId);
   };
-  const [showOrderAnimation, setShowOrderAnimation] = useState(false);
-  const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Señal para OrderAnimation: true solo una vez que handleConfirmOrder
-  // confirmó el pedido de verdad contra el backend (ver OrderAnimation.tsx).
-  const [orderConfirmed, setOrderConfirmed] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Precio unitario ya con la comisión de Flex Bill incrustada (nunca se
@@ -159,128 +153,81 @@ export default function CartView() {
       }
     }
 
-    // Si el usuario está loggeado Y su perfil está completo (nombre + fecha
-    // de nacimiento), hacer la orden directamente con animación
+    // Usuario loggeado con perfil completo, o invitado con nombre: pedir directo
+    // (sin pantallas de confirmación/animación: es un pedido adicional, no un pago).
     if (!isLoading && isAuthenticated && user && isProfileComplete(profile)) {
-      setIsSubmitting(true);
-      setOrderConfirmed(false);
-      // Guardar items antes de que se limpie el carrito
-      const itemsToOrder = [...cartState.items];
-      setOrderedItems(itemsToOrder);
-      // Mostrar animación de orden INMEDIATAMENTE (sin enviar la orden aún)
-      setShowOrderAnimation(true);
+      await placeOrder();
     } else if (!isLoading && isAuthenticated && user) {
       // Autenticado pero con perfil incompleto — sin esto, la orden se
       // grababa igual pero con un nombre placeholder generado a partir del
       // id de usuario. Pedirle que complete su perfil antes de ordenar.
-      console.log(
-        "📱 User authenticated but profile incomplete, redirecting to /auth-selection",
-      );
       navigateWithTable("/auth-selection");
     } else if (guestName) {
-      // Si NO está loggeado pero ya tiene nombre de invitado, proceder con la orden
-      console.log(
-        "📱 User not authenticated but has guest name, proceeding with order",
-      );
-      setIsSubmitting(true);
-      setOrderConfirmed(false);
-      const itemsToOrder = [...cartState.items];
-      setOrderedItems(itemsToOrder);
-      setShowOrderAnimation(true);
+      await placeOrder();
     } else {
-      // Si NO está loggeado y no tiene nombre, navegar a la vista de usuario para capturar su nombre
-      console.log("📱 User not authenticated, redirecting to /user");
+      // Sin sesión ni nombre: capturar el nombre antes de ordenar.
       navigateWithTable("/user");
     }
   };
 
-  const handleContinueFromAnimation = () => {
-    navigateWithTable("/order");
-  };
+  const placeOrder = async () => {
+    if (isSubmitting || cartState.items.length === 0) return;
+    setIsSubmitting(true);
+    const itemsToOrder = [...cartState.items];
 
-  const handleCancelOrder = () => {
-    console.log("❌ Order cancelled by user");
-    setShowOrderAnimation(false);
-    setOrderedItems([]);
-    setIsSubmitting(false);
-    setOrderConfirmed(false);
-  };
-
-  // Red de seguridad de OrderAnimation: la confirmación real nunca llegó
-  // dentro del tiempo de espera — puede que sí se haya creado la orden, así
-  // que no se afirma que falló, solo se saca al usuario de la pantalla
-  // congelada y se le pide verificar antes de reintentar.
-  const handleOrderTimeout = () => {
-    setShowOrderAnimation(false);
-    setIsSubmitting(false);
-    alert(t("orderTimeoutAlert"));
-  };
-
-  const handleConfirmOrder = async () => {
-    // Esta función se ejecuta después de que expira el período de cancelación
-    if (orderedItems.length > 0) {
-      // Determinar el nombre del usuario (autenticado o invitado)
-      let userName: string;
-      if (isAuthenticated && user) {
-        // Defensiva: si el perfil en memoria todavía no trae nombre (puede
-        // no haber propagado al AuthContext justo en este momento aunque ya
-        // exista en el backend), reintentamos una vez antes de caer al
-        // placeholder "Usuario <id>".
-        let resolvedProfile = profile;
-        if (!profile?.firstName) {
-          try {
-            const freshProfileResponse =
-              (await authService.getMyProfile()) as any;
-            const freshProfile =
-              freshProfileResponse?.data?.data?.profile ||
-              freshProfileResponse?.data?.profile;
-            if (freshProfile?.firstName) {
-              resolvedProfile = freshProfile;
-            }
-          } catch {
-            // Si falla el refetch, seguimos con lo que ya había en memoria
-          }
+    // Determinar el nombre del usuario (autenticado o invitado)
+    let userName: string;
+    if (isAuthenticated && user) {
+      // Defensiva: si el perfil en memoria todavía no trae nombre, reintentamos
+      // una vez antes de caer al placeholder "Usuario <id>".
+      let resolvedProfile = profile;
+      if (!profile?.firstName) {
+        try {
+          const freshProfileResponse =
+            (await authService.getMyProfile()) as any;
+          const freshProfile =
+            freshProfileResponse?.data?.data?.profile ||
+            freshProfileResponse?.data?.profile;
+          if (freshProfile?.firstName) resolvedProfile = freshProfile;
+        } catch {
+          // seguimos con lo que ya había en memoria
         }
-        userName = resolvedProfile?.firstName
-          ? `${resolvedProfile.firstName}`.trim()
-          : `${tc("defaultUserName")} ${user.id.substring(0, 8)}`;
-      } else if (guestName) {
-        userName = guestName;
-      } else {
-        console.error("No user name available for order");
-        setShowOrderAnimation(false);
-        setIsSubmitting(false);
-        return;
       }
+      userName = resolvedProfile?.firstName
+        ? `${resolvedProfile.firstName}`.trim()
+        : `${tc("defaultUserName")} ${user.id.substring(0, 8)}`;
+    } else if (guestName) {
+      userName = guestName;
+    } else {
+      console.error("No user name available for order");
+      setIsSubmitting(false);
+      return;
+    }
 
+    try {
+      await submitOrder(
+        userName,
+        itemsToOrder,
+        branchNumber?.toString(),
+        orderNotes.trim() || null,
+      );
+      // Fire-and-forget: clearCart atrapa sus propios errores.
+      clearCart().catch((err) =>
+        console.error("Error clearing cart after order:", err),
+      );
+      // Aviso para el menú, que lo muestra al montar.
       try {
-        // Enviar la orden a la API con branchNumber
-        await submitOrder(
-          userName,
-          orderedItems,
-          branchNumber?.toString(),
-          orderNotes.trim() || null,
-        );
-        // Limpiar el carrito de la base de datos después de la orden exitosa
-        // (fire-and-forget: clearCart ya atrapa sus propios errores
-        // internamente y nunca los propaga, así que esperarla no aportaba
-        // nada — solo agregaba latencia antes de confirmar el pedido)
-        clearCart().catch((err) =>
-          console.error("Error clearing cart after order:", err),
-        );
-        // El pedido ya se confirmó de verdad contra el backend — OrderAnimation
-        // esperaba esta señal para avanzar a la pantalla de éxito.
-        setOrderConfirmed(true);
-      } catch (error) {
-        console.error("Error submitting order:", error);
-        // Si hay error, ocultar la animación y mostrar mensaje al usuario
-        setShowOrderAnimation(false);
-        const errorMessage =
-          error instanceof Error ? error.message : t("errorUnknown");
-        alert(t("orderSubmitError", { message: errorMessage }));
-      } finally {
-        setIsSubmitting(false);
+        sessionStorage.setItem("even-order-placed", "1");
+      } catch {
+        // sessionStorage no disponible: simplemente no hay aviso
       }
+      navigateWithTable("/menu", true);
+    } catch (error) {
+      console.error("Error submitting order:", error);
+      setIsSubmitting(false);
+      const errorMessage =
+        error instanceof Error ? error.message : t("errorUnknown");
+      alert(t("orderSubmitError", { message: errorMessage }));
     }
   };
 
@@ -622,18 +569,6 @@ export default function CartView() {
         </div>
       </div>
 
-      {/* OrderAnimation overlay - para usuarios loggeados o invitados con nombre */}
-      {showOrderAnimation && (
-        <OrderAnimation
-          userName={profile?.firstName || guestName || tc("defaultUserName")}
-          orderedItems={orderedItems}
-          orderConfirmed={orderConfirmed}
-          onTimeout={handleOrderTimeout}
-          onContinue={handleContinueFromAnimation}
-          onCancel={handleCancelOrder}
-          onConfirm={handleConfirmOrder}
-        />
-      )}
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}

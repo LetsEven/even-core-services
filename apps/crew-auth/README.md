@@ -134,3 +134,16 @@ O con Docker: `docker build -f apps/crew-auth/Dockerfile -t crew-auth . && docke
 ## Respaldo
 
 Copiar `DATA_DIR` (usar `sqlite3 crew-auth.db ".backup out.db"` con el servicio en marcha por el modo WAL).
+
+## Bootstrap por variable de entorno (solo dev/staging)
+
+Si no hay shell en el entorno (p. ej. Railway), define `CREW_AUTH_BOOTSTRAP_JSON` y el servicio dara de alta
+los usuarios al arrancar (idempotente: no duplica ni cambia PIN de usuarios existentes):
+
+```json
+{"restaurantId":"26","branchId":"<id>","pairingCodeMinutes":30,
+ "users":[{"name":"Super","role":"super","pin":"123456"},{"name":"Mesero","role":"mesero","pin":"1111"}]}
+```
+
+El codigo de vinculacion se imprime en los logs. Los PIN viven en una variable de entorno: **no usar en produccion**
+(alli, CLI `create-super`). Quita la variable una vez creados los usuarios.

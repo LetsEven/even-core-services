@@ -126,3 +126,9 @@ Crew ya tiene el cliente y la UI preparados; falta que el backend exponga:
 - `AddDishModal` sigue en uso por `OrderCard` ("Agregar"); se retirará cuando la comanda unificada cubra agregar platillos a una cuenta existente.
 - La columna "Entregado" de Cocina solo muestra lo que el hook conserva (hoy Flex Bill con saldo pendiente); el resto sale al entregarse.
 - 42 warnings de lint preexistentes (`no-explicit-any`, `react-hooks`); ninguna regla se ha bajado.
+
+## CSP
+
+`index.html` lleva un `<meta http-equiv="Content-Security-Policy" content="%CREW_CSP%">`; el plugin `crew-csp` de `vite.config.ts` lo rellena en cada build con `src/lib/csp.ts` segun las `VITE_*`: `self`, la API (`VITE_API_BASE_URL`, https y wss), `VITE_CREW_AUTH_URL` solo con `provider=local`, Clerk (host del Frontend API sacado de la clave publica) solo con `provider=clerk`, Firebase push (salvo demo), IPC de Tauri. Una URL o proveedor invalido rompe el build. Las fuentes son las propias (@fontsource; ya no se cargan de Google Fonts).
+
+`src-tauri/tauri.conf.json` (`app.security.csp`) es estatico: es un superconjunto de lo que pide cualquier build (api.letseven.io, `*.up.railway.app`, Clerk, Firebase); la politica efectiva es la interseccion con el meta del build. Un build de Tauri con `provider=local` hacia un host fuera de `*.up.railway.app` (p. ej. una Pi en la LAN) debe anadirlo en `connect-src` con `tauri build --config`. `frame-ancestors` no funciona por meta: para la web conviene la cabecera `Content-Security-Policy: frame-ancestors 'none'` en Caddy.

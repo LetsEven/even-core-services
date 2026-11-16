@@ -2,6 +2,8 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!-- CSP generada en build (vite.config.ts + src/lib/csp.ts) con las VITE_* de este build. -->
+    <meta http-equiv="Content-Security-Policy" content="%CREW_CSP%" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="viewport"
@@ -17,12 +19,6 @@
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap"
-      rel="stylesheet"
     />
   </head>
   <body>

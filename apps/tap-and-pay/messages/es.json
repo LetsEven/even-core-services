@@ -301,5 +301,19 @@
     "updateBody": "Actualizamos nuestros Términos y Condiciones y Aviso de Privacidad.",
     "updateCta": "Entendido",
     "errorSave": "No pudimos guardar tu aceptación. Intenta de nuevo."
+  },
+  "SpotPicker": {
+    "title": "Elige tu mesa",
+    "subtitle": "Toca tu mesa para continuar. También puedes escanear el código QR que está en ella.",
+    "spotLabel": "Mesa {id}",
+    "available": "Libre",
+    "occupied": "Ocupada",
+    "reserved": "Reservada",
+    "unknown": "Sin estatus",
+    "filterAll": "Todas",
+    "filterAvailable": "Libres",
+    "empty": "No hay mesas para mostrar.",
+    "error": "No pudimos cargar las mesas.",
+    "retry": "Reintentar"
   }
 }

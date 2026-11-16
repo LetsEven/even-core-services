@@ -1,6 +1,7 @@
 export const PACKAGE_NAME = "@even/api-client";
 export type { ApiResponse, Requester } from "./types";
 export { getBackendOrigin } from "./origin";
+export { fetchRestaurantTables, type Spot, type SpotStatus } from "./spots";
 export {
   AUTH_TOKEN_STORAGE_KEY,
   GUEST_ID_STORAGE_KEY,

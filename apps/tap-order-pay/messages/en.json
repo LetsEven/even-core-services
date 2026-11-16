@@ -497,5 +497,19 @@
   "RestaurantIntro": {
     "title": "Welcome",
     "skip": "Tap to continue"
+  },
+  "SpotPicker": {
+    "title": "Choose your table",
+    "subtitle": "Tap your table to continue. You can also scan the QR code on it.",
+    "spotLabel": "Table {id}",
+    "available": "Available",
+    "occupied": "Occupied",
+    "reserved": "Reserved",
+    "unknown": "No status",
+    "filterAll": "All",
+    "filterAvailable": "Available",
+    "empty": "No tables to show.",
+    "error": "We couldn't load the tables.",
+    "retry": "Retry"
   }
 }

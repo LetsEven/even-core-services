@@ -2,20 +2,26 @@
 
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import TableSpotPicker from "@/app/components/TableSpotPicker";
 
 // Restaurant ID y Branch por defecto para testing
 // Estos valores coinciden con la orden de prueba en tap_pay_orders
 const DEFAULT_RESTAURANT_ID = 5; // Tacos Atarantados
 const DEFAULT_BRANCH_NUMBER = 2;
-const DEFAULT_TABLE = 1; // Mesa
 
 export default function Home() {
   const t = useTranslations("HomePage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading } = useAuth();
+  const [showPicker, setShowPicker] = useState(false);
+
+  const restaurantParam = searchParams.get("restaurant");
+  const pickerRestaurantId =
+    restaurantParam || DEFAULT_RESTAURANT_ID;
+  const branchNumber = searchParams.get("branch") || DEFAULT_BRANCH_NUMBER;
 
   useEffect(() => {
     if (isLoading) return;
@@ -27,7 +33,6 @@ export default function Home() {
     const authFromPaymentFlow = sessionStorage.getItem("authFromPaymentFlow");
 
     // Determinar restaurantId
-    const restaurantParam = searchParams.get("restaurant");
     const restaurantId =
       restaurantParam || storedRestaurant || DEFAULT_RESTAURANT_ID;
 
@@ -57,19 +62,27 @@ export default function Home() {
     const tableParam = searchParams.get("table");
     if (tableParam) {
       router.replace(
-        `/${restaurantId}/${DEFAULT_BRANCH_NUMBER}/order?table=${tableParam}`,
+        `/${restaurantId}/${branchNumber}/order?table=${tableParam}`,
       );
       return;
     }
 
-    // Default redirect
-    console.log(
-      `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/${DEFAULT_BRANCH_NUMBER}/order?table=${DEFAULT_TABLE}`,
+    // Sin mesa: se muestra el selector de mesas
+    setShowPicker(true);
+  }, [router, searchParams, isAuthenticated, isLoading, branchNumber]);
+
+  if (showPicker) {
+    return (
+      <TableSpotPicker
+        restaurantId={pickerRestaurantId}
+        onSelect={(table) =>
+          router.push(
+            `/${pickerRestaurantId}/${branchNumber}/order?table=${encodeURIComponent(table)}`,
+          )
+        }
+      />
     );
-    router.replace(
-      `/${DEFAULT_RESTAURANT_ID}/${DEFAULT_BRANCH_NUMBER}/order?table=${DEFAULT_TABLE}`,
-    );
-  }, [router, searchParams, isAuthenticated, isLoading]);
+  }
 
   return (
     <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">

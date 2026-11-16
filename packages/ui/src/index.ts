@@ -50,6 +50,13 @@ export {
 export { TermsUpdateToast, type TermsUpdateToastProps } from "./components/terms-update-toast";
 export { Spinner, type SpinnerProps } from "./components/spinner";
 export {
+  SpotPicker,
+  type SpotPickerItem,
+  type SpotPickerLabels,
+  type SpotPickerProps,
+  type SpotPickerStatus,
+} from "./components/spot-picker";
+export {
   DAY_KEYS,
   DETAIL_ANIMATION_MS,
   RestaurantDetailSheet,

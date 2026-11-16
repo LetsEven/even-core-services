@@ -2,19 +2,25 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import TableSpotPicker from "@/components/TableSpotPicker";
 
 // Restaurant ID y Branch por defecto para testing
 const DEFAULT_RESTAURANT_ID = 15;
 const DEFAULT_BRANCH_NUMBER = 1;
-const DEFAULT_TABLE = 2;
 
 export default function Home() {
   const t = useTranslations("HomePage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading } = useAuth();
+  const [showPicker, setShowPicker] = useState(false);
+
+  const restaurantParam = searchParams.get("restaurant");
+  const pickerRestaurantId =
+    restaurantParam || DEFAULT_RESTAURANT_ID;
+  const branchNumber = searchParams.get("branch") || DEFAULT_BRANCH_NUMBER;
 
   useEffect(() => {
     if (isLoading) return;
@@ -26,7 +32,6 @@ export default function Home() {
     const authFromMenu = sessionStorage.getItem("authFromMenu");
 
     // Determinar restaurantId
-    const restaurantParam = searchParams.get("restaurant");
     const restaurantId =
       restaurantParam || storedRestaurant || DEFAULT_RESTAURANT_ID;
 
@@ -66,16 +71,27 @@ export default function Home() {
     const tableParam = searchParams.get("table");
     if (tableParam) {
       router.replace(
-        `/${restaurantId}/${DEFAULT_BRANCH_NUMBER}/menu?table=${tableParam}`,
+        `/${restaurantId}/${branchNumber}/menu?table=${tableParam}`,
       );
       return;
     }
 
-    // Default redirect
-    router.replace(
-      `/${DEFAULT_RESTAURANT_ID}/${DEFAULT_BRANCH_NUMBER}/menu?table=${DEFAULT_TABLE}`,
+    // Sin mesa: se muestra el selector de mesas
+    setShowPicker(true);
+  }, [router, searchParams, isAuthenticated, isLoading, branchNumber]);
+
+  if (showPicker) {
+    return (
+      <TableSpotPicker
+        restaurantId={pickerRestaurantId}
+        onSelect={(table) =>
+          router.push(
+            `/${pickerRestaurantId}/${branchNumber}/menu?table=${encodeURIComponent(table)}`,
+          )
+        }
+      />
     );
-  }, [router, searchParams, isAuthenticated, isLoading]);
+  }
 
   return (
     <div className="min-h-new brand-evergreen flex flex-col">

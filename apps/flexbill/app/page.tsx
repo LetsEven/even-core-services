@@ -1,40 +1,53 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import Loader from "./components/UI/Loader";
+import TableSpotPicker from "./components/TableSpotPicker";
 
 // Restaurant ID y Branch por defecto para testing
 const DEFAULT_RESTAURANT_ID = 15;
 const DEFAULT_BRANCH_NUMBER = 1;
-const DEFAULT_TABLE = 1;
 
 function HomeContent() {
   const t = useTranslations("HomePage");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [showPicker, setShowPicker] = useState(false);
+
+  const restaurantParam = searchParams.get("restaurant");
+  const branchParam = searchParams.get("branch");
+  const restaurantId = restaurantParam || DEFAULT_RESTAURANT_ID;
+  const branchNumber = branchParam || DEFAULT_BRANCH_NUMBER;
 
   useEffect(() => {
     // Check for parameters in URL
     const tableParam = searchParams.get("table");
-    const restaurantParam = searchParams.get("restaurant");
-    const branchParam = searchParams.get("branch");
-
-    const restaurantId = restaurantParam || DEFAULT_RESTAURANT_ID;
-    const branchNumber = branchParam || DEFAULT_BRANCH_NUMBER;
 
     if (tableParam) {
       // Redirect to menu with table parameter
       const redirectUrl = `/${restaurantId}/${branchNumber}/menu?table=${tableParam}`;
       router.replace(redirectUrl);
     } else {
-      // Default redirect to restaurant menu with default table
-      const redirectUrl = `/${DEFAULT_RESTAURANT_ID}/${DEFAULT_BRANCH_NUMBER}/menu?table=${DEFAULT_TABLE}`;
-      router.replace(redirectUrl);
+      // Sin mesa: se muestra el selector de mesas
+      setShowPicker(true);
     }
-  }, [router, searchParams]);
+  }, [router, searchParams, restaurantId, branchNumber]);
+
+  if (showPicker) {
+    return (
+      <TableSpotPicker
+        restaurantId={restaurantId}
+        onSelect={(table) =>
+          router.push(
+            `/${restaurantId}/${branchNumber}/menu?table=${encodeURIComponent(table)}`,
+          )
+        }
+      />
+    );
+  }
 
   return (
     <div className="min-h-new brand-evergreen flex flex-col">

@@ -1,5 +1,5 @@
-import { MotionProvider } from "@even/ui";
-import DishFlight from "@/components/DishFlight";
+import { DishFlight, MotionProvider } from "@even/ui";
+
 import FlowBackdrop from "@/components/FlowBackdrop";
 import FlowNavOverlay from "@/components/FlowNavOverlay";
 

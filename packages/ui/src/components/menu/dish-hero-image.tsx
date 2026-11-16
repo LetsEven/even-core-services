@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { markDishReady, useDishFlight } from "@/lib/dish-transition";
+import { markDishReady, useDishFlight } from "../../lib/dish-transition";
 
 /**
  * Foto grande del detalle. Al montarse avisa a `DishFlight` para que la foto que
  * viene volando desde la tarjeta del menú aterrice encima de ella.
  */
-export default function DishHeroImage({
+export function DishHeroImage({
   src,
   ready = false,
   className = "",

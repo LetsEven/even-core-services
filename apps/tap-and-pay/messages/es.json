@@ -215,7 +215,8 @@
     "consumptionBreakdown": "+ Consumo",
     "tipBreakdown": "+ Propina",
     "serviceCommissionBreakdown": "+ Comisión de servicio",
-    "tryAgainCta": "Intentar de nuevo"
+    "tryAgainCta": "Intentar de nuevo",
+    "showOtherCards": "Ver otras tarjetas ({count})"
   },
   "TipSelectionPage": {
     "subtitle": "Revisa tu cuenta",

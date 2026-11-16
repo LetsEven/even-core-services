@@ -1,9 +1,14 @@
 "use client";
 
-import { m } from "motion/react";
-import DishHeroImage from "@/components/DishHeroImage";
-import DishBottomBar from "@/components/UI/DishBottomBar";
-import DishLoadingShell from "@/components/UI/DishLoadingShell";
+import {
+  DishBottomBar,
+  DishHeroImage,
+  DishLoadingShell,
+  DishScreen,
+  DishSheet,
+  PullToDismiss,
+  startDishClose,
+} from "@even/ui";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useCart } from "@/context/CartContext";
@@ -13,8 +18,6 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { useBranch } from "@/context/BranchContext";
 import { ChevronDown, X, Home, CircleAlert, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import PullToDismiss from "@/components/PullToDismiss";
-import { startDishClose } from "@/lib/dish-transition";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
 import OutOfStockModal from "@/components/OutOfStockModal";
 import {
@@ -740,7 +743,7 @@ export default function DishDetailPage() {
 
   return (
     <PullToDismiss onDismiss={dismiss}>
-    <m.div layoutRoot className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto overscroll-y-none">
+    <DishScreen className="h-dvh bg-white md:bg-even-evergreen relative overflow-y-auto overscroll-y-none">
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}
@@ -816,8 +819,7 @@ export default function DishDetailPage() {
         </div>
       )}
 
-      <m.main
-        data-dish-sheet
+      <DishSheet
         className={`app-col ${showImages ? "mt-64 md:mt-80 lg:mt-96" : "mt-2 md:mt-4"} relative z-10`}
       >
         <div className="bg-white rounded-t-4xl flex flex-col min-h-[calc(100dvh-16rem)] md:min-h-[calc(100dvh-20rem)] lg:min-h-[calc(100dvh-24rem)] px-6 md:px-8 lg:px-10 pb-[100px] md:pb-[120px] lg:pb-[140px]">
@@ -1282,6 +1284,7 @@ export default function DishDetailPage() {
 
             {/* Bottom bar */}
             <DishBottomBar
+              labels={{ decrement: t("decreaseQuantity"), increment: t("increaseQuantity") }}
               quantity={dishQuantity}
               minusIsTrash={isEditMode && dishQuantity === 1}
               onMinus={() =>
@@ -1303,7 +1306,7 @@ export default function DishDetailPage() {
             />
           </div>
         </div>
-      </m.main>
+      </DishSheet>
 
       {/* Review Modal */}
       {isReviewModalOpen && (
@@ -1481,7 +1484,7 @@ export default function DishDetailPage() {
           </div>
         </div>
       )}
-    </m.div>
+    </DishScreen>
     </PullToDismiss>
   );
 }

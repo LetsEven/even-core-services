@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useSearchParams, useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useTable } from "@/app/context/TableContext";
@@ -277,8 +278,8 @@ export default function TipSelectionPage() {
 
         <div className="w-full flex-1 flex flex-col justify-end">
           <div className="fixed fixed-col bottom-0 z-50 flex justify-center">
-            <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-              <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+            <div className="flex flex-col relative w-full">
+              <div className={sheetClasses.hero}>
                 <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
                   <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                     {tc("tableLabel", { table: tableNumber ?? "" })}
@@ -398,7 +399,7 @@ export default function TipSelectionPage() {
               className={`flex flex-col relative ${paymentType !== "select-items" ? "px-4 md:px-6 lg:px-8 w-full" : ""}`}
             >
               <div
-                className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7"
+                className={sheetClasses.hero}
                 style={{ zIndex: 0 }}
               >
                 <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
@@ -764,7 +765,7 @@ export default function TipSelectionPage() {
           {/* Tip Selection Section - Fijo cuando es select-items */}
           {paymentType === "select-items" && (
             <div
-              className="fixed fixed-col bottom-0 bg-white pt-8 md:pt-10 lg:pt-12 mx-4 md:mx-6 lg:mx-8"
+              className="fixed fixed-col bottom-0 bg-white pt-8 md:pt-10 lg:pt-12"
               style={{
                 paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                 zIndex: 40,

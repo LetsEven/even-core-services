@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 // NOTE: This page is maintained for users who want to manage payment methods separately
 // Main payment flows now use EcartPay SDK directly in payment/page.tsx and add-tip/page.tsx
 
@@ -286,7 +287,7 @@ function AddCardContent() {
         <MenuHeaderBack onBack={handleBack} />
 
         <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col justify-end">
-          <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+          <div className={sheetClasses.hero}>
             <div className="pt-6 md:pt-7 lg:pt-8 pb-12 md:pb-14 lg:pb-16 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 mt-2 md:mt-3 lg:mt-4 mb-2 md:mb-3 lg:mb-4">
                 {t("title")}
@@ -298,7 +299,7 @@ function AddCardContent() {
           </div>
 
           <div className="flex-1 h-full flex flex-col">
-            <div className="min-h-full bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 py-6 md:py-8 lg:py-10">
+            <div className={`${sheetClasses.card} min-h-full py-6 md:py-8 lg:py-10`}>
               {/* Test Card Helper */}
               {process.env.NODE_ENV === "development" && (
                 <div className="bg-info-50 border border-info-200 rounded-lg p-4 mb-4">

@@ -79,7 +79,6 @@
     "paidLabel": "Paid ${amount}"
   },
   "CartView": {
-    "emptyCartHero": "Your cart is empty, add items and enjoy",
     "confirmYourOrder": "Confirm your order",
     "myCart": "My cart",
     "cartEmptyTitle": "Your cart is empty",
@@ -139,7 +138,9 @@
     "submitReviewCta": "Submit review",
     "alreadyReviewed": "You've already reviewed this dish",
     "errorSubmitReview": "Error submitting review. Please try again.",
-    "defaultSectionName": "Menu"
+    "defaultSectionName": "Menu",
+    "decreaseQuantity": "Remove one",
+    "increaseQuantity": "Add one"
   },
   "Auth": {
     "phoneStepTitle": "Enter your number",
@@ -560,7 +561,8 @@
     "tryAgainCta": "Try again",
     "itemNameConsumption": "Order",
     "itemNameTip": "Tip",
-    "itemNameServiceFee": "Service fee"
+    "itemNameServiceFee": "Service fee",
+    "showOtherCards": "Show other cards ({count})"
   },
   "HomePage": {
     "heroTitle": "Welcome",

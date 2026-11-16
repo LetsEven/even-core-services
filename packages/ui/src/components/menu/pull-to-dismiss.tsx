@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { animate } from "motion/react";
-import { SPRING } from "@even/ui";
+import { SPRING } from "./motion-provider";
 
 const THRESHOLD = 120; // px arrastrados para cerrar
 const VELOCITY = 0.6; // px/ms para cerrar con un flick
@@ -22,7 +22,7 @@ function scrolledAncestor(target: EventTarget | null, root: HTMLElement) {
  * rápido se llama a `onDismiss`, y si no regresa con un resorte.
  * El `touchmove` es no pasivo para poder cancelar el rebote nativo de iOS Safari.
  */
-export default function PullToDismiss({
+export function PullToDismiss({
   onDismiss,
   children,
 }: {
@@ -31,7 +31,9 @@ export default function PullToDismiss({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const dismissRef = useRef(onDismiss);
-  dismissRef.current = onDismiss;
+  useEffect(() => {
+    dismissRef.current = onDismiss;
+  });
 
   useEffect(() => {
     const root = ref.current;

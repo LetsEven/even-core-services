@@ -64,7 +64,6 @@
     "fabCountLabel": "{count, plural, one {# item} other {# items}}"
   },
   "CartView": {
-    "emptyCartHero": "Your cart is empty, add items and enjoy",
     "confirmYourOrder": "Confirm your order",
     "myCart": "My cart",
     "cartEmptyTitle": "Your cart is empty",
@@ -170,7 +169,8 @@
     "googlePayErrorTitle": "We couldn't process Google Pay",
     "googlePayErrorMessage": "Google Pay couldn't complete the payment. You have not been charged. You can try again or pay with a saved card.",
     "paymentRejectedMessage": "We couldn't process the payment with this card. Try another card.",
-    "walletUnavailableMessage": "Apple Pay and Google Pay are not available for this order. Pay with a saved card."
+    "walletUnavailableMessage": "Apple Pay and Google Pay are not available for this order. Pay with a saved card.",
+    "showOtherCards": "Show other cards ({count})"
   },
   "AddCardPage": {
     "title": "Add your card to continue",
@@ -480,7 +480,9 @@
     "errorLoadingTitle": "Error loading",
     "errorLoadingMessage": "We couldn't load the dish",
     "backToHomeSubtitle": "Return to the home page",
-    "tryAgainLater": "Please try again later"
+    "tryAgainLater": "Please try again later",
+    "decreaseQuantity": "Remove one",
+    "increaseQuantity": "Add one"
   },
   "Terms": {
     "checkbox": "I have read and accept the <terms>Terms and Conditions</terms> and the <privacy>Privacy Notice</privacy>.",

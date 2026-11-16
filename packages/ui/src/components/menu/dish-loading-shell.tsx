@@ -3,6 +3,6 @@
  * hoja en vuelo desde el menú (`DishFlight`) van por encima y hacen de portada hasta
  * que el contenido real está listo.
  */
-export default function DishLoadingShell() {
+export function DishLoadingShell() {
   return <div className="h-dvh bg-white" />;
 }

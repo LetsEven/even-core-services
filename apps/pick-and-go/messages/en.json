@@ -182,7 +182,9 @@
     "alreadyReviewed": "You've already reviewed this dish",
     "errorSubmitReview": "Error submitting review. Please try again.",
     "viewImageAlt": "View image {number}",
-    "defaultSectionName": "Menu"
+    "defaultSectionName": "Menu",
+    "decreaseQuantity": "Remove one",
+    "increaseQuantity": "Add one"
   },
   "AddCardPage": {
     "title": "Add your card to continue",

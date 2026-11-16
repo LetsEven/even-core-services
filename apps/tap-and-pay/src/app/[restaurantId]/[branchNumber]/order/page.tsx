@@ -1,5 +1,6 @@
 "use client";
 
+import { sheetClasses } from "@even/ui";
 import { useCallback, useEffect, useState } from "react";
 import {
   Clock,
@@ -316,8 +317,8 @@ export default function OrderPage() {
         showBackButton={false}
       />
 
-      <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-        <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
+      <div className="w-full flex-1 flex flex-col">
+        <div className={sheetClasses.hero}>
           <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
             <h1 className="font-medium text-white/60 text-xl md:text-2xl lg:text-3xl">
               {tc("tableLabel", { table: state.tableNumber ?? "" })}
@@ -587,7 +588,7 @@ export default function OrderPage() {
                 {/* Sección inferior fija */}
                 {unpaidDishes.length > 0 && remainingAmount > 0 && (
                   <div
-                    className="fixed fixed-col bottom-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+                    className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
                     style={{
                       paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                     }}

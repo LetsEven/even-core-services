@@ -11,7 +11,7 @@ import { useCart } from "@/app/context/CartContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { useFlyToCart } from "@/app/hooks/useFlyToCart";
 import { useRestaurant } from "@/app/context/RestaurantContext";
-import { MenuProductCard, MenuQuickAddModal, rememberMenuPosition } from "@even/ui";
+import { MenuProductCard, MenuQuickAddModal, rememberMenuPosition, startDishFlight } from "@even/ui";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
 import OutOfStockModal from "@/app/components/OutOfStockModal";
 import { getItemDisplayPrice } from "@/app/utils/commissionCalculator";
@@ -126,6 +126,8 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
     if (card) {
       rememberMenuPosition(String(restaurantId), String(adaptedItem.id), card);
     }
+    // La foto sale de la tarjeta y crece hasta el detalle (ver DishFlight en el layout).
+    if (showImages) startDishFlight(adaptedItem.id, adaptedItem.images[0], card ?? null);
     navigateWithTable(`/dish/${adaptedItem.id}`);
   };
 

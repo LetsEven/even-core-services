@@ -79,7 +79,6 @@
     "paidLabel": "Pagó ${amount}"
   },
   "CartView": {
-    "emptyCartHero": "El carrito está vacío, agrega items y disfruta",
     "confirmYourOrder": "Confirma tu pedido",
     "myCart": "Mi carrito",
     "cartEmptyTitle": "Tu carrito está vacío",
@@ -139,7 +138,9 @@
     "submitReviewCta": "Enviar reseña",
     "alreadyReviewed": "Ya has calificado este platillo",
     "errorSubmitReview": "Error al enviar la reseña. Intenta de nuevo.",
-    "defaultSectionName": "Menú"
+    "defaultSectionName": "Menú",
+    "decreaseQuantity": "Quitar uno",
+    "increaseQuantity": "Agregar uno"
   },
   "Auth": {
     "phoneStepTitle": "Ingresa tu número",
@@ -560,7 +561,8 @@
     "tryAgainCta": "Intentar de nuevo",
     "itemNameConsumption": "Consumo",
     "itemNameTip": "Propina",
-    "itemNameServiceFee": "Cargo por servicio"
+    "itemNameServiceFee": "Cargo por servicio",
+    "showOtherCards": "Ver otras tarjetas ({count})"
   },
   "HomePage": {
     "heroTitle": "Bienvenido",

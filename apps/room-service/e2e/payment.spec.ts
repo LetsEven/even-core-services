@@ -25,6 +25,8 @@ test("payment_rejected descarta el intento y el reintento usa otra clave", async
   expect(await page.evaluate((key) => localStorage.getItem(key), PAYMENT_INTENT_STORAGE_KEY)).toBeNull();
 
   await page.getByRole("button", { name: "Intentar de nuevo" }).click();
+  // La selección es compacta: solo se ve la tarjeta elegida hasta pedir las otras.
+  await page.getByRole("button", { name: /Ver otras tarjetas/ }).click();
   await page.getByText("**** 5454").click();
   await page.getByRole("button", { name: "Pagar y ordenar" }).click();
   await expect.poll(() => charges().length, { timeout: 20_000 }).toBe(2);

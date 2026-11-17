@@ -26,7 +26,14 @@ import { useAuth } from "@/app/context/AuthContext";
 import InvoiceModal from "@/app/components/modals/InvoiceModal";
 import { invoiceService } from "@/app/services/invoice.service";
 import { ticketService } from "@/app/services/ticket.service";
-import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
+import {
+  lockScroll,
+  unlockScroll,
+  useModalBackClose,
+  ReceiptPaper,
+  ReceiptRow,
+  ReceiptRule,
+} from "@even/ui";
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import ItemCustomizations from "@/app/components/ItemCustomizations";
@@ -424,14 +431,56 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="min-h-dvh overflow-hidden brand-evergreen flex flex-col app-root">
-      {/* Success Icon */}
-      <div className="flex-1 flex justify-center items-center">
-        <img
-          src="/even/even-asterisk-grass.svg"
-          alt="Even Logo"
-          className="size-20 md:size-28 lg:size-32 animate-logo-fade-in"
-        />
+    <div className="h-dvh overflow-y-auto overflow-x-hidden brand-evergreen flex flex-col app-root">
+      {/* Ticket que se imprime y se sella como PAGADO */}
+      <div className="flex-1 shrink-0 flex justify-center items-center px-6 md:px-8 pt-[max(1.5rem,env(safe-area-inset-top))] pb-2">
+        <div className="w-full max-w-xs md:max-w-sm">
+          <ReceiptPaper mode="print" stamp={t("paidStamp")}>
+            <div className="text-center">
+              <h2 className="font-mono text-base font-bold uppercase tracking-wide">
+                {restaurant?.name || restaurantData.name}
+              </h2>
+              <p className="text-xs text-even-ink/55">
+                {tc("tableLabel", {
+                  table: state.tableNumber || tableNumber || "N/A",
+                })}{" "}
+                ·{" "}
+                {format.dateTime(new Date(), {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+            <ReceiptRule />
+            {dishOrders.length > 0 && (
+              <ReceiptRow
+                left={t("receiptItemsCount", { count: dishOrders.length })}
+              />
+            )}
+            {(paymentDetails?.cardLast4 ||
+              paymentDetails?.cardBrand === "apple" ||
+              paymentDetails?.cardBrand === "google") && (
+              <ReceiptRow
+                left={
+                  paymentDetails.cardBrand === "apple"
+                    ? "Apple Pay"
+                    : paymentDetails.cardBrand === "google"
+                      ? "Google Pay"
+                      : `**** ${paymentDetails.cardLast4.slice(-4)}`
+                }
+              />
+            )}
+            <ReceiptRule />
+            <ReceiptRow
+              strong
+              left={t("totalLabel")}
+              right={amount > 0 ? `$${Number(amount).toFixed(2)} MXN` : undefined}
+            />
+          </ReceiptPaper>
+        </div>
       </div>
 
       <div className="px-4 md:px-6 lg:px-8 w-full animate-slide-up">

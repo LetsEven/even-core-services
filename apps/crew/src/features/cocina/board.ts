@@ -13,6 +13,11 @@ export interface DishTicket {
   dish: Dish;
 }
 
+/** Hora en que se pidió el platillo; si no viene, la de la cuenta. */
+export function dishStartedAt(order: Order, dish: Dish): number {
+  return new Date(dish.createdAt ?? order.createdAt).getTime();
+}
+
 /** Columna de un platillo, o null si ya se entregó (Cocina no lo muestra). */
 export function getDishColumn(dish: Dish): DishColumn | null {
   if (dish.status === "delivered") return null;
@@ -34,9 +39,7 @@ export function groupDishTickets(
     // Más antiguos primero (es lo que la cocina debe atender antes); a igual
     // hora de pedido se conserva el orden de los platillos dentro del pedido.
     g[col].sort(
-      (a, b) =>
-        new Date(a.order.createdAt).getTime() -
-        new Date(b.order.createdAt).getTime(),
+      (a, b) => dishStartedAt(a.order, a.dish) - dishStartedAt(b.order, b.dish),
     );
   }
   return g;
@@ -74,11 +77,23 @@ export function isDishLate(order: Order, dish: Dish, now: number): boolean {
   const limit =
     (order.prepTimeMinutes ?? DEFAULT_PREP_MINUTES) +
     (order.waiterExtraMinutes ?? 0);
-  return elapsedMinutes(order, now) > limit;
+  return dishElapsedMinutes(order, dish, now) > limit;
+}
+
+/** Minutos desde que se pidió este platillo (no desde que se abrió la cuenta). */
+export function dishElapsedMinutes(
+  order: Order,
+  dish: Dish,
+  now: number,
+): number {
+  return Math.max(0, Math.floor((now - dishStartedAt(order, dish)) / 60_000));
 }
 
 export function elapsedMinutes(order: Order, now: number): number {
-  return Math.max(0, Math.floor((now - new Date(order.createdAt).getTime()) / 60_000));
+  return Math.max(
+    0,
+    Math.floor((now - new Date(order.createdAt).getTime()) / 60_000),
+  );
 }
 
 export function formatElapsed(minutes: number): string {
@@ -87,4 +102,3 @@ export function formatElapsed(minutes: number): string {
   const m = minutes % 60;
   return `${h} h ${String(m).padStart(2, "0")}`;
 }
-

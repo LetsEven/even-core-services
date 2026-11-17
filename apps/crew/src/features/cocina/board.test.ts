@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Dish, Order } from "../../types";
 import {
+  dishElapsedMinutes,
   formatElapsed,
   getDishColumn,
   getOrderProgress,
@@ -65,10 +66,20 @@ describe("getOrderProgress", () => {
   it("parcial: 3 de 4 listos", () => {
     const p = getOrderProgress(
       order({
-        dishes: [dish("ready"), dish("ready"), dish("ready"), dish("preparing")],
+        dishes: [
+          dish("ready"),
+          dish("ready"),
+          dish("ready"),
+          dish("preparing"),
+        ],
       }),
     );
-    expect(p).toMatchObject({ ready: 3, pending: 4, partial: true, complete: false });
+    expect(p).toMatchObject({
+      ready: 3,
+      pending: 4,
+      partial: true,
+      complete: false,
+    });
   });
   it("completo cuando nada sigue en cocina y hay algo por entregar", () => {
     expect(
@@ -78,13 +89,20 @@ describe("getOrderProgress", () => {
     expect(
       getOrderProgress(order({ dishes: [dish("delivered")] })).complete,
     ).toBe(false);
-    expect(getOrderProgress(order({ dishes: [dish("preparing")] })).complete).toBe(
-      false,
-    );
+    expect(
+      getOrderProgress(order({ dishes: [dish("preparing")] })).complete,
+    ).toBe(false);
   });
   it("los entregados no cuentan como pendientes", () => {
     const p = getOrderProgress(
-      order({ dishes: [dish("delivered"), dish("delivered"), dish("ready"), dish("preparing")] }),
+      order({
+        dishes: [
+          dish("delivered"),
+          dish("delivered"),
+          dish("ready"),
+          dish("preparing"),
+        ],
+      }),
     );
     expect(p.pending).toBe(2);
   });
@@ -93,7 +111,11 @@ describe("getOrderProgress", () => {
 describe("isDishLate", () => {
   it("compara contra prepTime + minutos extra", () => {
     const d = dish("preparing");
-    const o = order({ prepTimeMinutes: 10, waiterExtraMinutes: 5, dishes: [d] });
+    const o = order({
+      prepTimeMinutes: 10,
+      waiterExtraMinutes: 5,
+      dishes: [d],
+    });
     expect(isDishLate(o, d, 15 * 60_000)).toBe(false);
     expect(isDishLate(o, d, 16 * 60_000)).toBe(true);
   });
@@ -103,6 +125,23 @@ describe("isDishLate", () => {
     const o = order({ dishes: [p, r] });
     expect(isDishLate(o, p, 21 * 60_000)).toBe(true);
     expect(isDishLate(o, r, 90 * 60_000)).toBe(false);
+  });
+});
+
+describe("tiempo por platillo", () => {
+  it("un platillo agregado después cuenta desde su propia hora, no desde la cuenta", () => {
+    const nuevo = dish("preparing", {
+      createdAt: new Date(23 * 60_000).toISOString(),
+    });
+    const o = order({ dishes: [dish("delivered"), nuevo] });
+    const now = 24 * 60_000;
+    expect(dishElapsedMinutes(o, nuevo, now)).toBe(1);
+    expect(isDishLate(o, nuevo, now)).toBe(false);
+  });
+  it("sin hora propia usa la de la cuenta", () => {
+    const d = dish("preparing");
+    const o = order({ dishes: [d] });
+    expect(dishElapsedMinutes(o, d, 24 * 60_000)).toBe(24);
   });
 });
 

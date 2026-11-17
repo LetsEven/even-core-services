@@ -67,7 +67,14 @@ export function useKitchenOrders(branchId: string | null) {
                 .filter((d) => incomingDishMap.has(d.id))
                 .map((d) => ({ ...d, ...incomingDishMap.get(d.id)! })),
               // append any brand-new dishes at the end
-              ...incoming.dishes.filter((d) => !existingDishIds.has(d.id)),
+              // (si el backend no trae su hora, la del momento en que llegó:
+              // no heredan la de la cuenta ni la de los primeros platillos)
+              ...incoming.dishes
+                .filter((d) => !existingDishIds.has(d.id))
+                .map((d) => ({
+                  ...d,
+                  createdAt: d.createdAt ?? new Date().toISOString(),
+                })),
             ];
             return { ...incoming, dishes: mergedDishes };
           });

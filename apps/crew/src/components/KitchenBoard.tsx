@@ -6,7 +6,7 @@ import type { CookingStatus, DishStatus, Order } from "../types";
 import OrderCard from "./OrderCard";
 import { getOptions } from "./DishItem";
 import {
-  elapsedMinutes,
+  dishElapsedMinutes,
   formatElapsed,
   groupDishTickets,
   isDishLate,
@@ -60,7 +60,7 @@ function DishTile({
 }) {
   const { order, dish } = ticket;
   const late = isDishLate(order, dish, now);
-  const minutes = elapsedMinutes(order, now);
+  const minutes = dishElapsedMinutes(order, dish, now);
   const options = getOptions(dish.customFields);
   const moveLabel = column === "preparing" ? "Listo" : "Regresar";
   return (

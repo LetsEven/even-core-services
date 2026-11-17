@@ -35,6 +35,8 @@ export interface Dish {
   specialInstructions?: string | null;
   price?: number;
   paymentStatus?: string;
+  /** Cuándo se pidió este platillo (puede ser después de abrir la cuenta). */
+  createdAt?: string;
 }
 
 export interface PaymentTransaction {

@@ -1,15 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock, Check, Undo2 } from "lucide-react";
-import { Badge, Modal, cn } from "@even/ui";
+import { useMemo, useState } from "react";
+import { Check, Undo2 } from "lucide-react";
+import { Modal, cn } from "@even/ui";
 import type { Branch } from "../services/api";
 import type { CookingStatus, DishStatus, Order } from "../types";
 import OrderCard from "./OrderCard";
 import { getOptions } from "./DishItem";
 import {
-  dishElapsedMinutes,
-  formatElapsed,
   groupDishTickets,
-  isDishLate,
   type DishColumn,
   type DishTicket,
 } from "../features/cocina/board";
@@ -46,28 +43,24 @@ interface Props {
 function DishTile({
   ticket,
   column,
-  now,
   readOnly,
   onOpen,
   onMove,
 }: {
   ticket: DishTicket;
   column: DishColumn;
-  now: number;
   readOnly: boolean;
   onOpen: () => void;
   onMove: () => void;
 }) {
   const { order, dish } = ticket;
-  const late = isDishLate(order, dish, now);
-  const minutes = dishElapsedMinutes(order, dish, now);
   const options = getOptions(dish.customFields);
   const moveLabel = column === "preparing" ? "Listo" : "Regresar";
   return (
     <div
       className={cn(
         "flex w-full flex-col gap-2 rounded-xl border bg-white p-3 shadow-sm",
-        late ? "border-danger" : "border-stroke-soft",
+        "border-stroke-soft",
       )}
     >
       <button
@@ -81,19 +74,6 @@ function DishTile({
             <span className="mr-1.5">{dish.quantity}×</span>
             {dish.item}
           </p>
-          <span
-            className={cn(
-              "flex shrink-0 items-center gap-1 text-xs font-medium",
-              late ? "text-danger" : "text-tone-600",
-            )}
-          >
-            {late ? (
-              <AlertTriangle className="size-3.5" />
-            ) : (
-              <Clock className="size-3.5" />
-            )}
-            {formatElapsed(minutes)}
-          </span>
         </div>
         {options.length > 0 && (
           <ul className="flex flex-col text-xs text-tone-600">
@@ -114,11 +94,6 @@ function DishTile({
             ? ` · ${order.customerName}`
             : ""}
         </p>
-        {late && (
-          <Badge size="sm" variant="neutral" className="w-fit text-danger">
-            Retrasado
-          </Badge>
-        )}
       </button>
       {!readOnly && (
         <button
@@ -155,14 +130,8 @@ export default function KitchenBoard({
   waiterSession,
   requireWaiterLogin,
 }: Props) {
-  const [now, setNow] = useState(() => Date.now());
   const [tab, setTab] = useState<DishColumn>("preparing");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
 
   const grouped = useMemo(() => groupDishTickets(orders), [orders]);
 
@@ -218,7 +187,6 @@ export default function KitchenBoard({
                     key={ticket.key}
                     ticket={ticket}
                     column={c.id}
-                    now={now}
                     readOnly={readOnly}
                     onOpen={() => setSelectedId(ticket.order.id)}
                     onMove={() =>

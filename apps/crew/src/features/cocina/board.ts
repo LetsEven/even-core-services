@@ -1,8 +1,5 @@
 import type { Dish, Order } from "../../types";
 
-/** Minutos de preparación asumidos cuando la orden no trae `prepTimeMinutes`. */
-const DEFAULT_PREP_MINUTES = 20;
-
 /** Columnas de Cocina: la unidad es el platillo, no el pedido. */
 export type DishColumn = "preparing" | "ready";
 
@@ -11,11 +8,6 @@ export interface DishTicket {
   key: string;
   order: Order;
   dish: Dish;
-}
-
-/** Hora en que se pidió el platillo; si no viene, la de la cuenta. */
-export function dishStartedAt(order: Order, dish: Dish): number {
-  return new Date(dish.createdAt ?? order.createdAt).getTime();
 }
 
 /** Columna de un platillo, o null si ya se entregó (Cocina no lo muestra). */
@@ -39,7 +31,9 @@ export function groupDishTickets(
     // Más antiguos primero (es lo que la cocina debe atender antes); a igual
     // hora de pedido se conserva el orden de los platillos dentro del pedido.
     g[col].sort(
-      (a, b) => dishStartedAt(a.order, a.dish) - dishStartedAt(b.order, b.dish),
+      (a, b) =>
+        new Date(a.order.createdAt).getTime() -
+        new Date(b.order.createdAt).getTime(),
     );
   }
   return g;
@@ -69,36 +63,4 @@ export function getOrderProgress(order: Order): OrderProgress {
     complete: preparing === 0 && ready > 0,
     partial: preparing > 0 && ready > 0,
   };
-}
-
-/** Un platillo va tarde si sigue preparándose y su pedido ya pasó el tiempo de preparación. */
-export function isDishLate(order: Order, dish: Dish, now: number): boolean {
-  if (getDishColumn(dish) !== "preparing") return false;
-  const limit =
-    (order.prepTimeMinutes ?? DEFAULT_PREP_MINUTES) +
-    (order.waiterExtraMinutes ?? 0);
-  return dishElapsedMinutes(order, dish, now) > limit;
-}
-
-/** Minutos desde que se pidió este platillo (no desde que se abrió la cuenta). */
-export function dishElapsedMinutes(
-  order: Order,
-  dish: Dish,
-  now: number,
-): number {
-  return Math.max(0, Math.floor((now - dishStartedAt(order, dish)) / 60_000));
-}
-
-export function elapsedMinutes(order: Order, now: number): number {
-  return Math.max(
-    0,
-    Math.floor((now - new Date(order.createdAt).getTime()) / 60_000),
-  );
-}
-
-export function formatElapsed(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h} h ${String(m).padStart(2, "0")}`;
 }

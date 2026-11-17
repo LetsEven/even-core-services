@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Dish, Order } from "../../types";
-import {
-  dishElapsedMinutes,
-  formatElapsed,
-  getDishColumn,
-  getOrderProgress,
-  groupDishTickets,
-  isDishLate,
-} from "./board";
+import { getDishColumn, getOrderProgress, groupDishTickets } from "./board";
 
 let n = 0;
 const dish = (status: Dish["status"], over: Partial<Dish> = {}): Dish => ({
@@ -105,49 +98,5 @@ describe("getOrderProgress", () => {
       }),
     );
     expect(p.pending).toBe(2);
-  });
-});
-
-describe("isDishLate", () => {
-  it("compara contra prepTime + minutos extra", () => {
-    const d = dish("preparing");
-    const o = order({
-      prepTimeMinutes: 10,
-      waiterExtraMinutes: 5,
-      dishes: [d],
-    });
-    expect(isDishLate(o, d, 15 * 60_000)).toBe(false);
-    expect(isDishLate(o, d, 16 * 60_000)).toBe(true);
-  });
-  it("usa 20 min por defecto y solo aplica a platillos en preparación", () => {
-    const p = dish("preparing");
-    const r = dish("ready");
-    const o = order({ dishes: [p, r] });
-    expect(isDishLate(o, p, 21 * 60_000)).toBe(true);
-    expect(isDishLate(o, r, 90 * 60_000)).toBe(false);
-  });
-});
-
-describe("tiempo por platillo", () => {
-  it("un platillo agregado después cuenta desde su propia hora, no desde la cuenta", () => {
-    const nuevo = dish("preparing", {
-      createdAt: new Date(23 * 60_000).toISOString(),
-    });
-    const o = order({ dishes: [dish("delivered"), nuevo] });
-    const now = 24 * 60_000;
-    expect(dishElapsedMinutes(o, nuevo, now)).toBe(1);
-    expect(isDishLate(o, nuevo, now)).toBe(false);
-  });
-  it("sin hora propia usa la de la cuenta", () => {
-    const d = dish("preparing");
-    const o = order({ dishes: [d] });
-    expect(dishElapsedMinutes(o, d, 24 * 60_000)).toBe(24);
-  });
-});
-
-describe("formatElapsed", () => {
-  it("formatea minutos y horas", () => {
-    expect(formatElapsed(7)).toBe("7 min");
-    expect(formatElapsed(65)).toBe("1 h 05");
   });
 });

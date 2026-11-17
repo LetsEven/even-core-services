@@ -412,6 +412,8 @@
   },
   "PaymentSuccessPage": {
     "paidStamp": "PAID",
+    "closeCta": "Close",
+    "tapForDetail": "Tap to see the details",
     "receiptItemsCount": "{count, plural, one {# item} other {# items}}",
     "heroTitle": "Thanks for your order!",
     "heroSubtitle": "We've received your payment and your order is in progress.",

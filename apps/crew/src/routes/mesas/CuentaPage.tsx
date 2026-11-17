@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useAuth } from "../../lib/auth";
-import { ArrowLeft, Banknote, Plus, Printer, User } from "lucide-react";
+import { ArrowLeft, Banknote, Plus, User } from "lucide-react";
 import {
   Badge,
   Button,
@@ -34,7 +34,7 @@ import {
   useWaiterAssignment,
 } from "../../features/cuenta/useCuenta";
 import { isReprintEnabled, reprintComanda } from "../../services/printApi";
-import type { Order } from "../../types";
+import type { Dish, Order } from "../../types";
 import { formatFolio } from "../../utils/folio";
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -44,6 +44,20 @@ const SERVICE_LABELS: Record<string, string> = {
   tap_pay: "Tap & Pay",
   flex_bill: "Flex Bill",
 };
+
+/** Orden fijo de la lista: primero lo que se prepara, al final lo entregado. */
+function rankDishes(dishes: Dish[], readyAsDelivered: boolean): string[] {
+  const rank = (d: Dish) =>
+    d.status === "preparing"
+      ? 0
+      : d.status === "ready" && !readyAsDelivered
+        ? 1
+        : 2;
+  return dishes
+    .map((d, i) => ({ id: d.id, r: rank(d), i }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.id);
+}
 
 export default function CuentaPage() {
   const { unidad = "" } = useParams();
@@ -66,7 +80,9 @@ export default function CuentaPage() {
           {!ordersLoading && hasPermission("comanda.crear") && (
             <Button
               variant="primary"
-              onClick={() => navigate(`/mesas/${encodeURIComponent(code)}/comanda`)}
+              onClick={() =>
+                navigate(`/mesas/${encodeURIComponent(code)}/comanda`)
+              }
             >
               Abrir cuenta
             </Button>
@@ -110,6 +126,63 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
+
+  // Vista inicial: con platillos listos solo se muestran esos y "Entregar";
+  // si no, la lista completa. El orden de la lista se congela al entrar.
+  const readyDishes = order.dishes.filter((d) => d.status === "ready");
+  const usesKitchen = order.orderType !== "tap_pay" && !perms.hideStatusButtons;
+  const [view, setView] = useState<"pending" | "all">(
+    usesKitchen && readyDishes.length > 0 ? "pending" : "all",
+  );
+  const [frozenOrder, setFrozenOrder] = useState<string[]>(() =>
+    rankDishes(order.dishes, false),
+  );
+  const [delivering, setDelivering] = useState(false);
+
+  const showAll = (readyAsDelivered: boolean) => {
+    setFrozenOrder(rankDishes(order.dishes, readyAsDelivered));
+    setView("all");
+  };
+
+  const deliverReady = async () => {
+    setDelivering(true);
+    try {
+      await Promise.all(
+        readyDishes.map((d) =>
+          s.updateDish(
+            order.id,
+            order.orderType,
+            d.id,
+            "delivered",
+            s.waiterSession?.name,
+            s.waiterSession?.id,
+          ),
+        ),
+      );
+      showAll(true);
+    } finally {
+      setDelivering(false);
+    }
+  };
+
+  const changeStatus = (dishId: string, status: Dish["status"]) =>
+    void s.updateDish(
+      order.id,
+      order.orderType,
+      dishId,
+      status,
+      s.waiterSession?.name,
+      s.waiterSession?.id,
+    );
+
+  const position = (id: string) => {
+    const i = frozenOrder.indexOf(id);
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  const listedDishes =
+    view === "pending"
+      ? readyDishes
+      : [...order.dishes].sort((a, b) => position(a.id) - position(b.id));
 
   const delivered = order.dishes.filter((d) => d.status === "delivered").length;
   // Avance de cocina de lo pendiente de entregar (tap_pay no pasa por cocina).
@@ -161,6 +234,18 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
         setExtra(order.waiterExtraMinutes ?? 0);
         setExtraOpen(true);
       },
+    });
+  if (perms.canPrintTicket)
+    menu.push({
+      key: "ticket",
+      label: "Ticket",
+      onSelect: () => void ticket.openTicket(),
+    });
+  if (isReprintEnabled())
+    menu.push({
+      key: "reprint",
+      label: reprinting ? "Reimprimiendo…" : "Reimprimir comanda",
+      onSelect: () => void handleReprint(),
     });
   if (perms.canViewMovements)
     menu.push({
@@ -234,29 +319,25 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
 
         {/* Platillos y estados */}
         <section aria-label="Platillos" className="flex flex-col gap-4">
+          {view === "pending" && (
+            <p className="text-xs font-medium uppercase tracking-wider text-even-evergreen/60">
+              Por entregar
+            </p>
+          )}
           {order.dishes.length === 0 && (
             <p className="text-sm text-even-evergreen/50">
               Aún no hay platillos en la cuenta.
             </p>
           )}
-          {order.dishes.map((dish) => (
+          {listedDishes.map((dish) => (
             <DishItem
               key={dish.id}
               dish={dish}
-              hideStatusButtons={perms.hideStatusButtons}
+              hideStatusButtons={perms.hideStatusButtons || view === "pending"}
               hideStatusBadge={perms.hideStatusBadge}
-              onStatusChange={(dishId, status) =>
-                void s.updateDish(
-                  order.id,
-                  order.orderType,
-                  dishId,
-                  status,
-                  s.waiterSession?.name,
-                  s.waiterSession?.id,
-                )
-              }
+              onStatusChange={changeStatus}
               onQuantityChange={
-                perms.canEditDishes
+                view === "all" && perms.canEditDishes
                   ? (dishId, quantity) =>
                       s.updateDishQuantity(
                         order.id,
@@ -269,23 +350,22 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
               }
             />
           ))}
+          {view === "pending" && (
+            <div className="flex flex-col gap-2 pt-1">
+              <Button
+                variant="primary"
+                fullWidth
+                loading={delivering}
+                onClick={() => void deliverReady()}
+              >
+                Entregar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => showAll(false)}>
+                Ver todos los productos
+              </Button>
+            </div>
+          )}
         </section>
-
-        {/* Totales */}
-        {totals.hasAmounts && (
-          <section
-            aria-label="Totales"
-            className="grid grid-cols-3 gap-3 rounded-2xl bg-even-evergreen/5 px-4 py-3 text-center"
-          >
-            <Amount label="Total" value={formatMoney(totals.total)} />
-            <Amount label="Pagado" value={formatMoney(totals.paid)} />
-            <Amount
-              label="Restante"
-              value={formatMoney(totals.remaining)}
-              warn={(order.remainingAmount ?? 0) > 0}
-            />
-          </section>
-        )}
 
         {notice && (
           <p
@@ -297,52 +377,55 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
         )}
 
         {/* Reserva el alto del pie fijo */}
-        <div className="h-24" aria-hidden />
+        <div className="h-36" aria-hidden />
       </SheetCard>
 
-      {/* Acciones */}
-      <SheetFooter className="sticky flex flex-wrap items-center gap-2 pt-3">
-        {perms.canAddDish && canCreateComanda && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              navigate(`/mesas/${encodeURIComponent(code)}/comanda`)
-            }
-          >
-            <Plus className="size-4" /> Agregar
-          </Button>
+      {/* Total siempre visible + acciones 50/50 */}
+      <SheetFooter className="flex flex-col gap-3 pt-3">
+        {totals.hasAmounts && (
+          <div className="flex items-baseline justify-between gap-3 text-even-evergreen">
+            <span className="text-xs uppercase tracking-widest text-even-evergreen/60">
+              Total
+            </span>
+            <span className="text-xl font-bold tabular-nums">
+              {formatMoney(totals.total)}
+            </span>
+          </div>
         )}
-        {perms.canPrintTicket && (
-          <Button
-            variant="outline"
-            size="sm"
-            loading={ticket.loading}
-            onClick={() => void ticket.openTicket()}
-          >
-            <Printer className="size-4" /> Ticket
-          </Button>
+        {totals.hasAmounts && totals.paid > 0 && (
+          <div className="-mt-2 flex justify-between text-xs text-even-evergreen/60">
+            <span>Pagado {formatMoney(totals.paid)}</span>
+            <span
+              className={
+                (order.remainingAmount ?? 0) > 0 ? "text-amber-600" : ""
+              }
+            >
+              Restante {formatMoney(totals.remaining)}
+            </span>
+          </div>
         )}
-        {isReprintEnabled() && (
-          <Button
-            variant="outline"
-            size="sm"
-            loading={reprinting}
-            onClick={() => void handleReprint()}
-          >
-            <Printer className="size-4" /> Reimprimir comanda
-          </Button>
-        )}
-        {perms.canRegisterPayment && canCharge && (
-          <Button
-            variant="primary"
-            size="sm"
-            className="ml-auto"
-            onClick={() => setPayOpen(true)}
-          >
-            <Banknote className="size-4" /> Cobrar
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {perms.canAddDish && canCreateComanda && (
+            <Button
+              variant="outline"
+              className="flex-1 justify-center"
+              onClick={() =>
+                navigate(`/mesas/${encodeURIComponent(code)}/comanda`)
+              }
+            >
+              <Plus className="size-4" /> Agregar
+            </Button>
+          )}
+          {perms.canRegisterPayment && canCharge && (
+            <Button
+              variant="primary"
+              className="flex-1 justify-center"
+              onClick={() => setPayOpen(true)}
+            >
+              <Banknote className="size-4" /> Cobrar
+            </Button>
+          )}
+        </div>
       </SheetFooter>
 
       {payOpen && branch && (
@@ -402,7 +485,9 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
             max={60}
             value={extra}
             aria-label="Minutos extra"
-            onChange={(e) => setExtra(clampExtraMinutes(Number(e.target.value)))}
+            onChange={(e) =>
+              setExtra(clampExtraMinutes(Number(e.target.value)))
+            }
           />
           <div className="flex gap-2">
             {[5, 10, 15].map((m) => (
@@ -420,28 +505,5 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
         </div>
       </Modal>
     </SheetScreen>
-  );
-}
-
-function Amount({
-  label,
-  value,
-  warn = false,
-}: {
-  label: string;
-  value: string;
-  warn?: boolean;
-}) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-[0.625rem] uppercase tracking-widest text-even-evergreen/60">
-        {label}
-      </span>
-      <span
-        className={`text-base font-semibold ${warn ? "text-amber-600" : ""}`}
-      >
-        {value}
-      </span>
-    </div>
   );
 }

@@ -29,6 +29,7 @@ export function HomeRedirect() {
 // Mesas: todas las mesas juntas; el servicio es un atributo de cada cuenta.
 export function MesasPage() {
   const s = useSession();
+  const { hasPermission } = useAuth();
   return (
     <TablesBoard
       branchId={s.branchId}
@@ -38,6 +39,10 @@ export function MesasPage() {
       activeOrderTypes={s.activeOrderTypes}
       crewConfig={s.crewConfig}
       onOrdersRefresh={() => s.fetchOrders()}
+      onPickAndGoStatusChange={s.updateOrderCookingStatus}
+      pickAndGoReadOnly={
+        !hasPermission("cocina.operar") && !hasPermission("cuenta.ver")
+      }
     />
   );
 }

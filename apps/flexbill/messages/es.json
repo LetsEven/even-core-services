@@ -61,7 +61,9 @@
     "accountLabel": "Cuenta",
     "accountTitle": "Cuenta de la mesa",
     "accountTotal": "Total acumulado",
-    "requestBillCta": "Pedir la cuenta"
+    "requestBillCta": "Pedir la cuenta",
+    "continueToPayCta": "Continuar a pagar",
+    "backCta": "Regresar"
   },
   "MenuItem": {
     "addToCart": "Agregar {name}",

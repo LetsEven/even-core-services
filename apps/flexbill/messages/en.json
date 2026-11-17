@@ -61,7 +61,9 @@
     "accountLabel": "Bill",
     "accountTitle": "Table bill",
     "accountTotal": "Running total",
-    "requestBillCta": "Request the bill"
+    "requestBillCta": "Request the bill",
+    "continueToPayCta": "Continue to pay",
+    "backCta": "Back"
   },
   "MenuItem": {
     "addToCart": "Add {name}",

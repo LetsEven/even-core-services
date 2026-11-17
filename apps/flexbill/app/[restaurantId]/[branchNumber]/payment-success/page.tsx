@@ -348,9 +348,9 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="h-dvh overflow-y-auto overflow-x-hidden brand-evergreen flex flex-col app-root">
+    <div className="h-dvh overflow-hidden brand-evergreen flex flex-col justify-center app-root">
       {/* Ticket que se imprime, se sella como PAGADO y se expande al tocarlo */}
-      <div className="flex-1 shrink-0 flex justify-center items-center px-6 md:px-8 pt-[max(1.5rem,env(safe-area-inset-top))] pb-2">
+      <div className="shrink-0 flex justify-center items-center px-6 md:px-8 pt-[max(1.5rem,env(safe-area-inset-top))] pb-2">
         <div className="w-full max-w-xs md:max-w-sm">
           <PaidReceipt
             restaurantName={restaurant?.name || restaurantData.name}
@@ -368,38 +368,18 @@ export default function PaymentSuccessPage() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 lg:px-8 w-full animate-slide-up">
-        <div className="flex-1 flex flex-col">
-          <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center items-center mb-6 md:mb-8 lg:mb-10 mt-2 md:mt-4 lg:mt-6 gap-2 md:gap-3 lg:gap-4">
-              <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight">
-                {t("heroTitle")}
-              </h1>
-              <p className="text-white text-base md:text-lg lg:text-xl">
-                {t("heroSubtitle")}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-96 justify-center px-6 md:px-8 lg:px-10 flex-1 py-8 md:py-10 lg:py-12">
-            {/* Action Buttons */}
-            <div
-              className="space-y-3 md:space-y-4 lg:space-y-5"
-              style={{
-                paddingBottom: "max(0rem, env(safe-area-inset-bottom))",
-              }}
-            >
-              <button
-                onClick={handleGoHome}
-                disabled={isTableClosed}
-                className="w-full py-3 md:py-4 lg:py-5 rounded-full transition-all bg-even-grass text-even-evergreen font-medium text-base md:text-lg lg:text-xl disabled:opacity-50 disabled:cursor-not-allowed enabled:cursor-pointer enabled:active:scale-90"
-              >
-                {t("goToMenuCta")}
-              </button>
-
-            </div>
-          </div>
-        </div>
+      {/* Agradecimiento + Ir al menú, justo debajo del ticket */}
+      <div className="px-6 md:px-8 lg:px-10 w-full max-w-md mx-auto animate-slide-up flex flex-col items-center gap-4 md:gap-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-tight text-center">
+          {t("heroTitle")}
+        </h1>
+        <button
+          onClick={handleGoHome}
+          disabled={isTableClosed}
+          className="w-full py-3 md:py-4 lg:py-5 rounded-full transition-all bg-even-grass text-even-evergreen font-medium text-base md:text-lg lg:text-xl disabled:opacity-50 disabled:cursor-not-allowed enabled:cursor-pointer enabled:active:scale-90"
+        >
+          {t("goToMenuCta")}
+        </button>
       </div>
 
       <InvoiceModal

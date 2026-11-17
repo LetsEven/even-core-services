@@ -17,7 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Loader2, Move, Check, ShoppingBag } from "lucide-react";
+import { Loader2, Check, ShoppingBag } from "lucide-react";
 import {
   getRoomsForBranch,
   getTablesForBranch,
@@ -82,7 +82,8 @@ const STATE_CLASS: Record<UnitState, string> = {
     "bg-even-evergreen border border-even-evergreen text-even-offwhite shadow-[0_0_18px_rgba(2,56,40,0.25)]",
   ocupada:
     "bg-even-grass border border-even-grass/60 text-even-evergreen shadow-[0_0_20px_rgba(130,230,87,0.45)]",
-  libre: "bg-white border border-even-evergreen/15 text-even-evergreen shadow-sm",
+  libre:
+    "bg-white border border-even-evergreen/15 text-even-evergreen shadow-sm",
 };
 
 function SortableCircle({
@@ -108,8 +109,14 @@ function SortableCircle({
   isChecking: boolean;
   onClick: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: unit.id, disabled: dragDisabled });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: unit.id, disabled: dragDisabled });
   const meta = service ? SERVICE_META[service] : null;
   const label = `${unit.kind === "room" ? "Habitación" : "Mesa"} ${unit.number}${
     meta ? `, ${meta.label}` : ""
@@ -206,7 +213,10 @@ function Legend({
   const withMeta = services.filter((s) => s !== "pick_and_go");
   return (
     <div className="mb-4 flex flex-col items-center gap-1.5 text-xs text-even-evergreen/80">
-      <ul aria-label="Leyenda de estados" className="flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+      <ul
+        aria-label="Leyenda de estados"
+        className="flex flex-wrap justify-center gap-x-4 gap-y-1.5"
+      >
         {states.map((i) => (
           <li key={i.label} className="flex items-center gap-1.5">
             <span className={`size-3 rounded-full border ${i.swatch}`} />
@@ -215,11 +225,16 @@ function Legend({
         ))}
       </ul>
       {indicator !== "hidden" && withMeta.length > 1 && (
-        <ul aria-label="Leyenda de servicios" className="flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+        <ul
+          aria-label="Leyenda de servicios"
+          className="flex flex-wrap justify-center gap-x-4 gap-y-1.5"
+        >
           {withMeta.map((s) => (
             <li key={s} className="flex items-center gap-1.5">
               {showsDot(indicator) && (
-                <span className={`size-2.5 rounded-full ${SERVICE_META[s].dotClass}`} />
+                <span
+                  className={`size-2.5 rounded-full ${SERVICE_META[s].dotClass}`}
+                />
               )}
               {showsInitial(indicator) && (
                 <span className="font-semibold">{SERVICE_META[s].initial}</span>
@@ -248,7 +263,9 @@ export default function TablesBoard({
   const navigate = useNavigate();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 8 },
+    }),
   );
 
   const [units, setUnits] = useState<BoardUnit[]>([]);
@@ -258,9 +275,11 @@ export default function TablesBoard({
   const [checkingUnitId, setCheckingUnitId] = useState<string | null>(null);
   const [confirmUnit, setConfirmUnit] = useState<BoardUnit | null>(null);
   const [openingAccount, setOpeningAccount] = useState(false);
-  const [serviceChoiceUnit, setServiceChoiceUnit] = useState<BoardUnit | null>(null);
+  const [serviceChoiceUnit, setServiceChoiceUnit] = useState<BoardUnit | null>(
+    null,
+  );
   const [isReordering, setIsReordering] = useState(false);
-  const [reorderMode, setReorderMode] = useState(false);
+  const reorderMode = false;
   const [showPickAndGo, setShowPickAndGo] = useState(false);
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
@@ -306,7 +325,10 @@ export default function TablesBoard({
         // mesas libres para ofrecer traer esa cuenta.
         if (hasPosServices) {
           const free = data.filter(
-            (u) => u.kind === "table" && !u.has_open_account && u.status !== "maintenance",
+            (u) =>
+              u.kind === "table" &&
+              !u.has_open_account &&
+              u.status !== "maintenance",
           );
           if (free.length > 0) {
             const freeNumbers = new Set(free.map((u) => u.number));
@@ -396,7 +418,9 @@ export default function TablesBoard({
         );
         const service = getUnitService(order, hasTapPayAccount, unit.kind);
         const pulsing =
-          (state === "libre" && unit.kind === "table" && posUnits.has(unit.number)) ||
+          (state === "libre" &&
+            unit.kind === "table" &&
+            posUnits.has(unit.number)) ||
           (state === "ocupada" &&
             !!order &&
             order.dishes.some((d) => d.status === "preparing"));
@@ -454,7 +478,12 @@ export default function TablesBoard({
         (openService === "tap_pay" || openService === "flex_bill"
           ? openService
           : undefined);
-      const result = await openTableAccount(branchId, unit.number, token, chosen);
+      const result = await openTableAccount(
+        branchId,
+        unit.number,
+        token,
+        chosen,
+      );
       if (result.needsServiceChoice) {
         setServiceChoiceUnit(unit);
         setConfirmUnit(null);
@@ -527,57 +556,50 @@ export default function TablesBoard({
   const onlyTapPay = openService === "tap_pay";
 
   return (
-    <div className="relative flex-1 min-h-0 flex flex-col" style={{ background: "#023828" }}>
+    <div
+      className="relative flex-1 min-h-0 flex flex-col"
+      style={{ background: "#023828" }}
+    >
       <div className="flex flex-col items-center pb-5 gap-1">
         <h1 className="text-even-offwhite font-medium text-xl uppercase tracking-widest">
           Mesas
         </h1>
-        {units.length > 0 && !loading && (
-          <button
-            type="button"
-            onClick={() => setReorderMode((v) => !v)}
-            aria-pressed={reorderMode}
-            className={`flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer ${
-              reorderMode
-                ? "bg-even-grass text-even-evergreen border-even-grass"
-                : "bg-white/10 hover:bg-white/15 text-even-offwhite/80 border-white/15"
-            }`}
-          >
-            <Move className="w-3.5 h-3.5" />
-            {reorderMode ? "Listo" : "Reordenar"}
-          </button>
-        )}
-        {hasPickAndGo && (
-          <button
-            type="button"
-            onClick={() => setShowPickAndGo(true)}
-            aria-label={`Pick & Go, ${pickAndGo.complete.length} pedidos completos`}
-            className="relative mt-2 flex min-h-9 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-xs font-medium uppercase tracking-wider text-even-offwhite/80 transition-colors hover:bg-white/15 cursor-pointer"
-          >
-            <ShoppingBag className="w-3.5 h-3.5" />
-            Pick &amp; Go
-            {pickAndGo.complete.length > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-even-grass px-1 text-[0.6875rem] font-semibold text-even-evergreen">
-                {pickAndGo.complete.length}
-              </span>
-            )}
-          </button>
-        )}
-        {units.length > 0 && !loading && (
+        {((units.length > 0 && !loading) || hasPickAndGo) && (
           <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
-            {cobroCount > 0 && (
-              <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
-                {cobroCount} en cobro
-              </span>
+            {hasPickAndGo && (
+              <button
+                type="button"
+                onClick={() => setShowPickAndGo(true)}
+                aria-label={`Pick & Go, ${pickAndGo.complete.length} pedidos completos`}
+                className="relative flex min-h-7 items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 text-[0.6875rem] font-medium uppercase tracking-wider text-even-offwhite/80 transition-colors hover:bg-white/15 cursor-pointer"
+              >
+                <ShoppingBag className="w-3 h-3" />
+                Pick &amp; Go
+                {pickAndGo.complete.length > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-even-grass px-1 text-[0.6875rem] font-semibold text-even-evergreen">
+                    {pickAndGo.complete.length}
+                  </span>
+                )}
+              </button>
             )}
-            {activeCount > 0 && (
-              <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
-                {activeCount} {activeCount === 1 ? "cuenta activa" : "cuentas activas"}
-              </span>
+            {units.length > 0 && !loading && (
+              <>
+                {cobroCount > 0 && (
+                  <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/15 border border-white/30 text-even-offwhite font-medium">
+                    {cobroCount} en cobro
+                  </span>
+                )}
+                {activeCount > 0 && (
+                  <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-even-grass/20 border border-even-grass/30 text-even-grass font-medium">
+                    {activeCount}{" "}
+                    {activeCount === 1 ? "cuenta activa" : "cuentas activas"}
+                  </span>
+                )}
+                <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
+                  {freeCount} {freeCount === 1 ? "libre" : "libres"}
+                </span>
+              </>
             )}
-            <span className="text-[0.6875rem] px-2 py-0.5 rounded uppercase tracking-wider bg-white/10 border border-white/15 text-even-offwhite/60 font-medium">
-              {freeCount} {freeCount === 1 ? "libre" : "libres"}
-            </span>
           </div>
         )}
       </div>
@@ -619,7 +641,10 @@ export default function TablesBoard({
               onDragCancel={() => setIsReordering(false)}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext items={units.map((u) => u.id)} strategy={rectSortingStrategy}>
+              <SortableContext
+                items={units.map((u) => u.id)}
+                strategy={rectSortingStrategy}
+              >
                 <div className="grid grid-cols-4 gap-4 justify-items-center">
                   {view.map(({ unit, state, service, pulsing, progress }) => (
                     <SortableCircle
@@ -631,7 +656,11 @@ export default function TablesBoard({
                       pulsing={pulsing}
                       progress={progress}
                       dragDisabled={!reorderMode}
-                      disabled={reorderMode || unit.status === "maintenance" || !!checkingUnitId}
+                      disabled={
+                        reorderMode ||
+                        unit.status === "maintenance" ||
+                        !!checkingUnitId
+                      }
                       isChecking={checkingUnitId === unit.id}
                       onClick={() => handleUnitClick(unit, state)}
                     />
@@ -646,7 +675,10 @@ export default function TablesBoard({
       {confirmUnit && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+          style={{
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(6px)",
+          }}
         >
           <div
             className="w-full max-w-sm rounded-lg border border-white/10 shadow-2xl px-6 py-6 flex flex-col gap-5"
@@ -687,7 +719,10 @@ export default function TablesBoard({
       {serviceChoiceUnit && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+          style={{
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(6px)",
+          }}
         >
           <div
             className="w-full max-w-sm rounded-lg border border-white/10 shadow-2xl px-6 py-6 flex flex-col gap-5"
@@ -697,7 +732,9 @@ export default function TablesBoard({
               <p className="text-even-offwhite/40 text-xs uppercase tracking-widest mb-1">
                 Mesa {serviceChoiceUnit.number}
               </p>
-              <h2 className="text-even-offwhite font-bold text-xl">¿Qué servicio usar?</h2>
+              <h2 className="text-even-offwhite font-bold text-xl">
+                ¿Qué servicio usar?
+              </h2>
               <p className="text-even-offwhite/50 text-sm mt-1">
                 Esta sucursal tiene Tap & Pay y Flex Bill activos.
               </p>
@@ -737,7 +774,10 @@ export default function TablesBoard({
       >
         <div className="flex flex-col gap-4 p-5 text-even-evergreen">
           <h2 className="text-lg font-semibold">Pick &amp; Go</h2>
-          <section aria-label="Listos para entregar" className="flex flex-col gap-2">
+          <section
+            aria-label="Listos para entregar"
+            className="flex flex-col gap-2"
+          >
             <h3 className="text-xs font-semibold uppercase tracking-widest text-even-evergreen/60">
               Completos, por entregar ({pickAndGo.complete.length})
             </h3>
@@ -765,7 +805,9 @@ export default function TablesBoard({
                 {!pickAndGoReadOnly && (
                   <button
                     type="button"
-                    onClick={() => onPickAndGoStatusChange?.(order.id, "delivered")}
+                    onClick={() =>
+                      onPickAndGoStatusChange?.(order.id, "delivered")
+                    }
                     className="min-h-11 shrink-0 cursor-pointer rounded-full bg-even-grass px-4 text-sm font-medium text-even-evergreen active:scale-95"
                   >
                     Entregar
@@ -779,7 +821,9 @@ export default function TablesBoard({
               En cocina ({pickAndGo.inKitchen.length})
             </h3>
             {pickAndGo.inKitchen.length === 0 && (
-              <p className="text-sm text-even-evergreen/50">Nada en preparación.</p>
+              <p className="text-sm text-even-evergreen/50">
+                Nada en preparación.
+              </p>
             )}
             {pickAndGo.inKitchen.map(({ order, progress }) => (
               <div

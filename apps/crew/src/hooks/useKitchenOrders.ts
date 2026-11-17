@@ -34,6 +34,12 @@ export function useKitchenOrders(branchId: string | null) {
   // puede pisar a una más nueva que ya llegó con el monto correcto, dejando
   // "Pagado" atascado hasta el siguiente refresh.
   const fetchSeqRef = useRef(0);
+  // Copia síncrona de `orders` para decidir efectos secundarios (p. ej. el
+  // estado general de Pick & Go) sin depender de closures obsoletos.
+  const ordersRef = useRef<Order[]>([]);
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
 
   const fetchOrders = useCallback(
     async (showSpinner = false): Promise<Order[] | undefined> => {
@@ -112,6 +118,9 @@ export function useKitchenOrders(branchId: string | null) {
       waiterName?: string | null,
       waiterId?: string | null,
     ) => {
+      // Estado del pedido antes del cambio, para sincronizar Pick & Go abajo.
+      const before = ordersRef.current.find((o) => o.id === orderId);
+
       // Optimistic update
       setOrders((prev) =>
         prev.map((order) => {
@@ -136,6 +145,30 @@ export function useKitchenOrders(branchId: string | null) {
           waiterName,
           waiterId,
         );
+
+        // Pick & Go: el pedido avanza solo cuando todos sus platillos salieron
+        // de cocina (así el cliente se entera) y retrocede si se regresa uno.
+        if (orderType === "pick_and_go" && before) {
+          const dishes = before.dishes.map((d) =>
+            d.id === dishId ? { ...d, status } : d,
+          );
+          const allOut = dishes.every((d) => d.status !== "preparing");
+          const current = before.cookingStatus ?? "preparing";
+          const target: CookingStatus | null =
+            allOut && current === "preparing"
+              ? "ready"
+              : !allOut && current === "ready"
+                ? "preparing"
+                : null;
+          if (target) {
+            setOrders((prev) =>
+              prev.map((o) =>
+                o.id === orderId ? { ...o, cookingStatus: target } : o,
+              ),
+            );
+            await updatePickAndGoOrderCookingStatus(orderId, target, token);
+          }
+        }
       } catch (e) {
         // Revertir en caso de error
         fetchOrders();

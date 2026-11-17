@@ -17,7 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Loader2, Move } from "lucide-react";
+import { Loader2, Move, Check, ShoppingBag } from "lucide-react";
 import {
   getRoomsForBranch,
   getTablesForBranch,
@@ -29,7 +29,9 @@ import {
   syncFlexBillTableFromPOS,
   type Branch,
 } from "../services/api";
-import type { Order, OrderType } from "../types";
+import { Modal, cn } from "@even/ui";
+import type { CookingStatus, Order, OrderType } from "../types";
+import { getOrderProgress, type OrderProgress } from "../features/cocina/board";
 import { parseLocationCode } from "../utils/identifier";
 import { useRegisterRefresh } from "../app/refresh";
 import {
@@ -67,6 +69,10 @@ interface Props {
   activeOrderTypes: OrderType[];
   crewConfig: CrewConfig;
   onOrdersRefresh: () => void;
+  /** Marca el estado de un pedido Pick & Go (se usa para "Entregar"). */
+  onPickAndGoStatusChange?: (orderId: string, status: CookingStatus) => void;
+  /** Solo lectura: Pick & Go se ve pero no se puede entregar. */
+  pickAndGoReadOnly?: boolean;
 }
 
 const STATE_CLASS: Record<UnitState, string> = {
@@ -85,6 +91,7 @@ function SortableCircle({
   service,
   indicator,
   pulsing,
+  progress,
   disabled,
   dragDisabled,
   isChecking,
@@ -95,6 +102,7 @@ function SortableCircle({
   service: OrderType | null;
   indicator: CrewConfig["serviceIndicator"];
   pulsing: boolean;
+  progress: OrderProgress | null;
   disabled: boolean;
   dragDisabled: boolean;
   isChecking: boolean;
@@ -105,6 +113,12 @@ function SortableCircle({
   const meta = service ? SERVICE_META[service] : null;
   const label = `${unit.kind === "room" ? "Habitación" : "Mesa"} ${unit.number}${
     meta ? `, ${meta.label}` : ""
+  }${
+    progress?.complete
+      ? ", pedido completo por entregar"
+      : progress?.partial
+        ? `, ${progress.ready} de ${progress.pending} platillos listos`
+        : ""
   }`;
 
   return (
@@ -134,6 +148,23 @@ function SortableCircle({
             <span className={`size-2 rounded-full ${meta.dotClass}`} />
           )}
           {showsInitial(indicator) && meta.initial}
+        </span>
+      )}
+      {progress && (progress.complete || progress.partial) && (
+        <span
+          aria-hidden
+          className={cn(
+            "absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[0.625rem] font-semibold leading-none shadow",
+            progress.complete
+              ? "bg-even-evergreen text-even-grass"
+              : "bg-amber-400 text-even-evergreen",
+          )}
+        >
+          {progress.complete ? (
+            <Check className="size-3" strokeWidth={3} />
+          ) : (
+            `${progress.ready}/${progress.pending}`
+          )}
         </span>
       )}
     </button>
@@ -210,6 +241,8 @@ export default function TablesBoard({
   activeOrderTypes,
   crewConfig,
   onOrdersRefresh,
+  onPickAndGoStatusChange,
+  pickAndGoReadOnly = false,
 }: Props) {
   const { getToken } = useAuth();
   const navigate = useNavigate();
@@ -228,6 +261,7 @@ export default function TablesBoard({
   const [serviceChoiceUnit, setServiceChoiceUnit] = useState<BoardUnit | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
+  const [showPickAndGo, setShowPickAndGo] = useState(false);
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
   const hasRooms = activeOrderTypes.includes("room");
@@ -366,7 +400,8 @@ export default function TablesBoard({
           (state === "ocupada" &&
             !!order &&
             order.dishes.some((d) => d.status === "preparing"));
-        return { unit, state, service, pulsing };
+        const progress = order ? getOrderProgress(order) : null;
+        return { unit, state, service, pulsing, progress };
       }),
     [units, orders, posUnits],
   );
@@ -464,6 +499,23 @@ export default function TablesBoard({
     }
   }
 
+  const hasPickAndGo = activeOrderTypes.includes("pick_and_go");
+  const pickAndGo = useMemo(() => {
+    const list = orders
+      .filter((o) => o.orderType === "pick_and_go")
+      .map((order) => ({ order, progress: getOrderProgress(order) }))
+      .filter(({ progress }) => progress.pending > 0)
+      .sort(
+        (a, b) =>
+          new Date(a.order.createdAt).getTime() -
+          new Date(b.order.createdAt).getTime(),
+      );
+    return {
+      complete: list.filter((x) => x.progress.complete),
+      inKitchen: list.filter((x) => !x.progress.complete),
+    };
+  }, [orders]);
+
   const cobroCount = view.filter((v) => v.state === "cobro").length;
   const activeCount = orders.filter(
     (o) => o.orderType !== "pick_and_go",
@@ -493,6 +545,22 @@ export default function TablesBoard({
           >
             <Move className="w-3.5 h-3.5" />
             {reorderMode ? "Listo" : "Reordenar"}
+          </button>
+        )}
+        {hasPickAndGo && (
+          <button
+            type="button"
+            onClick={() => setShowPickAndGo(true)}
+            aria-label={`Pick & Go, ${pickAndGo.complete.length} pedidos completos`}
+            className="relative mt-2 flex min-h-9 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 text-xs font-medium uppercase tracking-wider text-even-offwhite/80 transition-colors hover:bg-white/15 cursor-pointer"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            Pick &amp; Go
+            {pickAndGo.complete.length > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-even-grass px-1 text-[0.6875rem] font-semibold text-even-evergreen">
+                {pickAndGo.complete.length}
+              </span>
+            )}
           </button>
         )}
         {units.length > 0 && !loading && (
@@ -553,7 +621,7 @@ export default function TablesBoard({
             >
               <SortableContext items={units.map((u) => u.id)} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-4 gap-4 justify-items-center">
-                  {view.map(({ unit, state, service, pulsing }) => (
+                  {view.map(({ unit, state, service, pulsing, progress }) => (
                     <SortableCircle
                       key={unit.id}
                       unit={unit}
@@ -561,6 +629,7 @@ export default function TablesBoard({
                       service={service}
                       indicator={crewConfig.serviceIndicator}
                       pulsing={pulsing}
+                      progress={progress}
                       dragDisabled={!reorderMode}
                       disabled={reorderMode || unit.status === "maintenance" || !!checkingUnitId}
                       isChecking={checkingUnitId === unit.id}
@@ -661,6 +730,73 @@ export default function TablesBoard({
           </div>
         </div>
       )}
+      <Modal
+        open={showPickAndGo}
+        onClose={() => setShowPickAndGo(false)}
+        aria-label="Pick & Go"
+      >
+        <div className="flex flex-col gap-4 p-5 text-even-evergreen">
+          <h2 className="text-lg font-semibold">Pick &amp; Go</h2>
+          <section aria-label="Listos para entregar" className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-even-evergreen/60">
+              Completos, por entregar ({pickAndGo.complete.length})
+            </h3>
+            {pickAndGo.complete.length === 0 && (
+              <p className="text-sm text-even-evergreen/50">
+                Ningún pedido completo por ahora.
+              </p>
+            )}
+            {pickAndGo.complete.map(({ order }) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-even-grass/60 bg-even-grass/15 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">
+                    {order.customerName || order.identifier}
+                  </p>
+                  <p className="truncate text-xs text-even-evergreen/60">
+                    {order.dishes
+                      .filter((d) => d.status === "ready")
+                      .map((d) => `${d.quantity}× ${d.item}`)
+                      .join(", ")}
+                  </p>
+                </div>
+                {!pickAndGoReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => onPickAndGoStatusChange?.(order.id, "delivered")}
+                    className="min-h-11 shrink-0 cursor-pointer rounded-full bg-even-grass px-4 text-sm font-medium text-even-evergreen active:scale-95"
+                  >
+                    Entregar
+                  </button>
+                )}
+              </div>
+            ))}
+          </section>
+          <section aria-label="En cocina" className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-even-evergreen/60">
+              En cocina ({pickAndGo.inKitchen.length})
+            </h3>
+            {pickAndGo.inKitchen.length === 0 && (
+              <p className="text-sm text-even-evergreen/50">Nada en preparación.</p>
+            )}
+            {pickAndGo.inKitchen.map(({ order, progress }) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-stroke-soft bg-white p-3"
+              >
+                <p className="min-w-0 truncate font-medium">
+                  {order.customerName || order.identifier}
+                </p>
+                <span className="shrink-0 text-xs text-even-evergreen/60">
+                  {progress.ready} de {progress.pending} listos
+                </span>
+              </div>
+            ))}
+          </section>
+        </div>
+      </Modal>
     </div>
   );
 }

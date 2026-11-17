@@ -123,7 +123,11 @@ export default function PaymentSuccessPage() {
     }
   }, [cameFromAuth]);
 
+  // TEMPORAL: el modal de registro se abre solo y tapa la animación del ticket.
+  // Reactivar cuando se decida dónde mostrarlo (p. ej. tras el sello PAGADO).
+  const AUTO_OPEN_REGISTER_MODAL = false;
   useEffect(() => {
+    if (!AUTO_OPEN_REGISTER_MODAL) return;
     if (isAuthLoading) return;
     if (!isAuthenticated && !cameFromAuth) {
       setIsRegisterModalOpen(true);

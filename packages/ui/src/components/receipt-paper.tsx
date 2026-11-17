@@ -13,9 +13,7 @@ const ZIGZAG: CSSProperties = {
 };
 
 /** Avance de la impresora: el papel sale a tirones, con pausas entre cada tramo. */
-const PRINT_HIDDEN = [100, 78, 78, 52, 52, 26, 26, 8, 8, 0]; // % del alto que sigue sin imprimirse
-// Márgenes negativos para no recortar la sombra
-const PRINT_CLIP = PRINT_HIDDEN.map((p) => `inset(-24px -24px ${p}% -24px)`);
+const PRINT_Y = ["-100%", "-78%", "-78%", "-52%", "-52%", "-26%", "-26%", "-8%", "-8%", "0%"];
 const PRINT_TIMES = [0, 0.14, 0.2, 0.38, 0.44, 0.62, 0.68, 0.86, 0.9, 1];
 
 /** Duración por defecto de la impresión (ms). */
@@ -56,11 +54,11 @@ export function ReceiptPaper({ mode = "appear", printMs = RECEIPT_PRINT_MS, clas
       <div className="relative w-full">
         {/* Ranura de la impresora */}
         <div className="relative z-10 mx-auto h-3 w-[96%] rounded-full bg-black/70 shadow-[inset_0_2px_3px_rgba(0,0,0,0.6)]" />
-        <div className="-mt-1.5 px-3 pb-4">
-          {/* Se revela de arriba hacia abajo (primero el encabezado), a tirones; el hueco ya está reservado */}
+        {/* El ticket entero (con su contenido) sale de la ranura y baja a tirones; el hueco ya está reservado */}
+        <div className="-mt-1.5 overflow-hidden px-3 pb-4">
           <m.div
-            initial={{ clipPath: PRINT_CLIP[0] }}
-            animate={{ clipPath: PRINT_CLIP }}
+            initial={{ y: PRINT_Y[0] }}
+            animate={{ y: PRINT_Y }}
             transition={{ duration: printMs / 1000, times: PRINT_TIMES, ease: "easeInOut" }}
           >
             {paper}

@@ -31,6 +31,9 @@ import {
   useModalBackClose,
   useRestaurantIntro,
   useScrollLock,
+  ReceiptPaper,
+  ReceiptRow,
+  ReceiptRule,
 } from "@even/ui";
 import MenuCategory from "@/app/components/MenuCategory";
 import PepperIcon from "@/app/components/UI/PepperIcon";
@@ -683,144 +686,83 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
 <div className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999]" onClick={() => setIsStatusModalOpen(false)} />
 <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
           <div
-            className="pointer-events-auto bg-even-evergreen/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            className="pointer-events-auto w-full max-w-md mx-4 max-h-[90dvh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="shrink-0">
-              <div className="w-full flex justify-end">
-                <button
-                  onClick={() => setIsStatusModalOpen(false)}
-                  className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
-                >
-                  <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
-                </button>
-              </div>
-              <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
-                <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
-                  {restaurant?.logo_url ? (
-                    <img
-                      src={restaurant.logo_url}
-                      alt={restaurant.name}
-                      className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
-                    />
-                  ) : (
-                    <Utensils className="size-20 md:size-24 lg:size-28 text-white" />
-                  )}
-                  <div className="flex flex-col items-center justify-center">
-                    <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                      {t("accountTitle")}
+            {/* La cuenta como ticket de papel */}
+            <div className="flex-1 min-h-0 overflow-y-auto pt-2">
+              <ReceiptPaper mode="appear">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="font-mono text-base font-bold uppercase tracking-wide">
+                      {restaurant?.name}
                     </h2>
-                    <p className="text-sm md:text-base lg:text-lg text-white/80">
+                    <p className="text-xs text-even-ink/55">
+                      {t("accountTitle")} ·{" "}
                       {tc("tableLabel", { table: tableNumber ?? "" })}
                     </p>
                   </div>
-                </div>
-              </div>
-              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white">
-                    {tc("orderedItems")}
-                  </h3>
                   <button
                     onClick={handleRefreshOrder}
                     disabled={isRefreshing}
-                    className="rounded-full hover:bg-white/10 p-1 md:p-1.5 lg:p-2 transition-colors disabled:opacity-50"
+                    aria-label={tc("orderedItems")}
+                    className="shrink-0 text-even-shamrock disabled:opacity-50"
                   >
                     <RefreshCw
-                      className={`size-5 md:size-6 lg:size-7 text-white ${isRefreshing ? "animate-spin" : ""}`}
+                      className={`size-5 ${isRefreshing ? "animate-spin" : ""}`}
                     />
                   </button>
                 </div>
-              </div>
+                <ReceiptRule />
+                {isRefreshing ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="size-7 animate-spin text-even-shamrock" />
+                  </div>
+                ) : tableState.dishOrders.length > 0 ? (
+                  <>
+                    {tableState.dishOrders.map((dish, index) => (
+                      <ReceiptRow
+                        key={dish.dish_order_id || index}
+                        left={
+                          <span className="capitalize">
+                            {dish.quantity}x {dish.item}
+                          </span>
+                        }
+                        right={`$${(
+                          dish.total_display_price ??
+                          Number(dish.price) * dish.quantity
+                        ).toFixed(2)}`}
+                        sub={
+                          <>
+                            <span className="uppercase">{dish.guest_name}</span> ·{" "}
+                            {getStatusText(dish.status, statusLabels)}
+                          </>
+                        }
+                      />
+                    ))}
+                    <ReceiptRule />
+                    <ReceiptRow
+                      strong
+                      left={t("accountTotal")}
+                      right={`$${tableState.dishOrders
+                        .reduce(
+                          (sum, dish) =>
+                            sum +
+                            (dish.total_display_price ??
+                              Number(dish.price) * dish.quantity),
+                          0,
+                        )
+                        .toFixed(2)}`}
+                    />
+                  </>
+                ) : (
+                  <p className="py-6 text-center text-sm">{tc("noOrderInfo")}</p>
+                )}
+              </ReceiptPaper>
             </div>
 
-            {/* Scrollable items */}
-            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
-              {isRefreshing ? (
-                <div className="flex justify-center items-center py-12 md:py-16 lg:py-20">
-                  <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-white" />
-                </div>
-              ) : tableState.dishOrders.length > 0 ? (
-                <div className="space-y-3 md:space-y-4 lg:space-y-5">
-                  {tableState.dishOrders.map((dish, index) => (
-                    <div
-                      key={dish.dish_order_id || index}
-                      className="flex items-start gap-3 md:gap-4 lg:gap-5 bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-5 border border-white/10"
-                    >
-                      {showImages && (
-                        <div className="shrink-0">
-                          <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm flex items-center justify-center overflow-hidden">
-                            {dish.images &&
-                            dish.images.length > 0 &&
-                            dish.images[0] ? (
-                              <img
-                                src={dish.images[0]}
-                                alt={dish.item}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <img
-                                src="/even/even-asterisk-evergreen.svg"
-                                alt="Logo Even"
-                                className="size-10 md:size-12 lg:size-14 object-contain"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base md:text-lg lg:text-xl text-white font-medium capitalize">
-                          {dish.item}
-                        </h3>
-                        <p className="text-xs md:text-sm lg:text-base font-medium text-white/80 uppercase">
-                          {dish.guest_name}
-                        </p>
-                        <div className="mt-1 md:mt-1.5 lg:mt-2">
-                          <span
-                            className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${getStatusColor(dish.status)}`}
-                          >
-                            {getStatusText(dish.status, statusLabels)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right flex flex-col items-end">
-                        <p className="text-xs md:text-sm lg:text-base text-white/60">
-                          {tc("quantityLabel", { quantity: dish.quantity })}
-                        </p>
-                        <p className="text-base md:text-lg lg:text-xl text-white font-medium">
-                          $
-                          {(
-                            dish.total_display_price ??
-                            Number(dish.price) * dish.quantity
-                          ).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 md:py-10 lg:py-12">
-                  <p className="text-white/70 text-base md:text-lg lg:text-xl">
-                    {tc("noOrderInfo")}
-                  </p>
-                </div>
-              )}
-            </div>
-            {tableState.dishOrders.length > 0 && (
-              <div className="shrink-0 flex flex-col gap-3 border-t border-white/20 px-6 py-4 md:px-8 lg:px-10">
-                <div className="flex items-center justify-between text-white">
-                  <span className="text-lg font-medium md:text-xl">{t("accountTotal")}</span>
-                  <span className="text-lg font-medium md:text-xl">
-                    $
-                    {tableState.dishOrders
-                      .reduce(
-                        (sum, dish) => sum + (dish.total_display_price ?? Number(dish.price) * dish.quantity),
-                        0,
-                      )
-                      .toFixed(2)}
-                  </span>
-                </div>
+            <div className="shrink-0 flex flex-col gap-2 pt-3">
+              {tableState.dishOrders.length > 0 && (
                 <button
                   onClick={() => {
                     setIsStatusModalOpen(false);
@@ -828,10 +770,16 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
                   }}
                   className="w-full rounded-full bg-even-grass py-3 text-base font-medium text-even-evergreen transition-all active:scale-95 md:text-lg"
                 >
-                  {t("requestBillCta")}
+                  {t("continueToPayCta")}
                 </button>
-              </div>
-            )}
+              )}
+              <button
+                onClick={() => setIsStatusModalOpen(false)}
+                className="w-full rounded-full border border-white/40 py-3 text-base font-medium text-white transition-all active:scale-95 md:text-lg"
+              >
+                {t("backCta")}
+              </button>
+            </div>
           </div>
         </div>
 </>

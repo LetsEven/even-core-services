@@ -17,7 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Loader2, Check, ShoppingBag } from "lucide-react";
+import { Loader2, ShoppingBag } from "lucide-react";
 import {
   getRoomsForBranch,
   getTablesForBranch,
@@ -29,7 +29,7 @@ import {
   syncFlexBillTableFromPOS,
   type Branch,
 } from "../services/api";
-import { Modal, cn } from "@even/ui";
+import { Modal } from "@even/ui";
 import type { CookingStatus, Order, OrderType } from "../types";
 import { getOrderProgress, type OrderProgress } from "../features/cocina/board";
 import { parseLocationCode } from "../utils/identifier";
@@ -43,8 +43,6 @@ import {
   findUnitOrder,
   getUnitService,
   getUnitState,
-  showsDot,
-  showsInitial,
   type UnitState,
 } from "../features/mesas/serviceMeta";
 
@@ -79,7 +77,7 @@ const STATE_CLASS: Record<UnitState, string> = {
   maintenance:
     "bg-even-evergreen/5 border border-even-evergreen/10 text-even-evergreen/25",
   cobro:
-    "bg-even-evergreen border border-even-evergreen text-even-offwhite shadow-[0_0_18px_rgba(2,56,40,0.25)]",
+    "bg-even-grass border border-even-grass/60 text-even-evergreen shadow-[0_0_20px_rgba(130,230,87,0.45)]",
   ocupada:
     "bg-even-grass border border-even-grass/60 text-even-evergreen shadow-[0_0_20px_rgba(130,230,87,0.45)]",
   libre:
@@ -90,7 +88,6 @@ function SortableCircle({
   unit,
   state,
   service,
-  indicator,
   pulsing,
   progress,
   disabled,
@@ -101,7 +98,6 @@ function SortableCircle({
   unit: BoardUnit;
   state: UnitState;
   service: OrderType | null;
-  indicator: CrewConfig["serviceIndicator"];
   pulsing: boolean;
   progress: OrderProgress | null;
   disabled: boolean;
@@ -146,105 +142,7 @@ function SortableCircle({
       }`}
     >
       {isChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : unit.number}
-      {meta && indicator !== "hidden" && (
-        <span
-          aria-hidden
-          className="absolute -top-0.5 -right-0.5 flex items-center justify-center gap-0.5 rounded-full bg-white px-1 min-w-4 h-4 text-[0.625rem] leading-none font-semibold text-even-evergreen border border-even-evergreen/20"
-        >
-          {showsDot(indicator) && (
-            <span className={`size-2 rounded-full ${meta.dotClass}`} />
-          )}
-          {showsInitial(indicator) && meta.initial}
-        </span>
-      )}
-      {progress && (progress.complete || progress.partial) && (
-        <span
-          aria-hidden
-          className={cn(
-            "absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[0.625rem] font-semibold leading-none shadow",
-            progress.complete
-              ? "bg-even-evergreen text-even-grass"
-              : "bg-amber-400 text-even-evergreen",
-          )}
-        >
-          {progress.complete ? (
-            <Check className="size-3" strokeWidth={3} />
-          ) : (
-            `${progress.ready}/${progress.pending}`
-          )}
-        </span>
-      )}
     </button>
-  );
-}
-
-function Legend({
-  reorderMode,
-  services,
-  indicator,
-  showPos,
-}: {
-  reorderMode: boolean;
-  services: OrderType[];
-  indicator: CrewConfig["serviceIndicator"];
-  showPos: boolean;
-}) {
-  if (reorderMode) {
-    return (
-      <p className="mb-4 rounded-lg bg-even-grass/20 px-3 py-2 text-center text-xs text-even-evergreen">
-        Modo reordenar: arrastra para cambiar el orden y toca &quot;Listo&quot;
-        al terminar.
-      </p>
-    );
-  }
-  const states = [
-    { label: "Libre", swatch: "bg-white border-even-evergreen/25" },
-    { label: "Ocupada", swatch: "bg-even-grass border-even-grass/60" },
-    { label: "Por cobrar", swatch: "bg-even-evergreen border-even-evergreen" },
-    ...(showPos
-      ? [
-          {
-            label: "Cuenta en POS",
-            swatch: "bg-even-grass border-even-grass/60 animate-pulse-ring",
-          },
-        ]
-      : []),
-  ];
-  const withMeta = services.filter((s) => s !== "pick_and_go");
-  return (
-    <div className="mb-4 flex flex-col items-center gap-1.5 text-xs text-even-evergreen/80">
-      <ul
-        aria-label="Leyenda de estados"
-        className="flex flex-wrap justify-center gap-x-4 gap-y-1.5"
-      >
-        {states.map((i) => (
-          <li key={i.label} className="flex items-center gap-1.5">
-            <span className={`size-3 rounded-full border ${i.swatch}`} />
-            {i.label}
-          </li>
-        ))}
-      </ul>
-      {indicator !== "hidden" && withMeta.length > 1 && (
-        <ul
-          aria-label="Leyenda de servicios"
-          className="flex flex-wrap justify-center gap-x-4 gap-y-1.5"
-        >
-          {withMeta.map((s) => (
-            <li key={s} className="flex items-center gap-1.5">
-              {showsDot(indicator) && (
-                <span
-                  className={`size-2.5 rounded-full ${SERVICE_META[s].dotClass}`}
-                />
-              )}
-              {showsInitial(indicator) && (
-                <span className="font-semibold">{SERVICE_META[s].initial}</span>
-              )}
-              {SERVICE_META[s].label}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
 
@@ -417,17 +315,12 @@ export default function TablesBoard({
           unit.has_open_account,
         );
         const service = getUnitService(order, hasTapPayAccount, unit.kind);
-        const pulsing =
-          (state === "libre" &&
-            unit.kind === "table" &&
-            posUnits.has(unit.number)) ||
-          (state === "ocupada" &&
-            !!order &&
-            order.dishes.some((d) => d.status === "preparing"));
         const progress = order ? getOrderProgress(order) : null;
+        // Pide al mesero: pidieron la cuenta, o hay platillos listos por entregar.
+        const pulsing = state === "cobro" || (progress?.ready ?? 0) > 0;
         return { unit, state, service, pulsing, progress };
       }),
-    [units, orders, posUnits],
+    [units, orders],
   );
 
   async function handleUnitClick(unit: BoardUnit, state: UnitState) {
@@ -628,12 +521,6 @@ export default function TablesBoard({
         )}
         {branchId && !loading && !error && units.length > 0 && (
           <>
-            <Legend
-              reorderMode={reorderMode}
-              services={activeOrderTypes}
-              indicator={crewConfig.serviceIndicator}
-              showPos={hasPosServices}
-            />
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -652,7 +539,6 @@ export default function TablesBoard({
                       unit={unit}
                       state={state}
                       service={service}
-                      indicator={crewConfig.serviceIndicator}
                       pulsing={pulsing}
                       progress={progress}
                       dragDisabled={!reorderMode}

@@ -13,6 +13,7 @@ import {
 } from "@even/ui";
 import { useSession } from "../../app/session/context";
 import DishItem from "../../components/DishItem";
+import { getOrderProgress } from "../../features/cocina/board";
 import CashPaymentModal from "../../components/CashPaymentModal";
 import PrintTicketModal from "../../components/PrintTicketModal";
 import ContactCustomerModal from "../../components/ContactCustomerModal";
@@ -111,6 +112,9 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
   );
 
   const delivered = order.dishes.filter((d) => d.status === "delivered").length;
+  // Avance de cocina de lo pendiente de entregar (tap_pay no pasa por cocina).
+  const progress =
+    order.orderType === "tap_pay" ? null : getOrderProgress(order);
   const goBack = () => navigate("/mesas");
 
   const handleReprint = async () => {
@@ -211,6 +215,22 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
           </div>
           <AccountMenu items={menu} />
         </header>
+
+        {/* Resumen de cocina: el mesero decide si lleva lo listo o espera al resto */}
+        {progress && progress.pending > 0 && (
+          <p
+            role="status"
+            className={
+              progress.complete
+                ? "rounded-xl border border-even-grass/60 bg-even-grass/20 px-4 py-3 text-sm font-medium text-even-evergreen"
+                : "rounded-xl border border-amber-400/50 bg-amber-400/15 px-4 py-3 text-sm font-medium text-even-evergreen"
+            }
+          >
+            {progress.complete
+              ? `Pedido completo: ${progress.ready} ${progress.ready === 1 ? "platillo listo" : "platillos listos"} para entregar`
+              : `${progress.ready} de ${progress.pending} ${progress.pending === 1 ? "platillo listo" : "platillos listos"} · faltan ${progress.preparing} en cocina`}
+          </p>
+        )}
 
         {/* Platillos y estados */}
         <section aria-label="Platillos" className="flex flex-col gap-4">

@@ -116,7 +116,9 @@
     "remainingLabel": "Remaining:",
     "noPendingBill": "There's no pending bill to pay",
     "noPendingDishes": "There are no pending dishes to pay",
-    "noPendingUserDishes": "You have no pending dishes to pay"
+    "noPendingUserDishes": "You have no pending dishes to pay",
+    "heroLabel": "Remaining balance",
+    "heroPaidBreakdown": "Bill {total} − paid {paid}"
   },
   "TipSelectionPage": {
     "title": "Review your bill",

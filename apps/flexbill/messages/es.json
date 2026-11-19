@@ -113,7 +113,9 @@
     "remainingLabel": "Restante:",
     "noPendingBill": "No hay cuenta pendiente por pagar",
     "noPendingDishes": "No hay platillos pendientes por pagar",
-    "noPendingUserDishes": "No tienes platillos pendientes por pagar"
+    "noPendingUserDishes": "No tienes platillos pendientes por pagar",
+    "heroLabel": "Saldo de la cuenta",
+    "heroPaidBreakdown": "Cuenta {total} − pagado {paid}"
   },
   "TipSelectionPage": {
     "title": "Revisa tu cuenta",

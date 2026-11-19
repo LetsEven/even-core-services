@@ -1,6 +1,7 @@
 "use client";
 
 import { useFlowStepReady } from "@even/ui";
+import { TitleHero } from "@even/ui";
 import { FlowStepCard } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useEffect, useMemo } from "react";
@@ -244,13 +245,7 @@ export default function CartView() {
         step="cart"
         // Sin artículos solo se muestra la mesa, sin título.
         hero={
-          cartState.items.length === 0 ? (
-            <div className="pt-6 md:pt-8 lg:pt-10 pb-2 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <p className="text-white/60 text-xl md:text-2xl lg:text-3xl font-medium">
-                {tc("tableLabel", { table: tableState.tableNumber })}
-              </p>
-            </div>
-          ) : undefined
+          cartState.items.length === 0 ? <TitleHero context={tc("tableLabel", { table: tableState.tableNumber })} /> : undefined
         }
       >
             {/* Scrollable content */}

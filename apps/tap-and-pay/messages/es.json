@@ -122,7 +122,9 @@
     "totalTable": "Total mesa {table}",
     "remainingLabel": "Restante:",
     "errorNoUnpaidBill": "No hay cuenta pendiente por pagar",
-    "errorNoUnpaidItems": "No hay platillos pendientes por pagar"
+    "errorNoUnpaidItems": "No hay platillos pendientes por pagar",
+    "heroLabel": "Saldo de la cuenta",
+    "heroPaidBreakdown": "Cuenta {total} − pagado {paid}"
   },
   "MenuHeader": {
     "participantsTitle": "Participantes",

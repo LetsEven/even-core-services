@@ -125,7 +125,9 @@
     "totalTable": "Table {table} total",
     "remainingLabel": "Remaining:",
     "errorNoUnpaidBill": "There's no outstanding bill to pay",
-    "errorNoUnpaidItems": "There are no unpaid dishes"
+    "errorNoUnpaidItems": "There are no unpaid dishes",
+    "heroLabel": "Remaining balance",
+    "heroPaidBreakdown": "Bill {total} − paid {paid}"
   },
   "MenuHeader": {
     "participantsTitle": "Participants",

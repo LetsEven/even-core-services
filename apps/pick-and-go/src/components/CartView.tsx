@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
 import { SheetFooter, SheetScreen, useFlowStepReady } from "@even/ui";
+import { TitleHero } from "@even/ui";
 import { FlowStepCard } from "@even/ui/diner";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "@/context/AuthContext";
@@ -173,13 +174,7 @@ export default function CartView({
         cardStyle={cardStyle}
         // Sin artículos solo se muestra el contexto, sin título.
         hero={
-          state.items.length === 0 ? (
-            <div className="pt-6 md:pt-8 lg:pt-10 pb-2 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <p className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
-                Pick & Go
-              </p>
-            </div>
-          ) : undefined
+          state.items.length === 0 ? <TitleHero context={"Pick & Go"} /> : undefined
         }
       >
             {/* Scrollable content */}

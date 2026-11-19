@@ -1,6 +1,7 @@
 "use client";
 
-import { EqualSplitView, FlowStepCard } from "@even/ui/diner";
+import { PayButton, TipPicker, formatMoney } from "@even/ui";
+import { EqualSplitView, FlowStepCard, useFlowAmount } from "@even/ui/diner";
 import { useSearchParams, useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useTable } from "@/app/context/TableContext";
@@ -217,6 +218,19 @@ export default function TipSelectionPage() {
   const MINIMUM_AMOUNT = 20;
   const isUnderMinimum = paymentAmount < MINIMUM_AMOUNT;
 
+  // El hero lee este mismo `paymentAmount`: es el que cobra el botón de pagar.
+  useFlowAmount(
+    isLoading
+      ? null
+      : {
+          total: paymentAmount,
+          bill: baseAmount,
+          billLabel: paymentType === "equal-shares" ? t("yourShareTitle") : undefined,
+          tip: tipAmount,
+          commission: evenClientCharge,
+        },
+  );
+
   const handleTipPercentage = (percentage: number) => {
     setTipPercentage(percentage);
     setCustomTip("");
@@ -289,7 +303,6 @@ export default function TipSelectionPage() {
       {paymentType === "equal-shares" ? (
           <EqualSplitView
             tableNumber={tableNumber}
-            remaining={unpaidAmount}
             share={baseAmount}
             people={equalPeopleCount}
             onPeopleChange={(n) => setEqualPeople(String(n))}
@@ -462,208 +475,50 @@ export default function TipSelectionPage() {
                   </div>
                 )}
 
-                {/* Tip Selection Section - cuando NO es select-items */}
-                {paymentType !== "select-items" && (
-                  <div className="space-y-4 md:space-y-5 lg:space-y-6 px-8 md:px-10 lg:px-12">
-                    {/* Resumen del pago */}
-                    <div className="space-y-2 md:space-y-3 lg:space-y-4">
-                      {/* Total de la Mesa - solo para equal-shares, ya que "Tu parte" se basa en el total */}
-                      {paymentType === "equal-shares" && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-base md:text-lg lg:text-xl font-medium text-black">
-                            {t("tableTotalLabel")}
-                          </span>
-                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                            ${tableTotalPrice.toFixed(2)} MXN
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Pagado */}
-                      {paidAmount > 0 && paymentType !== "equal-shares" && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                            {tc("paidColon")}
-                          </span>
-                          <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                            ${paidAmount.toFixed(2)} MXN
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Restante por pagar - solo mostrar si NO es full-bill ni equal-shares */}
-                      {paymentType !== "full-bill" &&
-                        paymentType !== "equal-shares" && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-even-grass font-medium text-base md:text-lg lg:text-xl">
-                              {t("remainingToPayLabel")}
-                            </span>
-                            <span className="text-even-grass font-medium text-base md:text-lg lg:text-xl">
-                              ${unpaidAmount.toFixed(2)} MXN
-                            </span>
-                          </div>
-                        )}
-
-                      {/* Tu parte */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                          {paymentType === "full-bill"
-                            ? t("totalLabel")
-                            : paymentType === "equal-shares"
-                              ? t("yourShareLabel")
-                              : paymentType === "choose-amount"
-                                ? t("yourAmountLabel")
-                                : t("yourShareLabel")}
-                        </span>
-                        <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                          ${baseAmount.toFixed(2)} MXN
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Selección de propina */}
-                    <div className="md:mb-4 lg:mb-5">
-                      <div className="flex items-center gap-4 mb-3">
-                        <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
-                          {t("tipLabel")}
-                        </span>
-                        <div className="grid grid-cols-5 gap-2 flex-1">
-                          {[0, 10, 15, 20].map((percentage) => (
-                            <button
-                              key={percentage}
-                              onClick={() => {
-                                handleTipPercentage(percentage);
-                                setShowCustomTipInput(false);
-                              }}
-                              className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                                tipPercentage === percentage &&
-                                !showCustomTipInput
-                                  ? "bg-even-grass text-even-evergreen"
-                                  : "bg-surface hover:border-tone-400"
-                              }`}
-                            >
-                              {percentage === 0 ? "0%" : `${percentage}%`}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => {
-                              setShowCustomTipInput(true);
-                              setTipPercentage(0);
-                            }}
-                            className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                              showCustomTipInput
-                                ? "bg-even-grass text-even-evergreen"
-                                : "bg-surface hover:border-tone-400"
-                            }`}
-                          >
-                            $
-                          </button>
-                        </div>
-                      </div>
-
-                      {showCustomTipInput && (
-                        <div className="flex flex-col gap-2 mb-3">
-                          <div className="relative w-full">
-                            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-sm">
-                              $
-                            </span>
-                            <input
-                              type="number"
-                              value={customTip}
-                              onChange={(e) =>
-                                handleCustomTipChange(e.target.value)
-                              }
-                              placeholder="0.00"
-                              step="0.01"
-                              min="0"
-                              autoFocus
-                              className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border rounded-full focus:outline-none focus:ring focus:ring-tone-400 focus:border-transparent text-black text-center bg-surface"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {tipAmount > 0 && (
-                        <div className="flex justify-end items-center mt-2 text-sm">
-                          <span className="text-even-grass font-medium">
-                            +${tipAmount.toFixed(2)} MXN
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Alerta de mínimo de compra */}
-                {isUnderMinimum &&
-                  baseAmount > 0 &&
-                  paymentType !== "select-items" && (
-                    <div className="bg-linear-to-br from-danger-50 to-danger-100 px-4 py-2">
-                      <div className="flex items-center gap-3 px-8 md:px-10 lg:px-12">
-                        <X className="size-6 text-danger-500 shrink-0" />
-                        <p className="text-danger-700 font-medium text-base md:text-lg">
-                          {t("underMinimumWarning")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Total final - cuando NO es select-items */}
+                {/* Propina y botón de pagar (el total vive en el hero) */}
                 {paymentType !== "select-items" && (
                   <div className="px-8 md:px-10 lg:px-12">
-                    <div
-                      className={`border-t border-tone-200 ${isUnderMinimum && baseAmount > 0 ? "pt-4 mt-0" : "pt-6"}`}
-                    >
-                      <div className="w-full flex gap-3 justify-between">
-                        <div className="flex flex-col justify-center -translate-y-2">
-                          <span className="text-tone-600 text-sm md:text-base lg:text-lg">
-                            {tc("totalToPay")}
-                          </span>
-                          <div
-                            className="flex items-center justify-center w-fit text-2xl md:text-3xl lg:text-4xl font-medium text-black text-center gap-2"
-                            key={paymentAmount}
-                          >
-                            ${(tipAmount + baseAmount).toFixed(2)}
-                            <CircleAlert
-                              className="size-4 cursor-pointer text-tone-500"
-                              strokeWidth={2.3}
-                              onClick={() => setShowTotalModal(true)}
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={handleContinueToCardSelection}
-                          disabled={
-                            baseAmount <= 0 ||
-                            (paymentType === "choose-amount" &&
-                              (!customPaymentAmount ||
-                                parseFloat(customPaymentAmount) <= 0 ||
-                                parseFloat(customPaymentAmount) >
-                                  maxAllowedAmount)) ||
-                            isUnderMinimum
-                          }
-                          className={`rounded-full transition-all px-20 h-10 md:h-12 lg:h-12 flex items-center justify-center text-base md:text-lg lg:text-xl bg-even-grass text-even-evergreen ${
-                            baseAmount <= 0 ||
-                            (paymentType === "choose-amount" &&
-                              (!customPaymentAmount ||
-                                parseFloat(customPaymentAmount) <= 0 ||
-                                parseFloat(customPaymentAmount) >
-                                  maxAllowedAmount)) ||
-                            isUnderMinimum
-                              ? "opacity-50 cursor-not-allowed"
-                              : "animate-pulse-button active:scale-90 cursor-pointer"
-                          }`}
-                        >
-                          {tc("payCta")}
-                        </button>
+                    <TipPicker
+                      label={t("tipLabel")}
+                      percentage={tipPercentage}
+                      showCustom={showCustomTipInput}
+                      customTip={customTip}
+                      onPercentage={(p) => {
+                        handleTipPercentage(p);
+                        setShowCustomTipInput(false);
+                      }}
+                      onCustomOpen={() => {
+                        setShowCustomTipInput(true);
+                        setTipPercentage(0);
+                      }}
+                      onCustomChange={handleCustomTipChange}
+                    />
+                    {isUnderMinimum && baseAmount > 0 && (
+                      <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
+                        <X className="size-6 shrink-0 text-danger-500" />
+                        <p className="text-base font-medium text-danger-700 md:text-lg">{t("underMinimumWarning")}</p>
                       </div>
+                    )}
+                    <div className="mt-6">
+                      <PayButton
+                        onClick={handleContinueToCardSelection}
+                        disabled={
+                          baseAmount <= 0 ||
+                          (paymentType === "choose-amount" &&
+                            (!customPaymentAmount ||
+                              parseFloat(customPaymentAmount) <= 0 ||
+                              parseFloat(customPaymentAmount) > maxAllowedAmount)) ||
+                          isUnderMinimum
+                        }
+                      >
+                        {tc("payCtaAmount", { amount: formatMoney(paymentAmount) })}
+                      </PayButton>
                     </div>
                   </div>
                 )}
           </FlowStepCard>
 
-          {/* Tip Selection Section - Fijo cuando es select-items */}
+          {/* Propina y botón de pagar - fijos cuando es select-items */}
           {paymentType === "select-items" && (
             <div
               className="fixed fixed-col bottom-0 bg-white pt-8 md:pt-10 lg:pt-12"
@@ -672,153 +527,35 @@ export default function TipSelectionPage() {
                 zIndex: 40,
               }}
             >
-              <div className="px-8 md:px-10 lg:px-12 space-y-4">
-                {/* Resumen del pago */}
-                <div className="space-y-2 md:space-y-3 lg:space-y-4">
-                  {paidAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                        {tc("paidColon")}
-                      </span>
-                      <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                        ${paidAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-even-grass font-medium text-base md:text-lg lg:text-xl">
-                      {t("remainingToPayLabel")}
-                    </span>
-                    <span className="text-even-grass font-medium text-base md:text-lg lg:text-xl">
-                      ${unpaidAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                </div>
-
-                {/* Selección de propina */}
-                <div>
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
-                      {t("tipLabel")}
-                    </span>
-                    <div className="grid grid-cols-5 gap-2 flex-1">
-                      {[0, 10, 15, 20].map((percentage) => (
-                        <button
-                          key={percentage}
-                          onClick={() => {
-                            handleTipPercentage(percentage);
-                            setShowCustomTipInput(false);
-                          }}
-                          className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                            tipPercentage === percentage && !showCustomTipInput
-                              ? "bg-even-grass text-even-evergreen"
-                              : "bg-surface hover:border-tone-400"
-                          }`}
-                        >
-                          {percentage === 0 ? "0%" : `${percentage}%`}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => {
-                          setShowCustomTipInput(true);
-                          setTipPercentage(0);
-                        }}
-                        className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                          showCustomTipInput
-                            ? "bg-even-grass text-even-evergreen"
-                            : "bg-surface hover:border-tone-400"
-                        }`}
-                      >
-                        $
-                      </button>
-                    </div>
-                  </div>
-
-                  {showCustomTipInput && (
-                    <div className="flex flex-col gap-2 mb-3">
-                      <div className="relative w-full">
-                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-sm">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          value={customTip}
-                          onChange={(e) =>
-                            handleCustomTipChange(e.target.value)
-                          }
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0"
-                          autoFocus
-                          className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border  rounded-full focus:outline-none focus:ring focus:ring-tone-400 focus:border-transparent text-black text-center bg-surface"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {tipAmount > 0 && (
-                    <div className="flex justify-end items-center mt-2 text-sm">
-                      <span className="text-even-grass font-medium text-base md:text-lg lg:text-xl">
-                        +${tipAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Alerta de mínimo de compra - select-items */}
-              {isUnderMinimum && baseAmount > 0 && (
-                <div className="bg-linear-to-br from-danger-50 to-danger-100 px-4 py-2">
-                  <div className="flex items-center gap-3 px-8 md:px-10 lg:px-12">
-                    <X className="size-6 text-danger-500 shrink-0" />
-                    <p className="text-danger-700 font-medium text-base md:text-lg">
-                      {t("underMinimumWarning")}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               <div className="px-8 md:px-10 lg:px-12">
-                <div
-                  className={`border-t border-tone-200 ${isUnderMinimum && baseAmount > 0 ? "pt-4 mt-0" : "pt-6"}`}
-                >
-                  <div className="w-full flex gap-3 justify-between">
-                    <div className="flex flex-col justify-center -translate-y-2">
-                      <span className="text-tone-600 text-sm md:text-base lg:text-lg">
-                        {tc("totalToPay")}
-                      </span>
-                      <div
-                        className="flex items-center justify-center w-fit text-2xl font-medium text-black text-center gap-2"
-                        key={paymentAmount}
-                      >
-                        ${(tipAmount + baseAmount).toFixed(2)}
-                        <CircleAlert
-                          className="size-4 cursor-pointer text-tone-500"
-                          strokeWidth={2.3}
-                          onClick={() => setShowTotalModal(true)}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleContinueToCardSelection}
-                      disabled={
-                        baseAmount <= 0 ||
-                        selectedItems.length === 0 ||
-                        isUnderMinimum
-                      }
-                      className={`rounded-full h-10 md:h-12 lg:h-12 flex items-center justify-center px-20 text-base md:text-lg lg:text-xl transition-all bg-even-grass text-even-evergreen ${
-                        baseAmount <= 0 ||
-                        selectedItems.length === 0 ||
-                        isUnderMinimum
-                          ? "opacity-50 cursor-not-allowed"
-                          : "animate-pulse-button active:scale-90 cursor-pointer"
-                      }`}
-                    >
-                      {tc("payCta")}
-                    </button>
+                <TipPicker
+                  label={t("tipLabel")}
+                  percentage={tipPercentage}
+                  showCustom={showCustomTipInput}
+                  customTip={customTip}
+                  onPercentage={(p) => {
+                    handleTipPercentage(p);
+                    setShowCustomTipInput(false);
+                  }}
+                  onCustomOpen={() => {
+                    setShowCustomTipInput(true);
+                    setTipPercentage(0);
+                  }}
+                  onCustomChange={handleCustomTipChange}
+                />
+                {isUnderMinimum && baseAmount > 0 && (
+                  <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
+                    <X className="size-6 shrink-0 text-danger-500" />
+                    <p className="text-base font-medium text-danger-700 md:text-lg">{t("underMinimumWarning")}</p>
                   </div>
+                )}
+                <div className="mt-6">
+                  <PayButton
+                    onClick={handleContinueToCardSelection}
+                    disabled={baseAmount <= 0 || selectedItems.length === 0 || isUnderMinimum}
+                  >
+                    {tc("payCtaAmount", { amount: formatMoney(paymentAmount) })}
+                  </PayButton>
                 </div>
               </div>
             </div>

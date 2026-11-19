@@ -22,7 +22,7 @@ test("el cobro de la cuenta lleva los campos de Flex Bill al backend", async ({ 
   await expect(page.getByText("**** 4242")).toBeVisible();
 
   await page.getByText("**** 4242").click();
-  await page.getByRole("button", { name: "Pagar", exact: true }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
   const charges = () => paymentsApi.requests.filter((r) => r.method === "POST" && r.path === "/payments");
   await expect.poll(() => charges().length).toBe(1);
 
@@ -46,7 +46,7 @@ test("payment_rejected descarta el intento y el reintento usa otra clave de cobr
 
   const charges = () => paymentsApi.requests.filter((r) => r.method === "POST" && r.path === "/payments");
   await page.getByText("**** 4242").click();
-  await page.getByRole("button", { name: "Pagar", exact: true }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
 
   await expect(page.getByText("Pago rechazado")).toBeVisible();
   await expect(page.getByText("La tarjeta fue rechazada por el banco")).toBeVisible();
@@ -55,7 +55,7 @@ test("payment_rejected descarta el intento y el reintento usa otra clave de cobr
 
   await page.getByRole("button", { name: "Intentar de nuevo" }).click();
   await expect(page.getByText("Pago rechazado")).toBeHidden();
-  await page.getByRole("button", { name: "Pagar", exact: true }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
   await expect.poll(() => charges().length).toBe(2);
 
   const [first, second] = charges().map((r) => r.body as { intentKey: string });

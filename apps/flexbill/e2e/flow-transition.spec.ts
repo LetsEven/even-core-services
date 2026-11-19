@@ -14,7 +14,7 @@ test.describe("transición de tarjeta del flujo de pago", () => {
     await expect(page).toHaveURL(/\/tip-selection\?/);
 
     // Adelante: propina → pago
-    await expectFlowTransition(page, () => page.getByRole("button", { name: "Pagar", exact: true }).click(), {
+    await expectFlowTransition(page, () => page.getByRole("button", { name: /^Pagar \$/ }).click(), {
       step: "card-selection",
     });
     await expect(page).toHaveURL(/\/card-selection\?/);
@@ -67,5 +67,33 @@ test.describe("transición de tarjeta del flujo de pago", () => {
 
     await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "card-selection" });
     await expect(page).toHaveURL(/\/card-selection\?/);
+  });
+
+  test("el monto protagonista es el mismo del botón de pagar, cambia en vivo y no se mueve entre vistas", async ({
+    page,
+  }) => {
+    await mockFlexBillApi(page);
+    await page.goto(PAYMENT_OPTIONS_URL);
+    await expect(page.getByText("Pagar cuenta restante")).toBeVisible();
+    const heroTop = async () =>
+      page.locator("[data-flow-hero]").first().evaluate((el) => Math.round(el.getBoundingClientRect().top));
+    const topOptions = await heroTop();
+
+    await expectFlowTransition(page, () => page.getByText("Pagar cuenta restante").click(), { step: "tip-selection" });
+    const total = page.getByTestId("flow-hero-total");
+    const payButton = page.getByRole("button", { name: /^Pagar \$/ });
+    const amountOf = async () => ((await payButton.textContent()) ?? "").replace("Pagar ", "");
+    await expect(total).toHaveText(await amountOf());
+    expect(await heroTop()).toBe(topOptions);
+
+    const before = await amountOf();
+    await page.getByRole("button", { name: "20%", exact: true }).click();
+    await expect(total).toHaveText(await amountOf());
+    expect(await amountOf()).not.toBe(before);
+
+    await expectFlowTransition(page, () => payButton.click(), { step: "card-selection" });
+    await expect(page.getByText("**** 4242")).toBeVisible();
+    await expect(total).toHaveText(await amountOf());
+    expect(await heroTop()).toBe(topOptions);
   });
 });

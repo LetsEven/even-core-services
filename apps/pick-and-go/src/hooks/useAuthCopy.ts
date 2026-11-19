@@ -16,3 +16,9 @@ export function useAuthSelectionCopy(): AuthCopyOverrides {
     profileTitle: t("profileStepTitleAlt"),
   };
 }
+
+/** El `auth` de Pick & Go conserva su subtítulo ("Te enviaremos un código de verificación"). */
+export function useAuthLoginCopy(): AuthCopyOverrides {
+  const t = useTranslations("Auth");
+  return { phoneSubtitle: t("phoneStepSubtitle") };
+}

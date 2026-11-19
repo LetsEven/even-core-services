@@ -26,7 +26,7 @@ export default function AuthSelectionPage() {
     saveProfile: (data) => updateProfile(data),
     refreshProfile,
     // verifyOTP resuelve el perfil antes de actualizar el contexto: este decide si pedir perfil o terminar.
-    session: { isAuthenticated, isLoading, profile, skipIfComplete: true },
+    session: { isAuthenticated, isLoading, profile, skipIfComplete: true, requireBirthDate: false },
     // replace: un "atrás" posterior desde order-confirm salta al carrito sin pasar de nuevo por aquí.
     onAuthenticated: () => navigateWithRestaurantId("/order-confirm", { replace: true }),
   });

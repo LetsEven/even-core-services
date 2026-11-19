@@ -7,6 +7,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthLoginCopy } from "@/hooks/useAuthCopy";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { useGuest } from "@/context/GuestContext";
@@ -24,6 +25,7 @@ export default function AuthPage() {
   const { setRestaurantId, setBranchNumber } = useRestaurant();
   const { verifyOTP, createOrUpdateProfile, refreshProfile, isAuthenticated, isLoading, profile } = useAuth();
   const { guestName } = useGuest();
+  const copy = useAuthLoginCopy();
 
   const restaurantId = params?.restaurantId as string;
   const branchNumber = params?.branchNumber as string;
@@ -103,7 +105,7 @@ export default function AuthPage() {
     verifyOtp: verifyOTP,
     saveProfile: createOrUpdateProfile,
     refreshProfile,
-    session: { isAuthenticated, isLoading, profile },
+    session: { isAuthenticated, isLoading, profile, requireBirthDate: false },
     onAuthenticated: handleAuthRedirect,
   });
 
@@ -113,6 +115,7 @@ export default function AuthPage() {
       <AuthStepCard
         variant="login"
         auth={auth}
+        copy={copy}
         guest={{
           label: t("continueAsGuest"),
           onClick: () => navigateWithTable(guestName ? "/order-confirm" : "/user"),

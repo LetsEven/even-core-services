@@ -27,7 +27,7 @@ export default function AuthSelectionPage() {
     saveProfile: createOrUpdateProfile,
     refreshProfile,
     // isAuthenticated/profile se actualizan juntos tras verificar el código (ver AuthContext.verifyOTP).
-    session: { isAuthenticated, isLoading, profile },
+    session: { isAuthenticated, isLoading, profile, requireBirthDate: false },
     onAuthenticated: () => navigateWithTable("/order-confirm"),
   });
 

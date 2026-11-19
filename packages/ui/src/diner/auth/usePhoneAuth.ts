@@ -35,6 +35,11 @@ export type PhoneAuthSession = {
    * incompleto en ese momento): la sesión solo actúa al llegar a la pantalla ya autenticado. Por defecto `true`.
    */
   decideAfterVerify?: boolean;
+  /**
+   * Tras verificar el código, ¿la fecha de nacimiento es obligatoria para dar el perfil por completo? Por defecto sí;
+   * con `false` basta el nombre (regla de Tap Order & Pay y Pick & Go). Al llegar ya con sesión se sigue pidiendo todo.
+   */
+  requireBirthDate?: boolean;
 };
 
 /** Nombre con el que quedó el perfil (lo que devolvió `hasProfile` o lo que se capturó en el formulario). */
@@ -116,7 +121,11 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
   useEffect(() => {
     if (!session || session.isLoading || !session.isAuthenticated || step === "profile" || finishedRef.current) return;
     if (step === "verify" && session.decideAfterVerify === false) return;
-    if (isProfileComplete(session.profile)) {
+    const complete =
+      step === "verify" && session.requireBirthDate === false
+        ? !!session.profile?.firstName
+        : isProfileComplete(session.profile);
+    if (complete) {
       if (step === "verify" || session.skipIfComplete) {
         finishedRef.current = true;
         void optionsRef.current.onAuthenticated();

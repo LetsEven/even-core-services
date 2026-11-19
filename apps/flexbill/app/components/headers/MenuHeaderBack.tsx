@@ -16,14 +16,15 @@ export default function MenuHeaderBack({
   tableNumber,
   onBack,
 }: MenuHeaderProps) {
-  const { navigateWithTable, back } = useTableNavigation();
+  const { back } = useTableNavigation();
   const pathname = usePathname();
 
   const handleBack = () => {
     if (onBack) {
       onBack();
     } else if (pathname?.includes("payment-options")) {
-      navigateWithTable("/order");
+      // Vuelta real con animación; sin historial previo (entró directo) cae a la cuenta.
+      back("/order");
     } else {
       back("/menu");
     }

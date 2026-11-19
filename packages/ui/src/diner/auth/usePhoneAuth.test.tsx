@@ -147,6 +147,22 @@ describe("usePhoneAuth", () => {
       expect(options.onAuthenticated).toHaveBeenCalledTimes(1);
     });
 
+    it("requireBirthDate:false termina tras el código con solo el nombre; por defecto lo pide", async () => {
+      const onlyName = { firstName: "Ana", birthDate: null };
+      for (const [requireBirthDate, finishes] of [[false, true], [undefined, false]] as const) {
+        const { result, rerender, options } = setup({ session: { isAuthenticated: false, isLoading: false, requireBirthDate } });
+        await sendCode(result);
+        rerender({ ...options, session: { isAuthenticated: true, isLoading: false, profile: onlyName, requireBirthDate } });
+        if (finishes) {
+          await waitFor(() => expect(options.onAuthenticated).toHaveBeenCalledTimes(1));
+          expect(result.current.step).toBe("verify");
+        } else {
+          await waitFor(() => expect(result.current.step).toBe("profile"));
+          expect(options.onAuthenticated).not.toHaveBeenCalled();
+        }
+      }
+    });
+
     it("decideAfterVerify:false deja decidir a hasProfile tras el código", async () => {
       const { result, rerender, options } = setup({
         session: { isAuthenticated: false, isLoading: false, decideAfterVerify: false },

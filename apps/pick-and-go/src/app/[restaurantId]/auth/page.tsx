@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthLoginCopy } from "@/hooks/useAuthCopy";
 import { useNavigation } from "@/hooks/useNavigation";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 
@@ -99,7 +100,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-new brand-evergreen flex flex-col">
       <MenuHeaderBack />
-      <AuthStepCard variant="login" auth={auth} example />
+      <AuthStepCard variant="login" auth={auth} example copy={useAuthLoginCopy()} />
     </div>
   );
 }

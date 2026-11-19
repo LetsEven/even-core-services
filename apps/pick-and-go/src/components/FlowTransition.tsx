@@ -5,7 +5,7 @@ import { FlowTransitionProvider, useAuthScreen } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { useAuthSelectionCopy } from "@/hooks/useAuthCopy";
+import { useAuthLoginCopy, useAuthSelectionCopy } from "@/hooks/useAuthCopy";
 import { FLOW_STEPS } from "@/lib/flow-steps";
 
 /**
@@ -20,7 +20,7 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const addCard = useTranslations("AddCardPage");
   // "auth-selection" es solo inicio de sesión (con textos propios); "auth" (menú / panel) muestra el número de ejemplo.
   const authSelection = useAuthScreen("selection", { copy: useAuthSelectionCopy() });
-  const authLogin = useAuthScreen("login", { example: true });
+  const authLogin = useAuthScreen("login", { example: true, copy: useAuthLoginCopy() });
 
   const screens = {
     cart: cartScreen({

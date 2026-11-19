@@ -11,6 +11,7 @@ import { FlowTransitionProvider, useAuthScreen, useTermsText } from "@even/ui/di
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
+import { useAuthLoginCopy } from "@/hooks/useAuthCopy";
 import { useTable } from "@/context/TableContext";
 import { FLOW_STEPS } from "@/lib/flow-steps";
 
@@ -29,7 +30,7 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const terms = useTermsText();
   // Ambas pantallas de acceso llevan "Continuar como invitado".
   const authSelection = useAuthScreen("selection", { guest: true });
-  const authLogin = useAuthScreen("login", { guest: true });
+  const authLogin = useAuthScreen("login", { guest: true, copy: useAuthLoginCopy() });
 
   const screens = {
     cart: cartScreen({

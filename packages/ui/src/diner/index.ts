@@ -15,3 +15,14 @@ export {
   toUnavailableModalItems,
   type UnavailableModalItem,
 } from "./UnavailableItemsModal";
+export { default as PepperIcon } from "./PepperIcon";
+export { PepperProvider, usePepper, type PepperMessage } from "./PepperContext";
+export {
+  PepperStatusAvatar,
+  TwinPebbleApproved,
+  TwinPebbleIdle,
+  TwinPebbleThinking,
+  TwinPebbleWorking,
+  type ChatStatus,
+} from "./PepperMascots";
+export { default as SupportTab } from "./SupportTab";

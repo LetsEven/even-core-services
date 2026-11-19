@@ -44,6 +44,7 @@ export {
   type AuthStepCardProps,
   type AuthVariant,
 } from "./auth/AuthStepCard";
+export { default as AuthModalView, type AuthModalViewProps } from "./auth/AuthModalView";
 export { PhoneStepForm, VerifyStepForm, ProfileStepForm, type GuestLink } from "./auth/AuthSteps";
 export {
   usePhoneAuth,

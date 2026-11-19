@@ -16,3 +16,17 @@ export function mergeMessages(shared: Messages, own: Messages): Messages {
   }
   return result;
 }
+
+/**
+ * Textos compartidos de un idioma. Imports estáticos a propósito: un `import()` con plantilla sobre el
+ * subpath del paquete (`@even/i18n/messages/${locale}.json`) no queda en el bundle de Turbopack y en
+ * producción truena con MODULE_NOT_FOUND para el idioma que no se resolvió al compilar.
+ */
+export async function loadSharedMessages(locale: string): Promise<Messages> {
+  switch (locale) {
+    case "en":
+      return (await import("./messages/en.json")).default as Messages;
+    default:
+      return (await import("./messages/es.json")).default as Messages;
+  }
+}

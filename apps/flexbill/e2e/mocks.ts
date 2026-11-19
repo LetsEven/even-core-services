@@ -14,6 +14,8 @@ export const TABLE = "12";
 export const SESSION = "e2e-table-session";
 const TABLE_QUERY = `table=${TABLE}&session=${SESSION}`;
 export const MENU_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/menu?${TABLE_QUERY}`;
+export const ORDER_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/order?${TABLE_QUERY}`;
+export const AUTH_SELECTION_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/auth-selection?${TABLE_QUERY}`;
 export const PAYMENT_OPTIONS_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/payment-options?${TABLE_QUERY}`;
 
 /** Pagar la cuenta completa de la mesa: $360 de consumo sin propina ni comisión. */
@@ -164,4 +166,37 @@ export async function mockFlexBillApi(page: Page, { walletOrder, payments }: Fle
 
   // Se registra después para que tenga prioridad sobre las rutas de arriba.
   return mockPaymentsApi(page, { ...payments, apiUrl: API_URL });
+}
+
+export interface AuthApiOptions {
+  /** El perfil que devuelve el backend tras verificar el código; `null` = cuenta nueva sin perfil. */
+  profile?: { firstName: string; lastName?: string; birthDate: string } | null;
+}
+
+/**
+ * Inicio de sesión por SMS y registro de invitado de FlexBill. Se llama después de `mockFlexBillApi`: lo que no
+ * sea de auth sigue a los otros mocks.
+ */
+export async function mockFlexBillAuthApi(page: Page, { profile = null }: AuthApiOptions = {}) {
+  const tablePath = String.raw`\/restaurants\/\d+\/branches\/\d+\/tables\/[^/]+`;
+  const session = { access_token: "tok_e2e", refresh_token: "ref_e2e", expires_at: 4_102_444_800 };
+  const user = { id: "user_e2e", phone: "+525500000000", accountType: "customer" };
+  const responses: Array<[string, RegExp, MockResponse]> = [
+    ["POST", /^\/auth\/customer\/send-otp$/, { success: true, data: {} }],
+    ["POST", /^\/auth\/customer\/verify-otp$/, { success: true, data: { user, session, profile } }],
+    ["GET", /^\/profiles\/me$/, { success: true, data: { profile } }],
+    ["POST", /^\/profiles$/, { success: true, data: { profile: { firstName: "Ana", lastName: "", birthDate: "1996-01-01" } } }],
+    ["POST", /^\/guests$/, { success: true, data: {} }],
+    // Al iniciar sesión se pasan las tarjetas del invitado a la cuenta.
+    ["POST", /^\/payment-methods\/migrate-from-guest$/, { success: true, data: {} }],
+    // ...y los pedidos del invitado se ligan al usuario.
+    ["PUT", /^\/orders\/link-user$/, { success: true, data: {} }],
+    ["POST", new RegExp(`^${tablePath}\\/join$`), { success: true, data: {} }],
+  ];
+  await page.route(`${API_URL}/**`, (route, request) => {
+    const path = new URL(request.url()).pathname.replace(/^\/api/, "");
+    const match = responses.find(([method, re]) => method === request.method() && re.test(path));
+    if (!match) return route.fallback();
+    return route.fulfill({ json: match[2] });
+  });
 }

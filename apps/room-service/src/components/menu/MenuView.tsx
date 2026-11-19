@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { setMenuCategory, takeMenuPosition } from "@/utils/menuScrollMemory";
+import { setMenuCategory, takeMenuPosition, useModalBackClose } from "@even/ui";
 import MenuHeader from "../headers/MenuHeader";
 import PepperIcon from "../UI/PepperIcon";
 import LanguageToggleButton from "../UI/LanguageToggleButton";
@@ -28,7 +28,6 @@ import {
   Suspense,
 } from "react";
 import { useRoomNavigation } from "../../hooks/useRoomNavigation";
-import { useModalBackClose } from "../../hooks/useModalBackClose";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import type { ReorderItem } from "../ReorderModal";

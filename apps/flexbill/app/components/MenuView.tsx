@@ -14,7 +14,7 @@ import {
   useImperativeHandle,
 } from "react";
 import { useTranslations } from "next-intl";
-import { setMenuCategory, takeMenuPosition } from "@/app/utils/menuScrollMemory";
+import { setMenuCategory, takeMenuPosition, useModalBackClose } from "@even/ui";
 import MenuHeader from "@/app/components/headers/MenuHeader";
 import MenuCategory from "@/app/components/MenuCategory";
 import PepperIcon from "@/app/components/UI/PepperIcon";
@@ -37,7 +37,6 @@ import { useRestaurant } from "@/app/context/RestaurantContext";
 import { DEFAULT_IMAGES } from "@/app/constants/images";
 import { useTable } from "@/app/context/TableContext";
 import ReorderModal from "@/app/components/ReorderModal";
-import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 
 const ChatView = lazy(() => import("@/app/components/ChatView"));
 const AuthView = lazy(() => import("./AuthView"));

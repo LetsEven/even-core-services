@@ -9,7 +9,7 @@ import {
 } from "../../interfaces/menuItemData";
 import { useCart } from "../../context/CartContext";
 import OutOfStockModal from "../OutOfStockModal";
-import { rememberMenuPosition } from "../../utils/menuScrollMemory";
+import { rememberMenuPosition } from "@even/ui";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useRestaurant } from "../../context/RestaurantContext";

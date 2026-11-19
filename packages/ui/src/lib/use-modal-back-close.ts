@@ -3,10 +3,9 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Hace que el back del dispositivo cierre modales/steps apilados en vez
- * de salir de la página. Las capas abiertas se apilan (LIFO) en un stack
- * global compartido con un único listener de `popstate`, así el back
- * solo afecta a la más interna, sin cascada hacia las de abajo.
+ * Hace que el back del dispositivo cierre modales/steps apilados en vez de salir de la página.
+ * Las capas abiertas se apilan (LIFO) en un stack global con un único listener de `popstate`, así el
+ * back solo afecta a la más interna, sin cascada hacia las de abajo.
  */
 
 type StackEntry = {
@@ -39,16 +38,14 @@ function ensureListener() {
 }
 
 /**
- * onBack se llama cuando el back le toca a esta capa. Por defecto
- * debe cerrarla; si en cambio llama a `rearm()`, absorbe el back sin
- * cerrarse (ej. retroceder un step interno).
+ * `onBack` se llama cuando el back le toca a esta capa. Por defecto debe cerrarla; si en cambio llama
+ * a `rearm()`, absorbe el back sin cerrarse (p. ej. retroceder un step interno).
  */
-export function useModalBackClose(
-  isOpen: boolean,
-  onBack: (rearm: () => void) => void,
-) {
+export function useModalBackClose(isOpen: boolean, onBack: (rearm: () => void) => void): void {
   const onBackRef = useRef(onBack);
-  onBackRef.current = onBack;
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,13 +62,8 @@ export function useModalBackClose(
     return () => {
       const isTop = stack.length > 0 && stack[stack.length - 1].id === id;
       stack = stack.filter((e) => e.id !== id);
-      // Cerrado por otra vía (X/backdrop): consumir la entrada para no
-      // dejarla "muerta".
-      if (
-        isTop &&
-        (window.history.state as { evenModalGuard?: number } | null)
-          ?.evenModalGuard === id
-      ) {
+      // Cerrado por otra vía (X/backdrop): consumir la entrada para no dejarla "muerta".
+      if (isTop && (window.history.state as { evenModalGuard?: number } | null)?.evenModalGuard === id) {
         ignoreNextPopstate += 1;
         window.history.back();
       }

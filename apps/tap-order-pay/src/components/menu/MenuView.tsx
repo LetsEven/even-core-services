@@ -12,8 +12,7 @@ import {
   useDeferredValue,
 } from "react";
 import { useTranslations } from "next-intl";
-import { setMenuCategory, takeMenuPosition } from "@/utils/menuScrollMemory";
-import { lockScroll, unlockScroll } from "@/utils/scrollLock";
+import { setMenuCategory, takeMenuPosition, lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
 import MenuHeader from "../headers/MenuHeader";
 import MenuCategory from "./MenuCategory";
 import {
@@ -29,7 +28,6 @@ import {
 } from "lucide-react";
 import { useUserData } from "../../context/userDataContext";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
-import { useModalBackClose } from "../../hooks/useModalBackClose";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import Loader from "../UI/Loader";

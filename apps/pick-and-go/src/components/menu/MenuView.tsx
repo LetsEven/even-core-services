@@ -2,10 +2,7 @@
 
 import MenuHeader from "../headers/MenuHeader";
 import MenuCategory from "./MenuCategory";
-import {
-  setMenuCategory,
-  takeMenuPosition,
-} from "../../utils/menuScrollMemory";
+import { setMenuCategory, takeMenuPosition, useModalBackClose } from "@even/ui";
 import PepperIcon from "../UI/PepperIcon";
 import {
   Search,
@@ -38,7 +35,6 @@ import { useRestaurant } from "../../context/RestaurantContext";
 import { useBranch } from "../../context/BranchContext";
 import { useNavigation } from "../../hooks/useNavigation";
 import { usePrepCountdown } from "../../hooks/usePrepCountdown";
-import { useModalBackClose } from "../../hooks/useModalBackClose";
 const BranchSelectionModal = lazy(
   () => import("../modals/BranchSelectionModal"),
 );

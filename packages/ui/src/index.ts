@@ -5,6 +5,8 @@ export { brandColors } from "./lib/colors";
 export { cn } from "./lib/cn";
 export { lockScroll, unlockScroll } from "./lib/scroll-lock";
 export { useScrollLock } from "./lib/use-scroll-lock";
+export { useModalBackClose } from "./lib/use-modal-back-close";
+export { rememberMenuPosition, setMenuCategory, takeMenuPosition, type MenuPosition } from "./lib/menu-scroll-memory";
 
 export { Badge, type BadgeProps } from "./components/badge";
 export { Button, buttonClasses, type ButtonProps, type ButtonSize, type ButtonVariant } from "./components/button";

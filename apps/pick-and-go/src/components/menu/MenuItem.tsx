@@ -13,7 +13,7 @@ import { useRestaurant } from "../../context/RestaurantContext";
 import { Plus, Minus } from "lucide-react";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
 import OutOfStockModal from "../OutOfStockModal";
-import { rememberMenuPosition } from "../../utils/menuScrollMemory";
+import { rememberMenuPosition } from "@even/ui";
 import { usePersonalItemDiscounts } from "../../hooks/usePersonalItemDiscounts";
 
 interface MenuItemProps {

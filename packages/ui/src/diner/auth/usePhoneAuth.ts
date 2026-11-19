@@ -122,6 +122,7 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
         void optionsRef.current.onAuthenticated();
       }
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el paso con la sesión del contexto de la app
       goToProfile({
         firstName: session.profile?.firstName ?? "",
         lastName: session.profile?.lastName ?? "",

@@ -24,13 +24,13 @@ export default function FlowNavOverlay() {
   const screens: Record<FlowStep, FlowScreen> = {
     cart: { hero: <FlowStepHero step="cart" />, body: <CartBody /> },
     "payment-options": { hero: <FlowStepHero step="payment-options" />, body: <PaymentOptionsBody /> },
-    // La propina real es una tarjeta del alto de su contenido pegada abajo, dentro de un margen lateral.
+    // La propina real es una tarjeta del alto de su contenido pegada abajo y a todo el ancho.
     "tip-selection": {
       hero: <FlowStepHero step="tip-selection" />,
       body: <TipBody />,
       layout: "anchored",
-      cardClassName: "flex-none pt-8 pb-4 md:pt-10 md:pb-6 lg:pt-12",
-      frameClassName: "px-4 md:px-6 lg:px-8",
+      // px-0: el cuerpo de la propina trae su propio relleno lateral (px-8…).
+      cardClassName: "flex-none px-0 md:px-0 lg:px-0 pt-8 pb-4 md:pt-10 md:pb-6 lg:pt-12",
     },
     "card-selection": { hero: <FlowStepHero step="card-selection" />, body: <CardSelectionBody /> },
   };

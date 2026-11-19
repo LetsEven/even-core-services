@@ -50,7 +50,7 @@ export function FlowNavOverlay({ screens, header }: FlowNavOverlayProps) {
   const screen = step ? screens[step] : undefined;
   if (!screen) return null;
   return (
-    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-even-evergreen" aria-hidden>
+    <div className="fixed inset-0 z-1000 flex flex-col overflow-hidden bg-even-evergreen" aria-hidden>
       <style>{`
         @keyframes flow-rise { from { transform: translateY(100%); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
         @keyframes flow-fade { from { opacity: 0; } to { opacity: 1; } }

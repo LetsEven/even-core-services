@@ -24,7 +24,11 @@ export function StepHero({ step }: { step: "payment-options" | "tip-selection" |
 }
 
 export const PaymentOptionsBody = PaymentOptionsSkeleton;
-export const TipBody = TipSkeleton;
+export function TipBody() {
+  const t = useTranslations("TipSelectionPage");
+  const tc = useTranslations("Common");
+  return <TipSkeleton labels={{ total: t("totalLabel"), tip: t("tipLabel"), totalToPay: tc("totalToPay"), payCta: tc("payCta") }} />;
+}
 
 export function CardSelectionBody() {
   const t = useTranslations("CardSelectionPage");

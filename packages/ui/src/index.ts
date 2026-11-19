@@ -147,6 +147,7 @@ export {
   PaymentOptionsSkeleton,
   StepHero,
   TipSkeleton,
+  type TipSkeletonLabels,
   type CardSelectionSkeletonLabels,
   type OrderConfirmSkeletonLabels,
 } from "./components/flow-skeletons";

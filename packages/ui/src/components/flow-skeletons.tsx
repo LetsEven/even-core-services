@@ -210,31 +210,63 @@ export function PaymentOptionsSkeleton() {
   );
 }
 
-/** Cuerpo de "propina" (cuenta completa): total, selector de propina y botón. */
-export function TipSkeleton() {
+export type TipSkeletonLabels = {
+  /** Fila del total/subtotal ("Total:"). */
+  total: string;
+  tip: string;
+  totalToPay: string;
+  payCta: string;
+};
+
+/**
+ * Cuerpo de "propina" (cuenta completa): resumen, selector de propina, y total con botón de pagar.
+ * Mismas clases que la vista real, de modo que la tarjeta mide lo mismo antes y después de cargar.
+ */
+export function TipSkeleton({ labels }: { labels: TipSkeletonLabels }) {
   return (
-    <div className="animate-pulse space-y-3 px-8 md:space-y-4 md:px-10 lg:space-y-5 lg:px-12">
-      <div className="flex items-center justify-between">
-        <div className="h-4 w-28 rounded bg-tone-200" />
-        <div className="h-4 w-20 rounded bg-tone-200" />
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="h-4 w-16 rounded bg-tone-200" />
-        <div className="grid flex-1 grid-cols-5 gap-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-7 rounded-full bg-tone-200" />
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-tone-200 pt-4">
-        <div className="flex w-full justify-between gap-3">
-          <div className="flex flex-col justify-center">
-            <div className="mb-1 h-3 w-20 rounded bg-tone-200" />
-            <div className="h-8 w-28 rounded bg-tone-200" />
+    <>
+      <div className="space-y-4 px-8 md:space-y-5 md:px-10 lg:space-y-6 lg:px-12">
+        <div className="space-y-2 md:space-y-3 lg:space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-base font-medium text-black md:text-lg lg:text-xl">{labels.total}</span>
+            <Ghost className="text-base font-medium md:text-lg lg:text-xl">$000.00 MXN</Ghost>
           </div>
-          <div className="h-9 w-28 rounded-full bg-tone-300 md:h-10 lg:h-11" />
+        </div>
+        <div className="md:mb-4 lg:mb-5">
+          <div className="mb-3 flex items-center gap-4">
+            <span className="text-base font-medium whitespace-nowrap text-black md:text-lg lg:text-xl">{labels.tip}</span>
+            <div className="grid flex-1 grid-cols-5 gap-2">
+              {["0%", "10%", "15%", "20%", "$"].map((label) => (
+                <div
+                  key={label}
+                  className="animate-pulse rounded-full border border-transparent bg-tone-100 py-1 md:py-1.5 lg:py-2"
+                >
+                  <span className="invisible">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-end text-sm">
+            <Ghost className="font-medium">+$00.00 MXN</Ghost>
+          </div>
         </div>
       </div>
-    </div>
+      <div className="px-8 md:px-10 lg:px-12">
+        <div className="border-t border-tone-200 pt-6">
+          <div className="flex w-full justify-between gap-3">
+            <div className="flex -translate-y-2 flex-col justify-center">
+              <span className="text-sm text-tone-600 md:text-base lg:text-lg">{labels.totalToPay}</span>
+              <div className="flex w-fit items-center justify-center gap-2 text-2xl font-medium text-black md:text-3xl lg:text-4xl">
+                <Ghost>$000.00</Ghost>
+                <span className="size-4" />
+              </div>
+            </div>
+            <div className="flex h-10 animate-pulse items-center justify-center rounded-full bg-even-grass/40 px-15 text-base md:h-12 md:text-lg lg:h-12 lg:text-xl">
+              <span className="invisible">{labels.payCta}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

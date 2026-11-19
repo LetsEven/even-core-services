@@ -1225,7 +1225,7 @@ export default function CardSelectionPage() {
           <MenuHeader />
         </div>
         <div className="h-20"></div>
-        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
+        <div className="w-full flex-1 flex flex-col">
           <div className={sheetClasses.hero}>
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
@@ -1293,7 +1293,7 @@ export default function CardSelectionPage() {
 
         {/* Contenido scrolleable */}
         <div
-          className={`px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col ${isAnimatingOut ? "animate-slide-down" : ""}`}
+          className={`w-full flex-1 flex flex-col ${isAnimatingOut ? "animate-slide-down" : ""}`}
         >
           <div className={sheetClasses.hero}>
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">

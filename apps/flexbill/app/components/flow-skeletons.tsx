@@ -55,7 +55,10 @@ export function CartBody() {
 }
 
 export const PaymentOptionsBody = PaymentOptionsSkeleton;
-export const TipBody = TipSkeleton;
+export function TipBody() {
+  const t = useTranslations("TipSelectionPage");
+  return <TipSkeleton labels={{ total: t("totalLabel"), tip: t("tipLabel"), totalToPay: t("totalToPay"), payCta: t("payCta") }} />;
+}
 
 export function CardSelectionBody() {
   const t = useTranslations("CardSelectionPage");

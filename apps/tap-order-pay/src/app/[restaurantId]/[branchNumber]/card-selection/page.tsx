@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useCart } from "@/context/CartContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
 import { usePayment } from "@/context/PaymentContext";
@@ -1384,6 +1384,8 @@ export default function CardSelectionPage() {
 
   const displayTotal = getDisplayTotal();
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
+
+  useFlowStepReady(!(isLoadingInitial || isLoadingProvider));
 
   if (isLoadingInitial || isLoadingProvider) {
     return (

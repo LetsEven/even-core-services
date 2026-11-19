@@ -13,6 +13,8 @@ export type PaymentResultTiming = {
   greenMs: number;
   /** Cuánto se queda el check antes de continuar. */
   successMs: number;
+  /** Cuánto se queda la pantalla de error. */
+  failedMs: number;
   /** Si la confirmación real no llega en este tiempo, se llama `onTimeout`. */
   timeoutMs: number;
 };
@@ -23,6 +25,7 @@ export const DEFAULT_PAYMENT_RESULT_TIMING: PaymentResultTiming = {
   settleMs: 1500,
   greenMs: 1500,
   successMs: 1800,
+  failedMs: 2500,
   timeoutMs: 20000,
 };
 
@@ -33,6 +36,12 @@ export type PaymentResultProps = {
   onConfirm?: () => void;
   /** Si se pasa, aparece el botón de cancelar durante la ventana. */
   onCancel?: () => void;
+  /** El cobro falló: muestra la pantalla de error y, pasado `failedMs`, llama `onFailedComplete`. */
+  failed?: boolean;
+  /** Texto de la pantalla de error. */
+  failedMessage?: ReactNode;
+  /** Termina la pantalla de error (normalmente: volver al formulario de pago). */
+  onFailedComplete?: () => void;
   /** Cuando termina el check. */
   onContinue: () => void;
   /** La confirmación nunca llegó (red de seguridad). Sin él se llama `onContinue`. */
@@ -64,6 +73,9 @@ export function PaymentResult({
   onCancel,
   onContinue,
   onTimeout,
+  failed = false,
+  failedMessage,
+  onFailedComplete,
   title,
   successMessage,
   cancelLabel,
@@ -79,7 +91,9 @@ export function PaymentResult({
   const onConfirmRef = useRef(onConfirm);
   const onContinueRef = useRef(onContinue);
   const onTimeoutRef = useRef(onTimeout);
+  const onFailedRef = useRef(onFailedComplete);
   useEffect(() => {
+    onFailedRef.current = onFailedComplete;
     onConfirmRef.current = onConfirm;
     onContinueRef.current = onContinue;
     onTimeoutRef.current = onTimeout;
@@ -170,6 +184,42 @@ export function PaymentResult({
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, confirmed]);
+
+  // Cobro rechazado: pantalla de error y regreso al formulario de pago.
+  useEffect(() => {
+    if (!failed) return;
+    const timer = setTimeout(() => onFailedRef.current?.(), t.failedMs);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [failed]);
+
+  if (failed) {
+    return (
+      <div className="fixed inset-0 z-9999 overflow-hidden bg-even-evergreen" role="alert">
+        <div className="flex h-dvh flex-col p-8">
+          <div className="pay-fade-in mt-8 mb-6 md:mt-12 md:mb-8 lg:mt-14 lg:mb-10">
+            <div className="flex size-20 items-center justify-center rounded-full bg-white md:size-24 lg:size-28">
+              <svg
+                className="size-14 text-danger-400 md:size-16 lg:size-20"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="3"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </div>
+          </div>
+          <div className="pay-fade-in mr-16 mb-8 text-3xl font-medium text-white md:mr-28 md:mb-12 md:text-5xl lg:mr-32 lg:mb-14 lg:text-6xl">
+            {failedMessage}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

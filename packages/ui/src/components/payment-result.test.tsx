@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PaymentResult } from "./payment-result";
 
-const TIMING = { introMs: 10, cancelWindowMs: 20, settleMs: 10, greenMs: 10, successMs: 10, timeoutMs: 100 };
+const TIMING = { introMs: 10, cancelWindowMs: 20, settleMs: 10, greenMs: 10, successMs: 10, failedMs: 30, timeoutMs: 100 };
 
 describe("PaymentResult", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -64,5 +64,24 @@ describe("PaymentResult", () => {
     setup({ onCancel, cancelLabel: "Deshacer" });
     act(() => vi.advanceTimersByTime(10));
     expect(screen.getByText("Deshacer")).toBeTruthy();
+  });
+
+  it("con failed muestra el error y avisa al terminar", () => {
+    const onFailedComplete = vi.fn();
+    render(
+      <PaymentResult
+        confirmed={false}
+        failed
+        failedMessage="No se pudo cobrar"
+        title="Procesando"
+        successMessage="Listo"
+        timing={TIMING}
+        onFailedComplete={onFailedComplete}
+        onContinue={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("No se pudo cobrar")).toBeTruthy();
+    act(() => vi.advanceTimersByTime(30));
+    expect(onFailedComplete).toHaveBeenCalledTimes(1);
   });
 });

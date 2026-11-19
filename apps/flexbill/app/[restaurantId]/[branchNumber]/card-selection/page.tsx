@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { PaymentResult, sheetClasses, useFlowStepReady } from "@even/ui";
 import { IVA_FACTOR, IVA_RATE } from "@/app/constants/fiscal";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useTranslations } from "next-intl";
@@ -16,9 +16,6 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useEcartPay } from "@/app/hooks/useEcartPay";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
 import { apiService } from "@/app/utils/api";
-import PaymentStatusVideo, {
-  type PaymentStatus,
-} from "@/app/components/UI/PaymentStatusVideo";
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import { extractPaymentMethods } from "@even/payments/react";
@@ -46,6 +43,8 @@ import { usePaymentProvider } from "@/app/hooks/usePaymentProvider";
 import { useMsiConfig } from "@/app/hooks/useMsiConfig";
 
 // Google Pay deshabilitado temporalmente — cambiar a false para reactivarlo.
+type PaymentStatus = "processing" | "success" | "failed";
+
 const GOOGLE_PAY_DISABLED = true;
 
 // Forma de `payment` / `order` en la respuesta de /payments que usa esta página.
@@ -766,8 +765,8 @@ export default function CardSelectionPage() {
     }
   };
 
-  const handleSuccessVideoComplete = useCallback(() => {
-    // Navigate after the success video finishes playing
+  const handleSuccessComplete = useCallback(() => {
+    // Navegar cuando PaymentResult termina de mostrar el check
     // Usar el table_order_id real cuando esté disponible para que la
     // búsqueda de factura en payment-success pueda encontrar la transacción
     const tableOrderId =
@@ -781,8 +780,8 @@ export default function CardSelectionPage() {
     );
   }, [navigateWithTable, baseAmount, paymentType, dishOrders]);
 
-  const handleFailedVideoComplete = useCallback(() => {
-    // Se queda en card-selection — solo se cierra el video de fallo
+  const handleFailedComplete = useCallback(() => {
+    // Se queda en card-selection — solo se cierra la pantalla de fallo
     setPaymentStatus(null);
   }, []);
 
@@ -1704,6 +1703,8 @@ export default function CardSelectionPage() {
   const MINIMUM_AMOUNT = 20;
   const isUnderMinimum = totalAmountCharged < MINIMUM_AMOUNT;
 
+  useFlowStepReady(!(isLoadingInitial || isLoadingProvider));
+
   if (isLoadingInitial || isLoadingProvider) {
     return (
       <div className="min-h-dvh brand-evergreen flex flex-col app-root">
@@ -1768,11 +1769,25 @@ export default function CardSelectionPage() {
 
   return (
     <>
-      <PaymentStatusVideo
-        status={paymentStatus}
-        onSuccessComplete={handleSuccessVideoComplete}
-        onFailedComplete={handleFailedVideoComplete}
-      />
+      {paymentStatus && (
+        <PaymentResult
+          // La animación es la misma que en las demás apps; aquí el cobro ya está en curso
+          // (sin ventana de cancelar) y el check espera a que el pago se confirme.
+          confirmed={paymentStatus === "success"}
+          failed={paymentStatus === "failed"}
+          title={t("paymentResultProcessing")}
+          successMessage={t("paymentResultSuccess")}
+          failedMessage={t("paymentResultFailed")}
+          timing={{ introMs: 1200, cancelWindowMs: 0, settleMs: 600, greenMs: 1500, successMs: 1200 }}
+          onContinue={handleSuccessComplete}
+          onFailedComplete={handleFailedComplete}
+        >
+          <div className="flex w-full items-center justify-between border-t border-stroke/50 pt-4 text-base font-medium text-black md:text-lg lg:text-xl">
+            <span>{t("totalToPay")}</span>
+            <span>${displayTotal.toFixed(2)} MXN</span>
+          </div>
+        </PaymentResult>
+      )}
 
       <div
         className={`min-h-dvh brand-evergreen flex flex-col app-root ${paymentStatus ? "animate-fade-out" : ""}`}

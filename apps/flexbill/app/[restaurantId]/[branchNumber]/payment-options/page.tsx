@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -178,6 +178,9 @@ export default function PaymentOptionsPage() {
       navigateWithTable("/menu", true);
     }
   }, [isLoading, unpaidAmount, navigateWithTable]);
+
+  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
+  useFlowStepReady(!isLoading);
 
   // Mostrar error de validación si existe
   if (validationError) {

@@ -37,6 +37,9 @@ export type PhoneAuthSession = {
   decideAfterVerify?: boolean;
 };
 
+/** Nombre con el que quedó el perfil (lo que devolvió `hasProfile` o lo que se capturó en el formulario). */
+export type AuthenticatedInfo = { firstName?: string | null; lastName?: string | null };
+
 export type PhoneAuthOptions = {
   /** Pide el SMS con el código. */
   sendOtp: (phone: string) => Promise<AuthResult>;
@@ -50,14 +53,14 @@ export type PhoneAuthOptions = {
    * Tras verificar el código: `true` = ya tiene perfil completo (se llama `onAuthenticated`), `false` = pedir el perfil.
    * Alternativa: `session` (el contexto decide). Si no se pasa ninguna, la app llama `goToProfile` / `onAuthenticated`.
    */
-  hasProfile?: () => Promise<boolean>;
+  hasProfile?: () => Promise<boolean | AuthenticatedInfo>;
   /**
    * El contexto de la app decide el siguiente paso: tras verificar el código (o al llegar ya con sesión) pasa al
    * perfil si está incompleto (nombre y fecha de nacimiento, precargados) o termina con `onAuthenticated`.
    */
   session?: PhoneAuthSession;
   /** El usuario terminó de iniciar sesión (código verificado y perfil completo). La app navega o cierra. */
-  onAuthenticated: () => void | Promise<void>;
+  onAuthenticated: (info?: AuthenticatedInfo) => void | Promise<void>;
 };
 
 /**
@@ -176,9 +179,11 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
           return;
         }
         if (!hasProfile) return;
-        if (await hasProfile().catch(() => false)) {
+        const found = await hasProfile().catch(() => false);
+        const info = typeof found === "object" ? found : undefined;
+        if (info ? !!info.firstName : found) {
           await refreshProfile?.();
-          await onAuthenticated();
+          await onAuthenticated(info);
         } else {
           setStep("profile");
         }
@@ -222,7 +227,7 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
         });
         if (response.success) {
           await refreshProfile?.();
-          await onAuthenticated();
+          await onAuthenticated({ firstName, lastName });
         } else {
           setError(response.error || t("errorSaveProfile"));
         }

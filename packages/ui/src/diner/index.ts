@@ -47,6 +47,7 @@ export {
 export { PhoneStepForm, VerifyStepForm, ProfileStepForm, type GuestLink } from "./auth/AuthSteps";
 export {
   usePhoneAuth,
+  type AuthenticatedInfo,
   type AuthResult,
   type PhoneAuth,
   type PhoneAuthOptions,

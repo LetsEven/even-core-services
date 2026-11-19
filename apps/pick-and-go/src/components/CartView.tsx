@@ -6,7 +6,7 @@ import { Minus, Plus, ChevronDown, ShoppingBag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
-import { SheetCard, SheetFooter, SheetHero, SheetScreen } from "@even/ui";
+import { SheetCard, SheetFooter, SheetHero, SheetScreen, useFlowStepReady } from "@even/ui";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "@/context/AuthContext";
 import { useBranch } from "@/context/BranchContext";
@@ -66,6 +66,7 @@ export default function CartView({
 
   const { state, updateQuantity, orderNotes, setOrderNotes, updateOrderNotes } =
     useCart();
+  useFlowStepReady(!state.isLoading);
   const { navigateWithRestaurantId } = useNavigation();
   const goToMenu = () => (onClose ? onClose() : navigateWithRestaurantId("/menu"));
   const { isLoading, user, profile, refreshProfile } = useAuth();

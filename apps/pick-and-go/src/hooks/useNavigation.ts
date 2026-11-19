@@ -3,7 +3,8 @@
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { useRestaurant } from "../context/RestaurantContext";
-import { startRouteTransition } from "../lib/route-transition";
+import { startRouteTransition } from "@even/ui";
+import { FLOW_STEPS } from "../lib/flow-steps";
 
 /**
  * Hook de navegación para Pick & Go
@@ -71,7 +72,7 @@ export function useNavigation() {
         } else {
           router.push(fullPath);
         }
-      });
+      }, FLOW_STEPS);
     },
     [router, currentRestaurantId, currentBranchNumber]
   );

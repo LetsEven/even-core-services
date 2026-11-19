@@ -1,53 +1,25 @@
 "use client";
 
-import { cn, sheetClasses } from "@even/ui";
-import { usePendingFlowStep, type FlowStep } from "@/lib/route-transition";
+import { FlowNavOverlay as SharedFlowNavOverlay, type FlowScreen } from "@even/ui";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { CardSelectionBody, CartBody, FlowHero, OrderConfirmBody } from "@/components/flow-skeletons";
+import { CardSelectionBody, CartBody, OrderConfirmBody, useFlowHero } from "@/components/flow-skeletons";
+import type { FlowStep } from "@/lib/flow-steps";
 
-const RISE = "0.7s cubic-bezier(0.22, 0.8, 0.24, 1)";
-const FADE = "0.5s ease";
-
-const BODIES: Record<FlowStep, () => React.JSX.Element> = {
-  cart: CartBody,
-  "order-confirm": OrderConfirmBody,
-  "card-selection": CardSelectionBody,
-};
-
-// Mismo relleno de la tarjeta que la vista real de cada paso.
-const CARD_CLASS: Record<FlowStep, string> = {
-  cart: "overflow-hidden",
-  "order-confirm": "flex-none py-8",
-  "card-selection": "overflow-hidden",
-};
-
-function Skeleton({ step }: { step: FlowStep }) {
-  const Body = BODIES[step];
-  // La confirmación real es una tarjeta del alto de su contenido, anclada abajo.
-  const anchored = step === "order-confirm";
-  return (
-    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-even-evergreen" aria-hidden>
-      {/* Fondo verde opaco: oculta la vista real que ya se montó debajo mientras sube la tarjeta */}
-      <div className="app-col relative flex min-h-0 flex-1 flex-col">
-        <div>
-          <MenuHeaderBack onBack={() => {}} />
-        </div>
-        <div className={cn("flex w-full flex-1 flex-col", anchored && "justify-end")}>
-          <div style={{ animation: `fade-in ${FADE} 0.2s backwards` }}>
-            <FlowHero step={step} />
-          </div>
-          <div className={cn(sheetClasses.card, CARD_CLASS[step])} style={{ animation: `slideUp ${RISE}` }}>
-            <Body />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Esqueleto del paso destino, visible desde que se pide navegar hasta que la ruta real se monta. */
+/**
+ * Esqueleto del paso destino (carrito → confirmación → pago). Cada paso reutiliza las mismas clases y
+ * tipografía que la vista real para que la tarjeta no cambie de altura al cargar (ver `flow-skeletons`).
+ */
 export default function FlowNavOverlay() {
-  const step = usePendingFlowStep();
-  if (!step) return null;
-  return <Skeleton step={step} />;
+  const cart = useFlowHero("cart");
+  const confirm = useFlowHero("order-confirm");
+  const pay = useFlowHero("card-selection");
+
+  const screens: Record<FlowStep, FlowScreen> = {
+    cart: { ...cart, body: <CartBody /> },
+    // La confirmación real es una tarjeta del alto de su contenido, anclada abajo.
+    "order-confirm": { ...confirm, body: <OrderConfirmBody />, layout: "anchored" },
+    "card-selection": { ...pay, body: <CardSelectionBody /> },
+  };
+
+  return <SharedFlowNavOverlay screens={screens} header={<MenuHeaderBack onBack={() => {}} />} />;
 }

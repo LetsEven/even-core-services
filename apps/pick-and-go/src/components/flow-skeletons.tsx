@@ -1,9 +1,9 @@
 "use client";
 
-import { cn, sheetClasses } from "@even/ui";
+import { cn, FlowTitle, Ghost, sheetClasses } from "@even/ui";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import type { FlowStep } from "@/lib/route-transition";
+import type { FlowStep } from "@/lib/flow-steps";
 
 /**
  * Esqueletos del flujo de compra (carrito → confirmación → pago).
@@ -16,42 +16,32 @@ import type { FlowStep } from "@/lib/route-transition";
  * se muestra con su texto real.
  */
 
-/** Dato que aún no llega: ocupa lo mismo que el texto real, pero se ve como barra. */
-export function Ghost({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <span aria-hidden className={cn("animate-pulse rounded-full bg-tone-200 text-transparent select-none", className)}>
-      {children}
-    </span>
-  );
-}
-
 /** Título del paso con la misma tipografía y márgenes que la vista real. */
-export function FlowHero({ step }: { step: FlowStep }) {
+export function useFlowHero(step: FlowStep): { hero: ReactNode; heroClassName?: string } {
   const cart = useTranslations("CartView");
   const confirm = useTranslations("OrderConfirmPage");
   const pay = useTranslations("CardSelectionPage");
 
   if (step === "cart") {
-    return (
-      <div className={cn(sheetClasses.hero, "p-0")}>
+    return {
+      heroClassName: "p-0",
+      hero: (
         <div className="flex flex-col justify-center px-8 py-6 md:px-10 md:py-8 lg:px-12 lg:py-10">
           <p className="text-xl font-medium text-mist md:text-2xl lg:text-3xl">Pick & Go</p>
           <p className="mt-2 mb-6 text-3xl leading-7 font-medium text-white md:mt-3 md:mb-8 md:text-4xl md:leading-9 lg:text-5xl lg:leading-tight">
             {cart("confirmYourOrder")}
           </p>
         </div>
-      </div>
-    );
+      ),
+    };
   }
-  return (
-    <div className={sheetClasses.hero}>
-      <div className="flex flex-col justify-center px-8 py-6">
-        <p className="mt-2 mb-6 text-3xl leading-7 font-medium text-white">
-          {step === "order-confirm" ? confirm("title") : pay("selectPaymentMethodTitle")}
-        </p>
-      </div>
-    </div>
-  );
+  return { hero: <FlowTitle>{step === "order-confirm" ? confirm("title") : pay("selectPaymentMethodTitle")}</FlowTitle> };
+}
+
+/** Título de un paso como bloque completo, para las vistas reales mientras cargan. */
+export function FlowHero({ step }: { step: FlowStep }) {
+  const { hero, heroClassName } = useFlowHero(step);
+  return <div className={cn(sheetClasses.hero, heroClassName)}>{hero}</div>;
 }
 
 /** Cuerpo de la tarjeta de confirmación: mismas filas y márgenes que la vista cargada (con sucursal y propina). */

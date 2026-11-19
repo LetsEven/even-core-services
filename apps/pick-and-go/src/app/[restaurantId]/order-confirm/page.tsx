@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -197,6 +197,9 @@ export default function OrderConfirmPage() {
     }
     navigateWithRestaurantId(`/card-selection?${qs.toString()}`);
   };
+
+  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
+  useFlowStepReady(!isLoadingInitial);
 
   if (isLoadingInitial) {
     return (

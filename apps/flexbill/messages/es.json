@@ -49,12 +49,6 @@
     "imageAlt": "{name} - Imagen {number}",
     "optionUnavailable": "Agotado"
   },
-  "AuthPage": {
-    "examplePrefix": "Ejemplo:"
-  },
-  "AuthSelectionPage": {
-    "continuingCta": "Continuando..."
-  },
   "CardScanner": {
     "subtitle": "Coloca tu tarjeta dentro del marco y presiona el botón para escanear",
     "errorNoRefs": "Error: Referencias de video o canvas no disponibles",

@@ -48,12 +48,6 @@
     "imageAlt": "{name} - Image {number}",
     "optionUnavailable": "Sold out"
   },
-  "AuthPage": {
-    "examplePrefix": "Example:"
-  },
-  "AuthSelectionPage": {
-    "continuingCta": "Continuing..."
-  },
   "CardScanner": {
     "subtitle": "Place your card inside the frame and press the button to scan",
     "errorNoRefs": "Error: Video or canvas references not available",

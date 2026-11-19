@@ -22,7 +22,8 @@
     "confirmCta": "Confirm",
     "defaultUserName": "User",
     "showMoreOptions": "+{count} more",
-    "showLessOptions": "Show less"
+    "showLessOptions": "Show less",
+    "invoiceCta": "Invoice"
   },
   "HomePage": {
     "heroTitle": "Welcome to Even",
@@ -117,7 +118,15 @@
     "createAccountCta": "Create account",
     "createAccountDetail": "Sign up and save time on future payments",
     "continueAsGuestCta": "Continue without signing up",
-    "continueAsGuestDetail": "View my payment details"
+    "continueAsGuestDetail": "View my payment details",
+    "paidStamp": "PAID",
+    "tapForDetail": "Tap to see the details",
+    "receiptItemsCount": "{count, plural, one {# item} other {# items}}",
+    "tipLabelPrefix": "+ Tip",
+    "installmentsLabel": "+ Financing ({months} months)",
+    "closeCta": "Close",
+    "heroTitle": "Thanks for your order!",
+    "goToOrderCta": "View my bill"
   },
   "OrderAnimation": {
     "processingPaymentMessage": "We're processing your payment",

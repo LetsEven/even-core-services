@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Minus, Plus, ChevronDown, ShoppingBag } from "lucide-react";
@@ -57,6 +57,7 @@ export default function CartView() {
     setOrderNotes,
     updateOrderNotes,
   } = useCart();
+  useFlowStepReady(!cartState.isLoading);
   const { navigateWithRoom } = useRoomNavigation();
   const { isAuthenticated, isLoading, user, profile, refreshProfile } =
     useAuth();

@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -1521,6 +1521,8 @@ export default function CardSelectionPage() {
 
   // Calcular si está bajo el mínimo usando el total con propina, comisiones, etc.
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
+
+  useFlowStepReady(!(isLoadingInitial || isLoadingProvider));
 
   if (isLoadingInitial || isLoadingProvider) {
     return (

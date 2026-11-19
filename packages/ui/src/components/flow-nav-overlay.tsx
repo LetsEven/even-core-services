@@ -3,18 +3,20 @@
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { usePendingFlowStep } from "../lib/route-transition";
-import { sheetClasses } from "./sheet-screen";
+import { FlowCard, type FlowCardLayout } from "./flow-card";
 
 export type FlowScreen = {
   /** Título del paso (mismo que la vista real). */
   hero: ReactNode;
   /** Clases extra del bloque del título (p. ej. `p-0` si el título trae su propio relleno). */
   heroClassName?: string;
-  /** Esqueleto de la tarjeta. */
+  /** Esqueleto de la tarjeta: el mismo componente de la vista real pintado en modo carga. */
   body: ReactNode;
-  /** Relleno de la tarjeta; por defecto `overflow-hidden`. */
+  /** Relleno de la tarjeta; por defecto `overflow-hidden` (`fill`) o `flex-none py-8` (`anchored`). */
   cardClassName?: string;
-  /** La vista real es una tarjeta del alto de su contenido, anclada abajo. */
+  /** `fill` (por defecto) o `anchored`: la vista real mide lo que su contenido y queda pegada abajo. */
+  layout?: FlowCardLayout;
+  /** @deprecated usa `layout: "anchored"`. */
   anchored?: boolean;
 };
 
@@ -54,17 +56,16 @@ export function FlowNavOverlay({ screens, header }: FlowNavOverlayProps) {
       {/* Fondo verde opaco: oculta la vista real que ya se montó debajo mientras sube la tarjeta */}
       <div className="app-col relative flex min-h-0 flex-1 flex-col">
         <div>{header}</div>
-        <div className={cn("flex w-full flex-1 flex-col", screen.anchored && "justify-end")}>
-          <div style={{ animation: `flow-fade ${FADE} 0.2s backwards` }}>
-            <div className={cn(sheetClasses.hero, screen.heroClassName)}>{screen.hero}</div>
-          </div>
-          <div
-            className={cn(sheetClasses.card, screen.cardClassName ?? "overflow-hidden")}
-            style={{ animation: `flow-rise ${RISE}` }}
-          >
-            {screen.body}
-          </div>
-        </div>
+        <FlowCard
+          layout={screen.layout ?? (screen.anchored ? "anchored" : "fill")}
+          hero={screen.hero}
+          heroClassName={screen.heroClassName}
+          heroStyle={{ animation: `flow-fade ${FADE} 0.2s backwards` }}
+          cardClassName={screen.cardClassName}
+          cardStyle={{ animation: `flow-rise ${RISE}` }}
+        >
+          {screen.body}
+        </FlowCard>
       </div>
     </div>
   );

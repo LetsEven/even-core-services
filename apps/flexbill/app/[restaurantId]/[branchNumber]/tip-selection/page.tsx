@@ -9,7 +9,7 @@ import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { getRestaurantData } from "@/app/utils/restaurantData";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
-import { CircleAlert, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   calculateFlexBillItemCommission,
   calculateFlexBillProportionalCommission,
@@ -52,7 +52,6 @@ export default function TipSelectionPage() {
   const [customTip, setCustomTip] = useState("");
   const [customPaymentAmount, setCustomPaymentAmount] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
@@ -905,73 +904,6 @@ export default function TipSelectionPage() {
           </>
         )}
 
-      {/* Modal de resumen del total */}
-      {showTotalModal && (
-        <div
-          className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-          style={{ zIndex: 99999 }}
-        >
-          {/* Fondo */}
-          <div
-            className="absolute inset-0 bg-black/20"
-            onClick={() => setShowTotalModal(false)}
-          ></div>
-
-          {/* Modal */}
-          <div className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8">
-            {/* Titulo */}
-            <div className="px-6 pt-4 md:px-8 lg:px-10 md:pt-6 lg:pt-8">
-              <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-black">
-                  {t("totalSummaryTitle")}
-                </h3>
-                <button
-                  onClick={() => setShowTotalModal(false)}
-                  className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                >
-                  <X className="size-5 text-tone-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Contenido */}
-            <div className="px-6 py-4 md:px-8 lg:px-10 md:py-6 lg:py-8">
-              <p className="text-black mb-4 text-base md:text-lg lg:text-xl">
-                {t("breakdownIntro")}
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                    +{" "}
-                    {paymentType === "full-bill"
-                      ? t("consumptionLabel")
-                      : paymentType === "select-items"
-                        ? t("itemsLabel")
-                        : paymentType === "equal-shares"
-                          ? t("yourShareLabel").replace(":", "")
-                          : paymentType === "choose-amount"
-                            ? t("yourAmountLabel").replace(":", "")
-                            : t("yourShareLabel").replace(":", "")}
-                  </span>
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                    ${displaySubtotal.toFixed(2)} MXN
-                  </span>
-                </div>
-                {displayPropina > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      {t("tipLabelPrefix")}
-                    </span>
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      ${displayPropina.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

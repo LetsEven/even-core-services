@@ -225,20 +225,27 @@ export function useFlowAmount(input: FlowAmountInput | null) {
   const t = useTranslations("Common");
   const total = input ? formatMoney(input.total) : null;
   const label = input?.label;
-  const breakdown = input
-    ? (input.breakdown ??
-      [
-        input.bill != null && `${input.billLabel ?? t("heroBill")} ${formatMoney(input.bill)}`,
-        input.tip != null && `${t("heroTip")} ${formatMoney(input.tip)}`,
-        input.commission != null && input.commission > 0 && `${t("heroCommission")} ${formatMoney(input.commission)}`,
-        input.financing != null && input.financing > 0 && `${t("heroFinancing")} ${formatMoney(input.financing)}`,
-      ]
-        .filter(Boolean)
-        .join(" + "))
-    : undefined;
+  const breakdown = input ? (input.breakdown ?? buildBreakdown(input, t)) : undefined;
 
   useLayoutEffect(() => {
     setFlowAmount(total == null ? null : { total, breakdown: breakdown || undefined, label });
   }, [total, breakdown, label]);
   useLayoutEffect(() => () => setFlowAmount(null), []);
+}
+
+const cents = (n: number) => Math.round(n * 100);
+
+/**
+ * "Cuenta $46.00 + propina $4.60". Omite los componentes en 0 y, si solo queda uno igual al total, no hay desglose
+ * (la línea conserva su alto en el hero para que el monto no se mueva).
+ */
+function buildBreakdown(input: FlowAmountInput, t: (key: string) => string): string | undefined {
+  const parts = [
+    { label: input.billLabel ?? t("heroBill"), value: input.bill },
+    { label: t("heroTip"), value: input.tip },
+    { label: t("heroCommission"), value: input.commission },
+    { label: t("heroFinancing"), value: input.financing },
+  ].filter((part): part is { label: string; value: number } => part.value != null && cents(part.value) > 0);
+  if (parts.length === 0 || (parts.length === 1 && cents(parts[0].value) === cents(input.total))) return undefined;
+  return parts.map((part) => `${part.label} ${formatMoney(part.value)}`).join(" + ");
 }

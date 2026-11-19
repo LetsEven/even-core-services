@@ -116,7 +116,6 @@ export default function CardSelectionPage() {
   // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
   const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
   const [pendingPaymentData, setPendingPaymentData] = useState<{
@@ -1203,7 +1202,6 @@ export default function CardSelectionPage() {
 
   // El back gesto/botón del dispositivo cierra estos modales en vez de
   // salir de la página.
-  useModalBackClose(showTotalModal, () => setShowTotalModal(false));
   useModalBackClose(showPaymentOptionsModal, () =>
     setShowPaymentOptionsModal(false),
   );
@@ -1523,72 +1521,6 @@ export default function CardSelectionPage() {
           </PayButton>
         </div>
 
-        {/* Modal de resumen del total */}
-        {showTotalModal && (
-          <div
-            className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-            style={{ zIndex: 99999 }}
-          >
-            {/* Fondo */}
-            <div
-              className="absolute inset-0 bg-black/20"
-              onClick={() => setShowTotalModal(false)}
-            ></div>
-
-            {/* Modal */}
-            <div className="relative bg-white rounded-t-4xl w-full mx-4">
-              {/* Titulo */}
-              <div className="px-6 pt-4">
-                <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                  <h3 className="text-lg font-semibold text-black">
-                    {t("totalSummaryTitle")}
-                  </h3>
-                  <button
-                    onClick={() => setShowTotalModal(false)}
-                    className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                  >
-                    <X className="size-5 text-tone-500" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Contenido */}
-              <div className="px-6 py-4">
-                <p className="text-black mb-4">{t("totalBreakdownIntro")}</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium">
-                      {t("consumptionBreakdown")}
-                    </span>
-                    <span className="text-black font-medium">
-                      ${baseAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                  {tipAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium">
-                        {t("tipBreakdown")}
-                      </span>
-                      <span className="text-black font-medium">
-                        ${tipAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {evenCommissionClient + ivaEvenClient > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium">
-                        {t("serviceCommissionBreakdown")}
-                      </span>
-                      <span className="text-black font-medium">
-                        ${(evenCommissionClient + ivaEvenClient).toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal de opciones de pago */}
         {showPaymentOptionsModal && (

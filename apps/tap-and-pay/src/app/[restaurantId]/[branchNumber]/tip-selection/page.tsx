@@ -8,10 +8,9 @@ import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import MenuHeader from "@/app/components/headers/MenuHeader";
-import { CircleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
 import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
-import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { prefetchMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useTranslations } from "next-intl";
 
@@ -35,7 +34,6 @@ export default function TipSelectionPage() {
   // "Dividir cuenta": N local por comensal; "Tu parte" = restante / N.
   const [equalPeople, setEqualPeople] = useState("2");
   const [splitStatus, setSplitStatus] = useState<any>(null);
-  const [showTotalModal, setShowTotalModal] = useState(false);
   // La mesa vive en el provider: si ya hay cuenta cargada se pinta de inmediato
   // y el estado de la división se actualiza en segundo plano.
   const [isLoading, setIsLoading] = useState(
@@ -153,7 +151,6 @@ export default function TipSelectionPage() {
 
   // El back gesto/botón del dispositivo cierra este modal en vez de salir
   // de la página.
-  useModalBackClose(showTotalModal, () => setShowTotalModal(false));
 
   const dishes = state.order?.items || [];
 
@@ -563,79 +560,6 @@ export default function TipSelectionPage() {
         </>
       )}
 
-      {/* Modal de resumen del total */}
-      {showTotalModal && (
-        <div
-          className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-          style={{ zIndex: 99999 }}
-        >
-          <div
-            className="absolute inset-0 bg-black/20"
-            onClick={() => setShowTotalModal(false)}
-          ></div>
-
-          <div className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8">
-            <div className="px-6 pt-4 md:px-8 lg:px-10 md:pt-6 lg:pt-8">
-              <div className="flex items-center justify-between pb-4 border-b bg-surfaceborder-stroke">
-                <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-black">
-                  {t("totalSummaryTitle")}
-                </h3>
-                <button
-                  onClick={() => setShowTotalModal(false)}
-                  className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                >
-                  <X className="size-5 text-tone-500" />
-                </button>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 md:px-8 lg:px-10 md:py-6 lg:py-8">
-              <p className="text-black mb-4 text-base md:text-lg lg:text-xl">
-                {t("totalBreakdownIntro")}
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                    +{" "}
-                    {paymentType === "full-bill"
-                      ? t("consumptionLabel")
-                      : paymentType === "select-items"
-                        ? t("yourItemsLabel")
-                        : paymentType === "equal-shares"
-                          ? t("yourShareBreakdown")
-                          : paymentType === "choose-amount"
-                            ? t("yourAmountBreakdown")
-                            : t("yourShareBreakdown")}
-                  </span>
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                    ${baseAmount.toFixed(2)} MXN
-                  </span>
-                </div>
-                {tipAmount > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      {t("tipBreakdown")}
-                    </span>
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      ${tipAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
-                {evenClientCharge > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      {t("serviceCommissionBreakdown")}
-                    </span>
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      ${evenClientCharge.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

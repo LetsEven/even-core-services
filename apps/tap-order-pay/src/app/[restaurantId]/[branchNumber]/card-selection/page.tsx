@@ -118,7 +118,6 @@ export default function CardSelectionPage() {
   const tipAmountFromParam = parseFloat(searchParams.get("tipAmount") || "0");
   const tipAmount = tipAmountFromParam;
 
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [showPOSModal, setShowPOSModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
@@ -1767,78 +1766,6 @@ export default function CardSelectionPage() {
           </PayButton>
         </div>
 
-        {/* Modal resumen del total */}
-        {showTotalModal && (
-          <div
-            className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-            style={{ zIndex: 99999 }}
-          >
-            <div
-              className="absolute inset-0 bg-black/20"
-              onClick={() => setShowTotalModal(false)}
-            />
-            <div className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8">
-              <div className="px-6 md:px-8 pt-4">
-                <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                  <h3 className="text-lg md:text-xl font-semibold text-black">
-                    Resumen del total
-                  </h3>
-                  <button
-                    onClick={() => setShowTotalModal(false)}
-                    className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                  >
-                    <X className="size-5 text-tone-500" />
-                  </button>
-                </div>
-              </div>
-              <div className="px-6 md:px-8 py-4 md:py-5">
-                <p className="text-black mb-4 text-base md:text-lg">
-                  El total se obtiene de la suma de:
-                </p>
-                <div className="space-y-3 md:space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg">
-                      {t("subtotalBreakdownLabel")}
-                    </span>
-                    <span className="text-black font-medium text-base md:text-lg">
-                      ${baseAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                  {tipAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg">
-                        {t("tipLabelPrefix")}
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg">
-                        ${tipAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {evenClientCharge > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg">
-                        {t("serviceCommissionLabel")}
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg">
-                        ${evenClientCharge.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {selectedMSI !== null && displayTotal > totalAmount && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg">
-                        + Financiamiento ({selectedMSI} meses)
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg">
-                        ${(displayTotal - totalAmount).toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal opciones de pago (MSI) */}
         {showPaymentOptionsModal && (

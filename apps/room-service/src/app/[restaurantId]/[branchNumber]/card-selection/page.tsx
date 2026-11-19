@@ -111,7 +111,6 @@ export default function CardSelectionPage() {
   const MINIMUM_AMOUNT = 20;
   const tipAmountFromParam = parseFloat(searchParams.get("tipAmount") || "0");
 
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
 
@@ -1850,66 +1849,6 @@ export default function CardSelectionPage() {
           </div>
         )}
 
-        {/* Modal de resumen del total */}
-        {showTotalModal && (
-          <div
-            className="fixed inset-0 flex items-end justify-center"
-            style={{ zIndex: 99999 }}
-          >
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setShowTotalModal(false)}
-            ></div>
-            <div className="relative bg-white rounded-t-4xl w-full mx-4">
-              <div className="px-6 pt-4">
-                <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                  <h3 className="text-lg font-semibold text-black">
-                    {t("totalSummaryTitle")}
-                  </h3>
-                  <button
-                    onClick={() => setShowTotalModal(false)}
-                    className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-              <div className="px-6 py-4">
-                <p className="text-black mb-4">{t("totalBreakdownIntro")}</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium">
-                      {t("consumptionLabel")}
-                    </span>
-                    <span className="text-black font-medium">
-                      ${baseAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                  {tipAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium">
-                        {t("tipLabelPrefix")}
-                      </span>
-                      <span className="text-black font-medium">
-                        ${tipAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {evenClientCharge > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium">
-                        {t("serviceCommissionLabel")}
-                      </span>
-                      <span className="text-black font-medium">
-                        ${evenClientCharge.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal de error de pago */}

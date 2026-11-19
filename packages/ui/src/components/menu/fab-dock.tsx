@@ -2,10 +2,11 @@
 
 import { useEffect, type ReactNode } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Menu, ShoppingCart, X } from "lucide-react";
+import { Menu, ReceiptText, ShoppingCart, X } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { MotionProvider, SPRING } from "./motion-provider";
 import { ProgressRing } from "./menu-fab";
+import { resolveMenuIndicator } from "./menu-indicator";
 
 export type DockItem = {
   id: string;
@@ -33,6 +34,13 @@ export type DockItem = {
   expanded?: boolean;
   /** Oculta solo este elemento (por ejemplo, sin pedido activo). */
   hidden?: boolean;
+  /** Se pinta verde (el botón de "Cuenta" cuando hay cuenta pendiente). */
+  highlight?: boolean;
+  /**
+   * Acceso a la cuenta (la app decide con `hidden` cuándo existe). Con cuenta pendiente y sin carrito queda fijado
+   * y resaltado; nunca lleva contador de platillos.
+   */
+  bill?: boolean;
 };
 
 export type FabDockProps = {
@@ -44,11 +52,14 @@ export type FabDockProps = {
   /** Artículos en el carrito. Con más de 0 el botón principal se pone verde y muestra el carrito. */
   count?: number;
   countLabel?: (count: number) => string;
+  /** Hay una cuenta pendiente en la mesa. El carrito con artículos tiene prioridad sobre este indicador. */
+  pendingBill?: boolean;
   /** Oculto mientras hay otra capa encima (bienvenida, detalle, modales). */
   hidden?: boolean;
   /** Nombre accesible del grupo de acciones ("Menú"). */
   menuLabel: string;
-  labels: { open: string; close: string };
+  /** `pendingBill`: "Cuenta pendiente", se agrega al nombre del botón principal (sin número de platillos). */
+  labels: { open: string; close: string; pendingBill?: string };
 };
 
 const GLASS: React.CSSProperties = {
@@ -67,7 +78,7 @@ const GLASS: React.CSSProperties = {
  * La burbuja de un elemento usa vidrio con `backdrop-filter` (no `liquid-glass-react`, que no se ve en
  * Safari iOS).
  */
-export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel, hidden = false, menuLabel, labels }: FabDockProps) {
+export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel, pendingBill = false, hidden = false, menuLabel, labels }: FabDockProps) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -77,12 +88,30 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
-  const visible = items.filter((item) => !item.hidden);
+  const indicator = resolveMenuIndicator({ cartCount: count, hasPendingBill: pendingBill });
+  const resolved = items.map((item) =>
+    item.bill
+      ? {
+          ...item,
+          count: undefined,
+          countLabel: undefined,
+          pinned: item.pinned || indicator === "bill",
+          highlight: item.highlight || indicator === "bill",
+        }
+      : item,
+  );
+  const visible = resolved.filter((item) => !item.hidden);
   const pinned = visible.filter((item) => item.pinned);
   const folded = visible.filter((item) => !item.pinned);
-  const hasItems = count > 0;
+  const hasItems = indicator === "cart";
+  const hasBill = indicator === "bill";
   const base = open ? labels.close : labels.open;
-  const mainLabel = hasItems && countLabel ? `${base}, ${countLabel(count)}` : base;
+  const mainLabel =
+    hasItems && countLabel
+      ? `${base}, ${countLabel(count)}`
+      : hasBill && labels.pendingBill
+        ? `${base}, ${labels.pendingBill}`
+        : base;
 
   return (
     <MotionProvider>
@@ -160,14 +189,14 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
             // before: área táctil de 64 px sobre un botón de 56 px.
             className={cn(
               "relative flex size-14 items-center justify-center rounded-full shadow-lg transition-[background-color,transform] duration-300 before:absolute before:-inset-1 active:scale-90 md:size-16",
-              hasItems && !open
+              (hasItems || hasBill) && !open
                 ? "bg-even-grass text-even-evergreen"
                 : "border border-white/40 bg-white/85 text-primary backdrop-blur-sm",
             )}
           >
             <AnimatePresence mode="popLayout" initial={false}>
               <m.span
-                key={open ? "close" : hasItems ? "cart" : "menu"}
+                key={open ? "close" : hasItems ? "cart" : hasBill ? "bill" : "menu"}
                 className="flex items-center justify-center"
                 initial={{ opacity: 0, rotate: -60, scale: 0.5 }}
                 animate={{ opacity: 1, rotate: 0, scale: 1 }}
@@ -178,6 +207,8 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
                   <X className="size-6 md:size-7" />
                 ) : hasItems ? (
                   <ShoppingCart className="size-6 md:size-7" />
+                ) : hasBill ? (
+                  <ReceiptText className="size-6 md:size-7" />
                 ) : (
                   <Menu className="size-6 md:size-7" />
                 )}
@@ -192,6 +223,14 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
             >
               {count}
             </div>
+          )}
+          {hasBill && !open && (
+            // Sin número: la cuenta no muestra cuántos platillos lleva.
+            <div
+              data-testid="bill-dot"
+              aria-hidden
+              className="pointer-events-none absolute -top-0.5 -left-0.5 size-3.5 rounded-full border-2 border-white bg-even-evergreen md:size-4"
+            />
           )}
         </div>
       </m.div>
@@ -211,7 +250,11 @@ function DockButton({ item }: { item: DockItem }) {
   );
   const className = cn(
     "relative flex size-11 items-center justify-center rounded-full transition-colors active:scale-95 md:size-12",
-    hasProgress ? "bg-even-evergreen text-white shadow-lg" : "border border-white/40 bg-white/90 text-warm-700 shadow-lg hover:bg-white",
+    hasProgress
+      ? "bg-even-evergreen text-white shadow-lg"
+      : item.highlight
+        ? "bg-even-grass text-even-evergreen shadow-lg"
+        : "border border-white/40 bg-white/90 text-warm-700 shadow-lg hover:bg-white",
     item.clip && "overflow-hidden",
   );
 

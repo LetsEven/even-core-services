@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, type MouseEvent, type ReactNode } from "react";
-import { Menu, ShoppingBag, ShoppingCart, X } from "lucide-react";
+import { Menu, ReceiptText, ShoppingBag, ShoppingCart, X } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { resolveMenuIndicator } from "./menu-indicator";
 import { playMorphClose, playMorphOpen, prefersReducedMotion } from "../../lib/button-morph";
 
 export type MenuFabProps = {
@@ -14,7 +15,9 @@ export type MenuFabProps = {
   hidden?: boolean;
   /** Texto del contador para lectores de pantalla: "3 artículos". Se agrega al nombre del botón. */
   countLabel?: (count: number) => string;
-  labels: { open: string; close: string };
+  /** Cuenta pendiente en la mesa: mismo estilo verde que el carrito, con ícono de cuenta y sin número. El carrito gana. */
+  pendingBill?: boolean;
+  labels: { open: string; close: string; pendingBill?: string };
 };
 
 /**
@@ -22,10 +25,17 @@ export type MenuFabProps = {
  * Es interactivo: con el carrito vacío es la hamburguesa; con artículos se vuelve verde y muestra el carrito.
  * Conserva `#cart-icon` y `#cart-badge` porque `useFlyToCart` (@even/cart) anima el platillo hasta ellos.
  */
-export function MenuFab({ open, onToggle, count = 0, hidden = false, countLabel, labels }: MenuFabProps) {
-  const hasItems = count > 0;
+export function MenuFab({ open, onToggle, count = 0, pendingBill = false, hidden = false, countLabel, labels }: MenuFabProps) {
+  const indicator = resolveMenuIndicator({ cartCount: count, hasPendingBill: pendingBill });
+  const hasItems = indicator === "cart";
+  const hasBill = indicator === "bill";
   const base = open ? labels.close : labels.open;
-  const label = hasItems && countLabel ? `${base}, ${countLabel(count)}` : base;
+  const label =
+    hasItems && countLabel
+      ? `${base}, ${countLabel(count)}`
+      : hasBill && labels.pendingBill
+        ? `${base}, ${labels.pendingBill}`
+        : base;
 
   return (
     <div
@@ -46,13 +56,21 @@ export function MenuFab({ open, onToggle, count = 0, hidden = false, countLabel,
         // before: área táctil de 64 px sobre un botón de 56 px.
         className={cn(
           "relative flex size-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 before:absolute before:-inset-1 active:scale-90 md:size-16",
-          hasItems
+          hasItems || hasBill
             ? "bg-even-grass text-even-evergreen"
             : "border border-white/40 bg-white/85 text-primary backdrop-blur-sm",
         )}
       >
         <FabIcon>
-          {open ? <X className="size-6 md:size-7" /> : hasItems ? <ShoppingCart className="size-6 md:size-7" /> : <Menu className="size-6 md:size-7" />}
+          {open ? (
+            <X className="size-6 md:size-7" />
+          ) : hasItems ? (
+            <ShoppingCart className="size-6 md:size-7" />
+          ) : hasBill ? (
+            <ReceiptText className="size-6 md:size-7" />
+          ) : (
+            <Menu className="size-6 md:size-7" />
+          )}
         </FabIcon>
       </button>
       {hasItems && (
@@ -63,6 +81,13 @@ export function MenuFab({ open, onToggle, count = 0, hidden = false, countLabel,
         >
           {count}
         </div>
+      )}
+      {hasBill && (
+        <div
+          data-testid="bill-dot"
+          aria-hidden
+          className="pointer-events-none absolute -top-0.5 -left-0.5 size-3.5 rounded-full border-2 border-white bg-even-evergreen md:size-4"
+        />
       )}
     </div>
   );

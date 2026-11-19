@@ -25,6 +25,50 @@ describe("FabDock", () => {
     expect(container.querySelector("#cart-icon")).not.toBeNull();
   });
 
+  it("solo cuenta pendiente: se ilumina con ícono de cuenta, sin número y con la cuenta fijada", () => {
+    const bill = { ...base, labels: { ...labels, pendingBill: "Cuenta pendiente" } };
+    const { container } = render(
+      <FabDock {...bill} open={false} pendingBill items={[item("cuenta", { bill: true, count: 4, countLabel: (n) => `${n} platillos` })]} />,
+    );
+    const main = screen.getByRole("button", { name: "Abrir menú, Cuenta pendiente" });
+    expect(main.className).toContain("bg-even-grass");
+    expect(container.querySelector("#cart-badge")).toBeNull();
+    expect(screen.getByTestId("bill-dot").textContent).toBe("");
+    // El botón de la cuenta está fijado (visible con el menú cerrado), resaltado y sin contador.
+    const account = screen.getByRole("button", { name: "cuenta" });
+    expect(account.closest("[inert]")).toBeNull();
+    expect(account.className).toContain("bg-even-grass");
+    expect(account.parentElement?.textContent).toBe("");
+  });
+
+  it("cuenta y carrito: gana el carrito (con número) y la cuenta queda sin resaltar", () => {
+    const bill = { ...base, labels: { ...labels, pendingBill: "Cuenta pendiente" } };
+    const { container } = render(
+      <FabDock {...bill} open={false} pendingBill count={2} countLabel={(n) => `${n} artículos`} items={[item("cuenta", { bill: true })]} />,
+    );
+    expect(screen.getByRole("button", { name: "Abrir menú, 2 artículos" })).toBeTruthy();
+    expect(container.querySelector("#cart-badge")?.textContent).toBe("2");
+    expect(screen.queryByTestId("bill-dot")).toBeNull();
+    const account = screen.getByRole("button", { name: "cuenta" });
+    expect(account.className).not.toContain("bg-even-grass");
+    expect(account.closest("[inert]")).not.toBeNull();
+  });
+
+  it("sin cuenta pendiente el botón de la cuenta no se resalta ni se fija, y sigue sin número", () => {
+    render(<FabDock {...base} open={false} items={[item("cuenta", { bill: true, count: 4 })]} />);
+    const account = screen.getByRole("button", { name: "cuenta" });
+    expect(account.className).not.toContain("bg-even-grass");
+    expect(account.closest("[inert]")).not.toBeNull();
+    expect(account.parentElement?.textContent).toBe("");
+  });
+
+  it("tocar el botón de la cuenta pendiente llama a su onClick", async () => {
+    const onClick = vi.fn();
+    render(<FabDock {...base} open={false} pendingBill items={[item("cuenta", { bill: true, onClick })]} />);
+    await userEvent.click(screen.getByRole("button", { name: "cuenta" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it("las acciones plegables no son accesibles con el menú cerrado; las fijadas sí", () => {
     render(<FabDock {...base} open={false} items={[item("perfil"), item("pedido", { pinned: true })]} />);
     // jsdom no calcula `inert`: se comprueba el atributo en el contenedor plegable.

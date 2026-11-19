@@ -294,6 +294,7 @@
     "categoriesLabel": "Categories",
     "closeMenu": "Close menu",
     "fabCountLabel": "{count, plural, one {# item} other {# items}}",
+    "fabPendingBillLabel": "Pending bill",
     "filterAll": "All",
     "menuLabel": "Menu",
     "noItemsAvailable": "No items available",

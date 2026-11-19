@@ -3,37 +3,48 @@
 import type { ReactNode } from "react";
 import { Menu, ReceiptText, ShoppingCart, UserCircle, X } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { resolveMenuIndicator } from "./menu-indicator";
 
 export type MenuHamburgerProps = {
   open: boolean;
   onToggle: () => void;
   /** Contador del carrito sobre la hamburguesa. */
   count?: number;
-  labels: { open: string; close: string };
+  /** Cuenta pendiente en la mesa: se ilumina como el carrito, sin número. El carrito gana. */
+  pendingBill?: boolean;
+  labels: { open: string; close: string; pendingBill?: string };
 };
 
 /**
  * Botón del header del menú que abre la píldora de acciones. Conserva `#cart-icon` y `#cart-badge`
  * porque `useFlyToCart` (@even/cart) anima el platillo hasta ellos.
  */
-export function MenuHamburger({ open, onToggle, count = 0, labels }: MenuHamburgerProps) {
+export function MenuHamburger({ open, onToggle, count = 0, pendingBill = false, labels }: MenuHamburgerProps) {
+  const indicator = resolveMenuIndicator({ cartCount: count, hasPendingBill: pendingBill });
+  const hasBill = indicator === "bill";
+  const base = open ? labels.close : labels.open;
   return (
     <div className="relative group" id="cart-icon">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        aria-label={open ? labels.close : labels.open}
+        aria-label={hasBill && labels.pendingBill ? `${base}, ${labels.pendingBill}` : base}
         // before: amplía el área táctil a 44 px sin cambiar el tamaño visual (40 px en móvil).
-        className="relative size-10 before:absolute before:-inset-0.5 md:size-12 md:before:inset-0 lg:size-14 rounded-full flex items-center justify-center bg-white/85 backdrop-blur-sm shadow-sm hover:scale-105 active:scale-95 transition-transform duration-200"
+        className={cn(
+          "relative size-10 before:absolute before:-inset-0.5 md:size-12 md:before:inset-0 lg:size-14 rounded-full flex items-center justify-center shadow-sm hover:scale-105 active:scale-95 transition-transform duration-200",
+          hasBill && !open ? "bg-even-grass" : "bg-white/85 backdrop-blur-sm",
+        )}
       >
         {open ? (
           <X className="text-primary size-5 md:size-6 lg:size-7" />
+        ) : hasBill ? (
+          <ReceiptText className="text-even-evergreen size-5 md:size-6 lg:size-7" />
         ) : (
           <Menu className="text-primary size-5 md:size-6 lg:size-7" />
         )}
       </button>
-      {count > 0 && (
+      {indicator === "cart" && (
         <div
           id="cart-badge"
           className="absolute -top-1 -right-1 bg-even-grass text-even-evergreen rounded-full size-4 md:size-5 lg:size-6 flex items-center justify-center text-xs md:text-sm font-normal pointer-events-none"

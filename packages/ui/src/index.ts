@@ -103,6 +103,12 @@ export {
   type MenuActionsModalProps,
 } from "./components/menu/menu-fab";
 export { FabDock, type DockItem, type FabDockProps } from "./components/menu/fab-dock";
+export {
+  hasUnpaidDishes,
+  resolveMenuIndicator,
+  type MenuIndicator,
+  type MenuIndicatorInput,
+} from "./components/menu/menu-indicator";
 export { MorphPanel, type MorphPanelProps } from "./components/menu/morph-panel";
 export { MotionProvider, SPRING } from "./components/menu/motion-provider";
 export {

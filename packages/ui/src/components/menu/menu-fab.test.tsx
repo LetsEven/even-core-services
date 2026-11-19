@@ -23,6 +23,18 @@ describe("MenuFab", () => {
     expect(container.querySelector("#cart-badge")?.textContent).toBe("3");
   });
 
+  it("solo cuenta pendiente: verde, sin número y con nombre accesible; con carrito gana el carrito", () => {
+    const l = { ...labels, pendingBill: "Cuenta pendiente" };
+    const { container, rerender } = render(<MenuFab open={false} onToggle={() => {}} pendingBill labels={l} />);
+    expect(screen.getByRole("button", { name: "Abrir menú, Cuenta pendiente" }).className).toContain("bg-even-grass");
+    expect(container.querySelector("#cart-badge")).toBeNull();
+    expect(screen.getByTestId("bill-dot").textContent).toBe("");
+    rerender(<MenuFab open={false} onToggle={() => {}} pendingBill count={2} countLabel={(n) => `${n} artículos`} labels={l} />);
+    expect(screen.getByRole("button", { name: "Abrir menú, 2 artículos" })).toBeTruthy();
+    expect(container.querySelector("#cart-badge")?.textContent).toBe("2");
+    expect(screen.queryByTestId("bill-dot")).toBeNull();
+  });
+
   it("alterna con el botón y cambia el nombre al abrir", async () => {
     const onToggle = vi.fn();
     const { rerender } = render(<MenuFab open={false} onToggle={onToggle} labels={labels} />);

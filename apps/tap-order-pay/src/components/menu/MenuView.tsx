@@ -21,6 +21,7 @@ import RestaurantIntro from "./RestaurantIntro";
 import {
   CategoryTabs,
   FabDock,
+  hasUnpaidDishes,
   MenuEmptyState,
   MenuRestaurantHeading,
   MenuSearchInput,
@@ -578,9 +579,10 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
         onClose={closeActionsMenu}
         count={totalItems}
         countLabel={(count) => t("fabCountLabel", { count })}
+        pendingBill={activeOrders.some((order) => hasUnpaidDishes(order.dishes))}
         hidden={showDetail || introActive || showPepperChat || showSettingsModal}
         menuLabel={t("menuLabel")}
-        labels={{ open: t("openMenu"), close: t("closeMenu") }}
+        labels={{ open: t("openMenu"), close: t("closeMenu"), pendingBill: t("fabPendingBillLabel") }}
         items={[
           {
             id: "profile",
@@ -613,6 +615,8 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             id: "account",
             label: t("accountLabel"),
             hidden: activeOrders.length === 0,
+            // Con cuenta pendiente y sin carrito, FabDock lo fija y resalta (sin contador de platillos).
+            bill: true,
             icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
             onClick: () => {
               closeActionsMenu();

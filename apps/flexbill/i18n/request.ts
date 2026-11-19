@@ -1,3 +1,4 @@
+import { mergeMessages } from "@even/i18n";
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 import {
@@ -21,6 +22,9 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: mergeMessages(
+      (await import(`@even/i18n/messages/${locale}.json`)).default,
+      (await import(`../messages/${locale}.json`)).default,
+    ),
   };
 });

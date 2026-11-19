@@ -2,7 +2,9 @@
 
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useCallback } from "react";
+import { startRouteTransition } from "@even/ui";
 import { useRestaurant } from "@/app/context/RestaurantContext";
+import { FLOW_STEPS } from "@/app/utils/flow-steps";
 
 export function useTableNavigation() {
   const router = useRouter();
@@ -81,11 +83,18 @@ export function useTableNavigation() {
       const separator = fullPath.includes("?") ? "&" : "?";
       const newUrl = `${fullPath}${separator}table=${tableNumber}`;
 
-      if (replace) {
-        router.replace(newUrl);
-      } else {
-        router.push(newUrl);
-      }
+      // Entre pasos del pago la tarjeta baja y sube la del paso destino; en otros casos navega directo.
+      startRouteTransition(
+        newUrl,
+        () => {
+          if (replace) {
+            router.replace(newUrl);
+          } else {
+            router.push(newUrl);
+          }
+        },
+        FLOW_STEPS,
+      );
     },
     [router, tableNumber, currentRestaurantId, currentBranchNumber]
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { TipBody } from "@/app/components/flow-skeletons";
 import { useSearchParams, useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useTable } from "@/app/context/TableContext";
@@ -41,6 +42,8 @@ export default function TipSelectionPage() {
   const [isLoading, setIsLoading] = useState(
     () => !state.order?.items || state.order.items.length === 0,
   );
+  // El esqueleto de la transición se queda hasta que la cuenta esté cargada.
+  useFlowStepReady(!isLoading);
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
 
   const loadSplitStatus = async () => {
@@ -278,7 +281,7 @@ export default function TipSelectionPage() {
 
         <div className="w-full flex-1 flex flex-col justify-end">
           <div className="fixed fixed-col bottom-0 z-50 flex justify-center">
-            <div className="flex flex-col relative w-full">
+            <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
               <div className={sheetClasses.hero}>
                 <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
                   <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
@@ -290,37 +293,8 @@ export default function TipSelectionPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-t-4xl relative z-10 flex flex-col pt-5 md:pt-6 lg:pt-8 pb-4 md:pb-5">
-                <div className="space-y-3 md:space-y-4 lg:space-y-5 px-8 md:px-10 lg:px-12 animate-pulse">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="h-4 bg-tone-200 rounded w-28"></div>
-                      <div className="h-4 bg-tone-200 rounded w-20"></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="h-4 bg-tone-200 rounded w-16"></div>
-                      <div className="grid grid-cols-5 gap-2 flex-1">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <div
-                            key={i}
-                            className="h-7 bg-tone-200 rounded-full"
-                          ></div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-tone-200 pt-4">
-                    <div className="w-full flex gap-3 justify-between">
-                      <div className="flex flex-col justify-center">
-                        <div className="h-3 bg-tone-200 rounded w-20 mb-1"></div>
-                        <div className="h-8 bg-tone-200 rounded w-28"></div>
-                      </div>
-                      <div className="h-9 md:h-10 lg:h-11 bg-tone-300 rounded-full w-28"></div>
-                    </div>
-                  </div>
-                </div>
+              <div className="bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6">
+                <TipBody />
               </div>
             </div>
           </div>

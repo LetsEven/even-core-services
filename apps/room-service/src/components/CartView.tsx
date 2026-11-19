@@ -2,7 +2,7 @@
 
 import { useFlowStepReady } from "@even/ui";
 import { TitleHero } from "@even/ui";
-import { FlowStepCard } from "@even/ui/diner";
+import { FlowStepCard, isProfileComplete } from "@even/ui/diner";
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Minus, Plus, ChevronDown, ShoppingBag } from "lucide-react";
@@ -29,11 +29,6 @@ const API_BASE_URL = getBackendOrigin(
   process.env.NEXT_PUBLIC_API_URL,
   "http://localhost:5000",
 );
-
-// Perfil completo = tiene nombre Y fecha de nacimiento (apellido es opcional).
-const isProfileComplete = (
-  p?: { firstName?: string; birthDate?: string } | null,
-) => !!p?.firstName && !!p?.birthDate;
 
 export default function CartView() {
   const t = useTranslations("CartView");

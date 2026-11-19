@@ -46,10 +46,12 @@
     "verifying": "Verificando..."
   },
   "AuthPage": {
+    "examplePrefix": "Ejemplo:",
     "phoneStepSubtitle": "Te enviaremos un código de verificación para tu registro"
   },
   "AuthSelectionPage": {
     "accessCta": "Acceder",
+    "continuingCta": "Continuando...",
     "phoneStepSubtitle": "Ingresa tu número para acceder o crear tu cuenta",
     "phoneStepTitle": "¿Cómo deseas continuar?"
   },

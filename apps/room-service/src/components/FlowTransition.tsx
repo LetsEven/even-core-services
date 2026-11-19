@@ -7,7 +7,7 @@ import {
   orderConfirmScreen,
   userScreen,
 } from "@even/ui";
-import { FlowTransitionProvider, useTermsText } from "@even/ui/diner";
+import { FlowTransitionProvider, useAuthScreen, useTermsText } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
@@ -27,6 +27,9 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const user = useTranslations("UserPage");
   const addCard = useTranslations("AddCardPage");
   const terms = useTermsText();
+  // Ambas pantallas de acceso llevan "Continuar como invitado".
+  const authSelection = useAuthScreen("selection", { guest: true });
+  const authLogin = useAuthScreen("login", { guest: true });
 
   const context = tc("roomLabel", { room: state.roomNumber ?? "" });
   const payCta = tc("payCtaAmount", { amount: "$000.00" });
@@ -65,6 +68,8 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
         saveCta: addCard("saveCta"),
       },
     }),
+    "auth-selection": authSelection,
+    auth: authLogin,
   } satisfies Record<(typeof FLOW_STEPS)[number], unknown>;
 
   return (

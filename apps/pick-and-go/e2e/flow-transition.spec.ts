@@ -1,5 +1,5 @@
-import { expect, expectFlowTransition, test } from "@even/e2e";
-import { cartWithClubSandwich, mockPickAndGoApi } from "./mocks";
+import { expect, expectFlowTransition, mockAuthApi, test } from "@even/e2e";
+import { API_URL, cartWithClubSandwich, mockPickAndGoApi } from "./mocks";
 
 const ORDER_CONFIRM_URL = "/4/order-confirm?branch=1";
 const CART_URL = "/4/cart?branch=1";
@@ -55,5 +55,39 @@ test.describe("transición de tarjeta del flujo de compra", () => {
 
     await expectFlowTransition(page, () => page.goBack(), { step: "cart" });
     await expect(page).toHaveURL(/\/cart\?/);
+  });
+});
+
+test.describe("transición de tarjeta del acceso (auth-selection)", () => {
+  test("el carrito anima hacia el acceso, vuelve con el botón y con popstate; teléfono y código llevan a la confirmación", async ({
+    page,
+  }) => {
+    await mockPickAndGoApi(page, { cartItems: cartWithClubSandwich });
+    await mockAuthApi(page, { apiUrl: API_URL, profile: { firstName: "Ana", birthDate: "1996-01-01" } });
+    await page.goto(CART_URL);
+    await expect(page.getByText("Club sándwich", { exact: false }).first()).toBeVisible();
+
+    // Sin sesión: el carrito lleva al acceso con la misma animación que el resto del flujo.
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Ordenar" }).click(), {
+      step: "auth-selection",
+    });
+    await expect(page).toHaveURL(/\/auth-selection\?/);
+
+    await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "cart" });
+    await expect(page).toHaveURL(/\/cart\?/);
+
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Ordenar" }).click(), {
+      step: "auth-selection",
+    });
+    await expectFlowTransition(page, () => page.goBack(), { step: "cart" });
+    await expectFlowTransition(page, () => page.goForward(), { step: "auth-selection" });
+
+    await page.getByPlaceholder("Número de teléfono").fill("5512345678");
+    await page.getByRole("button", { name: "Enviar código" }).click();
+    await page.getByPlaceholder("000000").fill("123456");
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Verificar código" }).click(), {
+      step: "order-confirm",
+    });
+    await expect(page).toHaveURL(/\/order-confirm\?/);
   });
 });

@@ -1,5 +1,5 @@
-import { expect, expectFlowTransition, test } from "@even/e2e";
-import { CARD_SELECTION_URL, PAYMENT_OPTIONS_URL, mockTapAndPayApi } from "./mocks";
+import { expect, expectFlowTransition, mockAuthApi, test } from "@even/e2e";
+import { API_URL, CARD_SELECTION_URL, ORDER_URL, PAYMENT_OPTIONS_URL, mockTapAndPayApi } from "./mocks";
 
 test.use({ viewport: { width: 412, height: 915 } });
 
@@ -77,5 +77,54 @@ test.describe("transición de tarjeta del flujo de pago", () => {
 
     await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "card-selection" });
     await expect(page).toHaveURL(/\/card-selection\?/);
+  });
+});
+
+test.describe("transición de tarjeta del acceso (auth-selection)", () => {
+  test("la cuenta avanza al acceso y vuelve con el botón y con popstate; como invitado captura el nombre", async ({ page }) => {
+    await mockTapAndPayApi(page);
+    await mockAuthApi(page, { apiUrl: API_URL });
+    await page.goto(ORDER_URL);
+    await expect(page.getByText("Tacos al pastor")).toBeVisible();
+
+    // Sin sesión ni registro en la cuenta: "Continuar" lleva al acceso.
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Continuar" }).click(), {
+      step: "auth-selection",
+    });
+    await expect(page).toHaveURL(/\/auth-selection\?/);
+    await expect(page.getByRole("button", { name: "Acceder" })).toBeVisible();
+
+    await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "order" });
+    await expect(page).toHaveURL(/\/order\?/);
+
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Continuar" }).click(), {
+      step: "auth-selection",
+    });
+    await expectFlowTransition(page, () => page.goBack(), { step: "order" });
+    await expectFlowTransition(page, () => page.goForward(), { step: "auth-selection" });
+
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Continuar como invitado" }).click(), {
+      step: "user",
+    });
+    await expect(page).toHaveURL(/\/user\?/);
+    await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "auth-selection" });
+  });
+
+  test("con teléfono y código el acceso vuelve al flujo de pago", async ({ page }) => {
+    await mockTapAndPayApi(page);
+    await mockAuthApi(page, { apiUrl: API_URL, profile: { firstName: "Ana", birthDate: "1996-01-01" } });
+    await page.goto(ORDER_URL);
+    await expect(page.getByText("Tacos al pastor")).toBeVisible();
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Continuar" }).click(), {
+      step: "auth-selection",
+    });
+
+    await page.getByPlaceholder("Número de teléfono").fill("5512345678");
+    await page.getByRole("button", { name: "Acceder" }).click();
+    await page.getByPlaceholder("000000").fill("123456");
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Verificar código" }).click(), {
+      step: "payment-options",
+    });
+    await expect(page).toHaveURL(/\/payment-options\?/);
   });
 });

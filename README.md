@@ -92,8 +92,29 @@ configuración:
 - El gesto/botón atrás del navegador (`popstate`) anima solo la entrada. Sin vista anterior conocida, `back(fallbackUrl)`
   navega al respaldo.
 
-No tienen forma de tarjeta (y no se animan): menú, detalle de platillo, dashboard, Pepper, `auth`/`auth-selection`
-(formularios sobre el verde, con subpasos propios) y `payment-success`/`order` de FlexBill (ticket/recibo).
+No tienen forma de tarjeta (y no se animan): menú, detalle de platillo, dashboard, Pepper y `payment-success` de
+FlexBill (recibo). La cuenta de FlexBill (`order`, ticket sobre verde) sí es un paso, con su esqueleto propio en
+`apps/flexbill/app/components/FlowTransition.tsx`.
+
+### Inicio de sesión por teléfono (`auth`, `auth-selection`)
+
+El acceso (teléfono → código SMS → perfil, y "Continuar como invitado") también es un paso del flujo y vive en
+`@even/ui/diner`:
+
+- `usePhoneAuth({ sendOtp, verifyOtp, saveProfile, refreshProfile, hasProfile | session, onAuthenticated })` es el
+  estado del flujo. Los subpasos son estado del componente (no historial): el botón atrás sale de la pantalla con la
+  animación y "Cambiar número" vuelve al teléfono.
+- `AuthStepCard` pinta la hoja (título por subpaso, formularios, altura animada) y `useAuthScreen(variant, opts)` el
+  esqueleto con el mismo marcado. `AUTH_FLOW_STEPS` (`auth-selection`, `auth`) se suma a los `FLOW_STEPS` de la app.
+- `AuthModalView` es el mismo acceso dentro del modal de ajustes del menú (no es un paso).
+- Textos en `@even/i18n` (`Auth`, `AuthPage`, `AuthSelectionPage`); `copy` sobrescribe títulos si una app los necesita
+  distintos (Pick & Go).
+
+Cada app conserva lo suyo: `auth.service` y `AuthContext` (la fuente de términos, la sucursal de registro y los
+endpoints difieren por app), las rutas de destino, los flags de `sessionStorage` del redirect posterior y los efectos
+propios (p. ej. el alta en `active_users` de Tap & Pay). Cómo decide cada app tras verificar el código: `hasProfile`
+(consulta el perfil: FlexBill, Room Service, Tap & Pay, y `auth` de Pick & Go) o `session` (el contexto ya resolvió el
+perfil en `verifyOTP`: Tap Order & Pay, `auth-selection` de Pick & Go).
 
 ## Comisiones
 

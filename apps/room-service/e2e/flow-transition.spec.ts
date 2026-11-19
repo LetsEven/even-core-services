@@ -1,5 +1,5 @@
-import { expect, expectFlowTransition, test } from "@even/e2e";
-import { ROOM, cartWithClubSandwich, mockRoomServiceApi } from "./mocks";
+import { expect, expectFlowTransition, mockAuthApi, test } from "@even/e2e";
+import { API_URL, ROOM, cartWithClubSandwich, mockRoomServiceApi } from "./mocks";
 
 const ORDER_CONFIRM_URL = `/4/1/order-confirm?room=${ROOM}`;
 const CART_URL = `/4/1/cart?room=${ROOM}`;
@@ -52,5 +52,48 @@ test.describe("transición de tarjeta del flujo de compra", () => {
 
     await expectFlowTransition(page, () => page.goBack(), { step: "cart" });
     await expect(page).toHaveURL(/\/cart\?/);
+  });
+});
+
+test.describe("transición de tarjeta del acceso (auth)", () => {
+  test("el carrito anima hacia el acceso y vuelve; como invitado llega a capturar el nombre", async ({ page }) => {
+    await mockRoomServiceApi(page, { cartItems: cartWithClubSandwich });
+    await mockAuthApi(page, { apiUrl: API_URL });
+    await page.goto(CART_URL);
+    await expect(page.getByText("Club sándwich", { exact: false }).first()).toBeVisible();
+
+    // Sin sesión: el carrito lleva al acceso con la misma animación que el resto del flujo.
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Ordenar" }).click(), { step: "auth" });
+    await expect(page).toHaveURL(/\/auth\?/);
+
+    // Volver con el botón: animación completa hacia el carrito; con popstate, solo la entrada.
+    await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "cart" });
+    await expect(page).toHaveURL(/\/cart\?/);
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Ordenar" }).click(), { step: "auth" });
+    await expectFlowTransition(page, () => page.goBack(), { step: "cart" });
+    await expectFlowTransition(page, () => page.goForward(), { step: "auth" });
+
+    // Invitado: del acceso al nombre y de vuelta con el botón.
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Continuar como invitado" }).click(), {
+      step: "user",
+    });
+    await expect(page).toHaveURL(/\/user\?/);
+    await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "auth" });
+  });
+
+  test("con teléfono y código el acceso vuelve a la confirmación del pedido", async ({ page }) => {
+    await mockRoomServiceApi(page, { cartItems: cartWithClubSandwich });
+    await mockAuthApi(page, { apiUrl: API_URL, profile: { firstName: "Ana", birthDate: "1996-01-01" } });
+    await page.goto(CART_URL);
+    await expect(page.getByText("Club sándwich", { exact: false }).first()).toBeVisible();
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Ordenar" }).click(), { step: "auth" });
+
+    await page.getByPlaceholder("Número de teléfono").fill("5512345678");
+    await page.getByRole("button", { name: "Enviar código" }).click();
+    await page.getByPlaceholder("000000").fill("123456");
+    await expectFlowTransition(page, () => page.getByRole("button", { name: "Verificar código" }).click(), {
+      step: "order-confirm",
+    });
+    await expect(page).toHaveURL(/\/order-confirm\?/);
   });
 });

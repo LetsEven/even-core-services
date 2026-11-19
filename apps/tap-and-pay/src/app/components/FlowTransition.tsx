@@ -7,13 +7,13 @@ import {
   Ghost,
   paymentOptionsScreen,
   selectItemsScreen,
-  StepHero,
+  TitleHero,
   tipScreen,
   userScreen,
   type FlowScreen,
   type FlowScreenSource,
 } from "@even/ui";
-import { FlowTransitionProvider, useEqualSplitScreen, useTermsText } from "@even/ui/diner";
+import { FlowTransitionProvider, useAuthScreen, useEqualSplitScreen, useTermsText } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import MenuHeader from "@/app/components/headers/MenuHeader";
@@ -30,7 +30,7 @@ function useOrderScreen(context: ReactNode): FlowScreen {
   const t = useTranslations("OrderPage");
   const tc = useTranslations("Common");
   return {
-    hero: <StepHero label={context} title={t("subtitle")} />,
+    hero: <TitleHero context={context} title={t("subtitle")} />,
     body: (
       <>
         <div className="flex-1 overflow-y-auto pb-45 md:pb-50 lg:pb-55">
@@ -94,6 +94,9 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const equalSplit = useEqualSplitScreen(tableNumber);
   const context = tc("tableLabel", { table: tableNumber ?? "" });
   const order = useOrderScreen(context);
+  // "auth-selection" lleva "Continuar como invitado"; "auth" (menú / tras pagar) muestra el número de ejemplo.
+  const authSelection = useAuthScreen("selection", { guest: true });
+  const authLogin = useAuthScreen("login", { example: true });
 
   const payCta = tc("payCtaAmount", { amount: "$000.00" });
   const tipLabels = { tip: tip("tipLabel"), payCta };
@@ -151,6 +154,8 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
         saveCta: addCard("saveCta"),
       },
     }),
+    "auth-selection": authSelection,
+    auth: authLogin,
   };
 
   return (

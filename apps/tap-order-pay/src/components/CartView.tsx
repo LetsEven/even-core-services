@@ -15,7 +15,7 @@ import { useAuth } from "../context/AuthContext";
 import { useAgentStatus } from "../hooks/useAgentStatus";
 import { useRestaurant } from "../context/RestaurantContext";
 import POSBlockedModal from "./POSBlockedModal";
-import { isProfileComplete } from "@/utils/profile";
+import { isProfileComplete } from "@even/ui/diner";
 import ItemCustomizations from "@/components/ItemCustomizations";
 import { getBackendOrigin } from "@even/api-client";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";

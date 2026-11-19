@@ -5,13 +5,19 @@ import {
   cardSelectionScreen,
   cartScreen,
   chooseAmountScreen,
+  Ghost,
   paymentOptionsScreen,
+  ReceiptPaper,
+  ReceiptRow,
+  ReceiptRule,
   selectItemsScreen,
+  TitleHero,
   tipScreen,
   userScreen,
+  type FlowScreen,
   type FlowScreenSource,
 } from "@even/ui";
-import { FlowTransitionProvider, useEqualSplitScreen, useTermsText } from "@even/ui/diner";
+import { FlowTransitionProvider, useAuthScreen, useEqualSplitScreen, useTermsText } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
@@ -19,8 +25,63 @@ import { useRestaurant } from "@/app/context/RestaurantContext";
 import { useTable } from "@/app/context/TableContext";
 import { FLOW_STEPS } from "@/app/utils/flow-steps";
 
+/** Clases de la tarjeta de la cuenta: verde con el ticket encima (blanca cuando la mesa ya está cerrada). */
+export const ORDER_CARD_CLASS = "overflow-hidden bg-even-evergreen px-0 md:px-0 lg:px-0";
+
 /**
- * Animación de tarjeta del flujo de pago de FlexBill: aquí solo se declaran los pasos, sus textos y la cabecera;
+ * Cuenta de la mesa: título, ticket con una fila por platillo sin pagar y la barra fija de subtotal y "Continuar".
+ * Es la única pantalla propia de FlexBill; el resto sale de las pantallas compartidas de `@even/ui`.
+ */
+function useOrderScreen(context: ReactNode, rows: number, closed: boolean): FlowScreen {
+  const t = useTranslations("OrderStatus");
+  const hero = <TitleHero context={context} title={t("subtitle")} />;
+  // Mesa ya pagada: la vista real es un aviso centrado; no hay ticket que imitar.
+  if (closed) return { hero, body: <div className="flex-1" /> };
+  return {
+    hero,
+    cardClassName: ORDER_CARD_CLASS,
+    body: (
+      <>
+        <div className="flex-1 overflow-y-auto px-3 pt-6 pb-35 md:px-6 md:pb-40 lg:pb-45">
+          <div className="mx-auto w-full max-w-xl">
+            <ReceiptPaper mode="static">
+              <div className="min-w-0">
+                <Ghost className="font-mono text-base font-bold uppercase">Restaurante</Ghost>
+                <p className="text-xs">
+                  <Ghost>Cuenta Compartida · Mesa 00</Ghost>
+                </p>
+              </div>
+              <ReceiptRule />
+              {Array.from({ length: Math.max(rows, 1) }, (_, row) => (
+                <ReceiptRow
+                  key={row}
+                  left={<Ghost>1x Platillo del menú</Ghost>}
+                  right={<Ghost>$000.00</Ghost>}
+                  sub={<Ghost>Invitado · pendiente</Ghost>}
+                />
+              ))}
+              <ReceiptRule />
+              <ReceiptRow strong left={t("subtotal")} right={<Ghost>$000.00</Ghost>} />
+            </ReceiptPaper>
+          </div>
+        </div>
+        <div className="fixed fixed-col bottom-0 z-50 mx-4 border-t border-white/10 bg-even-evergreen px-6 md:mx-6 md:px-8 lg:mx-8 lg:px-10">
+          <div className="flex items-center justify-between pt-4 text-base font-medium md:text-lg lg:text-xl">
+            <span className="text-white/70">{t("subtotal")}</span>
+            <Ghost className="text-white">$000.00 MXN</Ghost>
+          </div>
+          <div className="mt-4 w-full animate-pulse rounded-full bg-even-grass/40 py-3 text-base md:mt-5 md:py-4 md:text-lg lg:py-5 lg:text-xl">
+            <span className="invisible block text-center">{t("continueCta")}</span>
+          </div>
+          <div style={{ height: "max(1.5rem, env(safe-area-inset-bottom))" }} />
+        </div>
+      </>
+    ),
+  };
+}
+
+/**
+ * Animación de tarjeta del flujo de FlexBill: aquí solo se declaran los pasos, sus textos y la cabecera;
  * el motor, el esqueleto y la navegación viven en `@even/ui` y `@even/ui/diner`.
  */
 export default function FlowTransition({ children }: { children: ReactNode }) {
@@ -38,6 +99,14 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const addCard = useTranslations("AddCardPage");
   const terms = useTermsText();
   const equalSplit = useEqualSplitScreen(state.tableNumber);
+  const order = useOrderScreen(
+    tc("tableLabel", { table: state.tableNumber }),
+    unpaidDishes,
+    state.tableSummary?.data?.data?.status === "paid",
+  );
+  // Inicio de sesión: "auth-selection" (con "Continuar como invitado") desde la cuenta; "auth" desde el menú o tras pagar.
+  const authSelection = useAuthScreen("selection", { guest: true });
+  const authLogin = useAuthScreen("login", { example: true });
 
   const context = tc("tableLabel", { table: state.tableNumber });
   const payCta = tc("payCtaAmount", { amount: "$000.00" });
@@ -57,6 +126,7 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   });
 
   const screens: Record<(typeof FLOW_STEPS)[number], FlowScreenSource> = {
+    order,
     cart: cartScreen({ context, title: cart("confirmYourOrder"), labels: { myCart: cart("myCart") } }),
     "payment-options": paymentOptionsScreen({ context, title: options("title"), amountLabel: options("heroLabel") }),
     // La propina cambia de forma según lo que se paga (`type=`): dividir cuenta, elegir monto o artículos.
@@ -94,6 +164,8 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
         saveCta: addCard("saveCta"),
       },
     }),
+    "auth-selection": authSelection,
+    auth: authLogin,
   };
 
   return (

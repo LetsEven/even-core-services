@@ -36,3 +36,34 @@ export {
   type ChatStatus,
 } from "./PepperMascots";
 export { default as SupportTab } from "./SupportTab";
+export {
+  default as AuthStepCard,
+  AUTH_FLOW_STEPS,
+  AUTH_STEP_NAMES,
+  useAuthScreen,
+  type AuthCopyOverrides,
+  type AuthScreenOptions,
+  type AuthStepCardProps,
+  type AuthVariant,
+} from "./auth/AuthStepCard";
+export { default as AuthModalView, type AuthModalViewProps } from "./auth/AuthModalView";
+export { PhoneStepForm, VerifyStepForm, ProfileStepForm, type GuestLink } from "./auth/AuthSteps";
+export {
+  usePhoneAuth,
+  type AuthenticatedInfo,
+  type AuthResult,
+  type PhoneAuth,
+  type PhoneAuthOptions,
+  type PhoneAuthSession,
+  type PhoneAuthStep,
+  type ProfileFields,
+} from "./auth/usePhoneAuth";
+export {
+  COUNTRIES,
+  ageFromBirthDate,
+  birthDateFromAge,
+  formatPhoneInput,
+  formatPhoneNumber,
+  isProfileComplete,
+  unwrapProfile,
+} from "./auth/phone";

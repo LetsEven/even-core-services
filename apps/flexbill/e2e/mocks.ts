@@ -1,4 +1,4 @@
-import { mockPaymentsApi, type MockResponse, type PaymentsApiOptions } from "@even/e2e";
+import { mockAuthApi, mockPaymentsApi, type AuthApiOptions, type MockResponse, type PaymentsApiOptions } from "@even/e2e";
 import type { Page } from "@playwright/test";
 
 /**
@@ -14,6 +14,8 @@ export const TABLE = "12";
 export const SESSION = "e2e-table-session";
 const TABLE_QUERY = `table=${TABLE}&session=${SESSION}`;
 export const MENU_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/menu?${TABLE_QUERY}`;
+export const ORDER_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/order?${TABLE_QUERY}`;
+export const AUTH_SELECTION_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/auth-selection?${TABLE_QUERY}`;
 export const PAYMENT_OPTIONS_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/payment-options?${TABLE_QUERY}`;
 
 /** Pagar la cuenta completa de la mesa: $360 de consumo sin propina ni comisión. */
@@ -164,4 +166,17 @@ export async function mockFlexBillApi(page: Page, { walletOrder, payments }: Fle
 
   // Se registra después para que tenga prioridad sobre las rutas de arriba.
   return mockPaymentsApi(page, { ...payments, apiUrl: API_URL });
+}
+
+/**
+ * Inicio de sesión por SMS y registro de invitado de FlexBill (mock compartido de `@even/e2e`, más unirse a la
+ * mesa). Se llama después de `mockFlexBillApi`.
+ */
+export function mockFlexBillAuthApi(page: Page, options: Pick<AuthApiOptions, "profile"> = {}) {
+  const tablePath = String.raw`\/restaurants\/\d+\/branches\/\d+\/tables\/[^/]+`;
+  return mockAuthApi(page, {
+    apiUrl: API_URL,
+    ...options,
+    extra: [["POST", new RegExp(`^${tablePath}\\/join$`), { success: true, data: {} }]],
+  });
 }

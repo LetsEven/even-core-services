@@ -13,7 +13,7 @@ import {
   type FlowScreen,
   type FlowScreenSource,
 } from "@even/ui";
-import { FlowTransitionProvider, useEqualSplitScreen, useTermsText } from "@even/ui/diner";
+import { FlowTransitionProvider, useAuthScreen, useEqualSplitScreen, useTermsText } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import MenuHeader from "@/app/components/headers/MenuHeader";
@@ -94,6 +94,9 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const equalSplit = useEqualSplitScreen(tableNumber);
   const context = tc("tableLabel", { table: tableNumber ?? "" });
   const order = useOrderScreen(context);
+  // "auth-selection" lleva "Continuar como invitado"; "auth" (menú / tras pagar) muestra el número de ejemplo.
+  const authSelection = useAuthScreen("selection", { guest: true });
+  const authLogin = useAuthScreen("login", { example: true });
 
   const tipLabels = { total: tip("totalLabel"), tip: tip("tipLabel"), totalToPay: tc("totalToPay"), payCta: tc("payCta") };
   const tipProps = { context, title: tip("subtitle") };
@@ -147,6 +150,8 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
         saveCta: addCard("saveCta"),
       },
     }),
+    "auth-selection": authSelection,
+    auth: authLogin,
   };
 
   return (

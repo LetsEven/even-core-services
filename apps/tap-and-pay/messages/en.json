@@ -56,9 +56,6 @@
     "cancelPaymentCta": "Cancel payment",
     "successMessage": "Your payment was processed successfully"
   },
-  "AuthPage": {
-    "phoneExamplePrefix": "Example:"
-  },
   "CardSelectionPage": {
     "errorSelectPaymentMethod": "Please select a payment method",
     "errorCardNotFound": "Selected card not found",

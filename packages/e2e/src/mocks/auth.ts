@@ -28,9 +28,11 @@ export async function mockAuthApi(page: Page, { apiUrl = E2E_API_URL, profile = 
     ["GET", /^\/profiles\/me$/, { success: true, data: { profile } }],
     ["POST", /^\/profiles$/, { success: true, data: created }],
     ["POST", /^\/guests$/, ok],
-    // Al iniciar sesión se pasan las tarjetas y los pedidos del invitado a la cuenta.
+    // Al iniciar sesión se pasan tarjetas, pedidos y carrito del invitado a la cuenta y se buscan sus descuentos.
     ["POST", /^\/payment-methods\/migrate-from-guest$/, ok],
     ["PUT", /^\/orders\/link-user$/, ok],
+    ["POST", /^\/cart\/migrate$/, ok],
+    ["GET", /^\/user-discounts\/active$/, { success: true, data: [] }],
     ...extra,
   ];
 

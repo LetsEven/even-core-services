@@ -30,6 +30,11 @@ export type PhoneAuthSession = {
   profile?: { firstName?: string | null; lastName?: string | null; birthDate?: string | null } | null;
   /** Con sesión y perfil completo desde el paso del teléfono, terminar de inmediato en vez de pedir el número otra vez. */
   skipIfComplete?: boolean;
+  /**
+   * `false` si tras verificar el código decide `hasProfile` (el contexto de la app aún puede traer un perfil
+   * incompleto en ese momento): la sesión solo actúa al llegar a la pantalla ya autenticado. Por defecto `true`.
+   */
+  decideAfterVerify?: boolean;
 };
 
 export type PhoneAuthOptions = {
@@ -107,6 +112,7 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
   const session = options.session;
   useEffect(() => {
     if (!session || session.isLoading || !session.isAuthenticated || step === "profile" || finishedRef.current) return;
+    if (step === "verify" && session.decideAfterVerify === false) return;
     if (isProfileComplete(session.profile)) {
       if (step === "verify" || session.skipIfComplete) {
         finishedRef.current = true;

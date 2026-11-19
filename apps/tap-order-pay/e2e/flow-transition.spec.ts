@@ -59,15 +59,7 @@ test.describe("transición de tarjeta del flujo de compra", () => {
 test.describe("transición de tarjeta del acceso (auth)", () => {
   test("el carrito anima hacia el acceso y vuelve; con teléfono y código termina en la confirmación", async ({ page }) => {
     await mockTapOrderFlowApi(page, { cartItems: cartWithClubSandwich });
-    await mockAuthApi(page, {
-      apiUrl: API_URL,
-      profile: { firstName: "Ana", birthDate: "1996-01-01" },
-      // Con sesión, el carrito del invitado pasa a la cuenta y se buscan descuentos del usuario.
-      extra: [
-        ["POST", /^\/cart\/migrate$/, { success: true, data: {} }],
-        ["GET", /^\/user-discounts\/active$/, { success: true, data: [] }],
-      ],
-    });
+    await mockAuthApi(page, { apiUrl: API_URL, profile: { firstName: "Ana", birthDate: "1996-01-01" } });
     await page.goto(CART_URL);
     await expect(page.getByText("Club sándwich", { exact: false }).first()).toBeVisible();
 

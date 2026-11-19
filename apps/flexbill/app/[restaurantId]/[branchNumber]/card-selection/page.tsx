@@ -1,6 +1,7 @@
 "use client";
 
 import { PaymentResult, sheetClasses, useFlowStepReady } from "@even/ui";
+import { CardSelectionBody, FlowHero } from "@/app/components/flow-skeletons";
 import { IVA_FACTOR, IVA_RATE } from "@/app/constants/fiscal";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useTranslations } from "next-intl";
@@ -1714,55 +1715,18 @@ export default function CardSelectionPage() {
         />
 
         <div className="w-full flex-1 flex flex-col">
-          {/* Título skeleton */}
-          <div className={sheetClasses.hero}>
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
-            </div>
-          </div>
+          <FlowHero step="card-selection" />
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden`}>
-              <div className="flex-1 overflow-y-auto py-8 pb-[120px] flex flex-col gap-4">
-                {/* Total row */}
-                <div className="flex justify-between items-center">
-                  <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                  <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                </div>
-
-                {/* Label métodos de pago */}
-                <div className="h-4 w-36 bg-tone-200 rounded-full animate-pulse mt-1" />
-
-                {/* Card skeleton 1 */}
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-                {/* Card skeleton 2 */}
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-
-                {/* Botón agregar tarjeta */}
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-              </div>
+            <div className={`${sheetClasses.card} overflow-hidden z-50`}>
+              <CardSelectionBody />
             </div>
-          </div>
-        </div>
-
-        {/* Barra inferior fija — skeleton */}
-        <div
-          className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-        >
-          <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
-            <div className="flex flex-col gap-1.5">
-              <div className="h-3 w-16 bg-tone-200 rounded-full animate-pulse" />
-              <div className="h-6 w-28 bg-tone-200 rounded-full animate-pulse" />
-            </div>
-            <div className="h-12 w-36 bg-tone-200 rounded-full animate-pulse" />
           </div>
         </div>
       </div>
     );
   }
 
-  // Mostrar error de validación si existe
   if (validationError) {
     return <ValidationError errorType={validationError as any} />;
   }

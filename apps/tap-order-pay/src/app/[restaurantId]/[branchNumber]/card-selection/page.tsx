@@ -1,6 +1,7 @@
 "use client";
 
 import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { CardSelectionBody, FlowHero } from "@/components/flow-skeletons";
 import { useCart } from "@/context/CartContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
 import { usePayment } from "@/context/PaymentContext";
@@ -1390,45 +1391,15 @@ export default function CardSelectionPage() {
   if (isLoadingInitial || isLoadingProvider) {
     return (
       <div className="min-h-dvh brand-evergreen flex flex-col app-root">
-        <div className="fixed fixed-col top-0 z-50">
-          <MenuHeaderBack />
-        </div>
-        <div className="h-20" />
+        <MenuHeaderBack />
+
         <div className="w-full flex-1 flex flex-col">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
-            </div>
-          </div>
+          <FlowHero step="card-selection" />
+
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden`}>
-              <div className="flex-1 overflow-y-auto py-8 pb-30 flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <div className="h-4 w-20 bg-tone-200 rounded-full animate-pulse" />
-                  <div className="h-4 w-24 bg-tone-200 rounded-full animate-pulse" />
-                </div>
-                <div className="flex justify-between items-center border-t pt-3">
-                  <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                  <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                </div>
-                <div className="h-4 w-36 bg-tone-200 rounded-full animate-pulse mt-1" />
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-                <div className="h-12 w-full bg-tone-100 rounded-full animate-pulse" />
-              </div>
+            <div className={`${sheetClasses.card} overflow-hidden z-50`}>
+              <CardSelectionBody />
             </div>
-          </div>
-        </div>
-        <div
-          className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-        >
-          <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
-            <div className="flex flex-col gap-1.5">
-              <div className="h-3 w-16 bg-tone-200 rounded-full animate-pulse" />
-              <div className="h-6 w-28 bg-tone-200 rounded-full animate-pulse" />
-            </div>
-            <div className="h-12 w-36 bg-tone-200 rounded-full animate-pulse" />
           </div>
         </div>
       </div>

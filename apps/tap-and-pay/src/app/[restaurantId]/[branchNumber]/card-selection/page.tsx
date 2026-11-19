@@ -1,6 +1,7 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { CardSelectionBody } from "@/app/components/flow-skeletons";
 import { useSearchParams, useParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -115,6 +116,8 @@ export default function CardSelectionPage() {
   // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
   const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  // El esqueleto de la transición se queda hasta que carguen los métodos de pago.
+  useFlowStepReady(!isLoadingInitial && !authLoading);
   const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
@@ -1222,8 +1225,19 @@ export default function CardSelectionPage() {
           <MenuHeader />
         </div>
         <div className="h-20"></div>
-        <div className="w-full flex-1 flex items-center justify-center">
-          <Loader2 className="size-10 text-white animate-spin" />
+        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
+          <div className={sheetClasses.hero}>
+            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
+              <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
+                {t("selectPaymentMethodTitle")}
+              </h1>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className={`${sheetClasses.card} overflow-hidden`}>
+              <CardSelectionBody />
+            </div>
+          </div>
         </div>
       </div>
     );

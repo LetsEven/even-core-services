@@ -27,6 +27,8 @@ export type FlowCardProps = {
   animateHeight?: boolean;
   /** Duración (ms) de la animación de altura. */
   heightMs?: number;
+  /** Clases del contenedor (p. ej. margen lateral cuando la vista real mete la hoja dentro de un `px-4`). */
+  className?: string;
   children: ReactNode;
 };
 
@@ -43,11 +45,12 @@ export function FlowCard({
   cardStyle,
   animateHeight,
   heightMs = 350,
+  className,
   children,
 }: FlowCardProps) {
   const anchored = layout === "anchored";
   return (
-    <div className={cn("flex w-full flex-1 flex-col", anchored && "justify-end")}>
+    <div className={cn("flex w-full flex-1 flex-col", anchored && "justify-end", className)}>
       {hero != null && (
         <div style={heroStyle}>
           <div className={cn(sheetClasses.hero, heroClassName)}>{hero}</div>

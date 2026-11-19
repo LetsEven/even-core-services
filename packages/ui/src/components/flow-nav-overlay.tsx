@@ -16,6 +16,8 @@ export type FlowScreen = {
   cardClassName?: string;
   /** `fill` (por defecto) o `anchored`: la vista real mide lo que su contenido y queda pegada abajo. */
   layout?: FlowCardLayout;
+  /** Clases del contenedor de la hoja (margen lateral, etc.). */
+  frameClassName?: string;
   /** @deprecated usa `layout: "anchored"`. */
   anchored?: boolean;
 };
@@ -57,6 +59,7 @@ export function FlowNavOverlay({ screens, header }: FlowNavOverlayProps) {
       <div className="app-col relative flex min-h-0 flex-1 flex-col">
         <div>{header}</div>
         <FlowCard
+          className={screen.frameClassName}
           layout={screen.layout ?? (screen.anchored ? "anchored" : "fill")}
           hero={screen.hero}
           heroClassName={screen.heroClassName}

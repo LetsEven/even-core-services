@@ -113,6 +113,13 @@ export {
   RECEIPT_PRINT_MS,
   type ReceiptPaperProps,
 } from "./components/receipt-paper";
+export {
+  PaidReceipt,
+  type PaidReceiptDish,
+  type PaidReceiptLabels,
+  type PaidReceiptPayment,
+  type PaidReceiptProps,
+} from "./components/paid-receipt";
 export { MenuProductCard, type MenuProductCardProps } from "./components/menu/menu-product-card";
 export { MenuQuickAddModal, type MenuQuickAddModalProps } from "./components/menu/menu-quick-add-modal";
 export { MenuRestaurantHeading, type MenuRestaurantHeadingProps } from "./components/menu/menu-restaurant-heading";

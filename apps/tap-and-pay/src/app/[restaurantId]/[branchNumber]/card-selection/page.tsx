@@ -1247,13 +1247,6 @@ export default function CardSelectionPage() {
               true,
             );
           }}
-          onCancel={() => {
-            setShowPaymentAnimation(false);
-            setIsProcessing(false);
-            setIsAnimatingOut(false);
-            setPendingPaymentData(null);
-            setConfirmedPaymentId(null);
-          }}
           onConfirm={handleConfirmPayment}
           onTimeout={handleConfirmTimeout}
         />

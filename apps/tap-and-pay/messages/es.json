@@ -22,7 +22,8 @@
     "confirmCta": "Confirmar",
     "defaultUserName": "Usuario",
     "showMoreOptions": "+{count} más",
-    "showLessOptions": "Ver menos"
+    "showLessOptions": "Ver menos",
+    "invoiceCta": "Facturar"
   },
   "HomePage": {
     "heroTitle": "Bienvenido a Even",
@@ -117,7 +118,15 @@
     "createAccountCta": "Crear cuenta",
     "createAccountDetail": "Regístrate y ahorra tiempo en futuros pagos",
     "continueAsGuestCta": "Continuar sin registrarme",
-    "continueAsGuestDetail": "Ver los detalles de mi pago"
+    "continueAsGuestDetail": "Ver los detalles de mi pago",
+    "paidStamp": "PAGADO",
+    "tapForDetail": "Toca para ver el detalle",
+    "receiptItemsCount": "{count, plural, one {# artículo} other {# artículos}}",
+    "tipLabelPrefix": "+ Propina",
+    "installmentsLabel": "+ Financiamiento ({months} meses)",
+    "closeCta": "Cerrar",
+    "heroTitle": "¡Gracias por tu pedido!",
+    "goToOrderCta": "Ver mi cuenta"
   },
   "OrderAnimation": {
     "processingPaymentMessage": "Estamos procesando tu pago",

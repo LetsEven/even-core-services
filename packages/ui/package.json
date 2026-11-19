@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./theme.css": "./src/styles/theme.css",
-    "./diner.css": "./src/styles/diner.css"
+    "./diner.css": "./src/styles/diner.css",
+    "./diner": "./src/diner/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -21,11 +22,18 @@
     "tailwind-merge": "^3.7.0"
   },
   "peerDependencies": {
+    "next": "*",
+    "next-intl": "*",
     "react": "^19",
     "react-dom": "^19"
   },
+  "peerDependenciesMeta": {
+    "next": { "optional": true },
+    "next-intl": { "optional": true }
+  },
   "devDependencies": {
     "@even/eslint-config": "*",
+    "@even/payments": "*",
     "@even/tsconfig": "*",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

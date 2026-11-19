@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Minus, Plus, ShoppingBag, ChevronDown } from "lucide-react";
@@ -43,6 +43,7 @@ export default function CartView() {
     setOrderNotes,
     updateOrderNotes,
   } = useCart();
+  useFlowStepReady(!cartState.isLoading);
   const { state: tableState, submitOrder } = useTable();
   const { navigateWithTable } = useTableNavigation();
   const restaurantData = getRestaurantData();

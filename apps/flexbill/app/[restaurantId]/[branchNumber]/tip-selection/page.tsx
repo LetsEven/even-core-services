@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -474,6 +474,9 @@ export default function TipSelectionPage() {
   };
 
   const paymentDetails = getPaymentDetails();
+
+  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
+  useFlowStepReady(!isLoading);
 
   // Mostrar error de validación si existe
   if (validationError) {

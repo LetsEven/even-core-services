@@ -555,7 +555,10 @@
     "itemNameConsumption": "Consumo",
     "itemNameTip": "Propina",
     "itemNameServiceFee": "Cargo por servicio",
-    "showOtherCards": "Ver otras tarjetas ({count})"
+    "showOtherCards": "Ver otras tarjetas ({count})",
+    "paymentResultProcessing": "Procesando tu pago",
+    "paymentResultSuccess": "¡Pago realizado!",
+    "paymentResultFailed": "No se pudo completar el pago"
   },
   "HomePage": {
     "heroTitle": "Bienvenido",

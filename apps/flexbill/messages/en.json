@@ -555,7 +555,10 @@
     "itemNameConsumption": "Order",
     "itemNameTip": "Tip",
     "itemNameServiceFee": "Service fee",
-    "showOtherCards": "Show other cards ({count})"
+    "showOtherCards": "Show other cards ({count})",
+    "paymentResultProcessing": "Processing your payment",
+    "paymentResultSuccess": "Payment complete!",
+    "paymentResultFailed": "We couldn't complete the payment"
   },
   "HomePage": {
     "heroTitle": "Welcome",

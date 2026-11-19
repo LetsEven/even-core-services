@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { setMenuCategory, takeMenuPosition, useModalBackClose } from "@even/ui";
 import MenuHeader from "../headers/MenuHeader";
 import PepperIcon from "../UI/PepperIcon";
-import LanguageToggleButton from "../UI/LanguageToggleButton";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 import MenuCategory from "./MenuCategory";
 import {
   Search,

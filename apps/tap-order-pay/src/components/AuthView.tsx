@@ -8,7 +8,7 @@ import { authService } from "@/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
 import TermsCheckbox from "@/components/TermsCheckbox";
 import { useModalBackClose } from "@even/ui";
-import LanguageToggleButton from "@/components/UI/LanguageToggleButton";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 
 type Step = "phone" | "verify" | "profile";
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
 
-const LanguageToggleButton = lazy(() => import("../UI/LanguageToggleButton"));
+const LanguageToggleButton = lazy(() => import("@even/i18n/language-toggle-button"));
 
 interface DashboardHeaderProps {
   onClose?: () => void;

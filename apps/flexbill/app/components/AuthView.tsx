@@ -7,7 +7,7 @@ import Flag from "react-world-flags";
 import { useAuth } from "@/app/context/AuthContext";
 import TermsCheckbox from "@/app/components/TermsCheckbox";
 import { useModalBackClose } from "@even/ui";
-import LanguageToggleButton from "@/app/components/UI/LanguageToggleButton";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 
 type Step = "phone" | "verify" | "profile";
 

@@ -6,7 +6,7 @@ import {
   LOCALE_COOKIE,
   isLocale,
   negotiateLocale,
-} from "./locale";
+} from "@even/i18n/locale";
 
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();

@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { sheetClasses, useFlowStepReady } from "@even/ui";
 import { DEFAULT_TIP_PERCENTAGE, readCheckoutDraft, writeCheckoutDraft } from "@even/cart";
 import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 import { useParams } from "next/navigation";
@@ -101,6 +101,9 @@ export default function OrderConfirmPage() {
   const handleContinue = () => {
     navigateWithTable(`/card-selection?tipAmount=${tipAmount.toFixed(2)}`);
   };
+
+  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
+  useFlowStepReady(!isLoadingInitial);
 
   if (isLoadingInitial) {
     return (

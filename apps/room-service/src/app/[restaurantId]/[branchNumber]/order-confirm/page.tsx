@@ -1,6 +1,7 @@
 "use client";
 
 import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { FlowHero, OrderConfirmBody } from "@/components/flow-skeletons";
 import { DEFAULT_TIP_PERCENTAGE, readCheckoutDraft, writeCheckoutDraft } from "@even/cart";
 import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 import { useParams } from "next/navigation";
@@ -112,36 +113,11 @@ export default function OrderConfirmPage() {
 
         <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
           <div className="flex flex-col relative w-full">
-            <div className={sheetClasses.hero}>
-              <div className="py-6 px-8 flex flex-col justify-center">
-                <div className="h-8 w-2/3 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
-              </div>
-            </div>
+            <FlowHero step="order-confirm" />
 
-            <div className={`${sheetClasses.card} flex-none py-8 gap-4`}>
-              <div className="flex justify-between items-center">
-                <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse" />
-                <div className="h-4 w-24 bg-tone-200 rounded-full animate-pulse" />
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse shrink-0" />
-                <div className="grid grid-cols-5 gap-2 flex-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-8 bg-tone-100 rounded-full animate-pulse"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center border-t pt-4">
-                <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-                <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
-              </div>
-
-              <div className="h-12 w-full bg-tone-200 rounded-full animate-pulse" />
+            {/* Cuerpo skeleton: mismas filas que la tarjeta cargada */}
+            <div className={`${sheetClasses.card} flex-none py-8`}>
+              <OrderConfirmBody />
             </div>
           </div>
         </div>

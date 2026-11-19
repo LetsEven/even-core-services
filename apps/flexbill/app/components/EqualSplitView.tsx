@@ -177,7 +177,7 @@ export default function EqualSplitView({
       </div>
 
       <div
-        className="bg-white rounded-t-4xl mx-4 md:mx-6 lg:mx-8 px-8 md:px-10 lg:px-12 pt-6"
+        className="sheet-card bg-white rounded-t-4xl px-8 md:px-10 lg:px-12 pt-6"
         style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-center justify-between">

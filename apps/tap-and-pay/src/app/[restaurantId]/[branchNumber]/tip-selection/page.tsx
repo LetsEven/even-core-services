@@ -281,7 +281,7 @@ export default function TipSelectionPage() {
 
         <div className="w-full flex-1 flex flex-col justify-end">
           <div className="fixed fixed-col bottom-0 z-50 flex justify-center">
-            <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
+            <div className="flex flex-col relative w-full">
               <div className={sheetClasses.hero}>
                 <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
                   <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
@@ -293,7 +293,7 @@ export default function TipSelectionPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6">
+              <div className="sheet-card bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6">
                 <TipBody />
               </div>
             </div>
@@ -365,12 +365,12 @@ export default function TipSelectionPage() {
           <div
             className={`${
               paymentType === "select-items"
-                ? "flex flex-col relative px-4 md:px-6 lg:px-8"
+                ? "flex flex-col relative"
                 : "fixed fixed-col bottom-0 z-50 flex justify-center"
             }`}
           >
             <div
-              className={`flex flex-col relative ${paymentType !== "select-items" ? "px-4 md:px-6 lg:px-8 w-full" : ""}`}
+              className={`flex flex-col relative ${paymentType !== "select-items" ? "w-full" : ""}`}
             >
               <div
                 className={sheetClasses.hero}
@@ -387,7 +387,7 @@ export default function TipSelectionPage() {
               </div>
 
               <div
-                className={`bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6 ${
+                className={`sheet-card bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6 ${
                   paymentType === "select-items"
                     ? `${isUnderMinimum ? "pb-75" : "pb-60"}`
                     : ""

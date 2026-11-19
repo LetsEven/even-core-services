@@ -139,6 +139,18 @@ export {
   type PaymentResultTiming,
 } from "./components/payment-result";
 export { FlowCard, type FlowCardLayout, type FlowCardProps } from "./components/flow-card";
+export {
+  CardSelectionSkeleton,
+  CartSkeleton,
+  FlowHeroBlock,
+  OrderConfirmSkeleton,
+  PaymentOptionsSkeleton,
+  StepHero,
+  TipSkeleton,
+  type TipSkeletonLabels,
+  type CardSelectionSkeletonLabels,
+  type OrderConfirmSkeletonLabels,
+} from "./components/flow-skeletons";
 export { FlowNavOverlay, FlowSkeletonBody, FlowTitle, Ghost, type FlowNavOverlayProps, type FlowScreen } from "./components/flow-nav-overlay";
 export {
   DEFAULT_FLOW_TIMING,

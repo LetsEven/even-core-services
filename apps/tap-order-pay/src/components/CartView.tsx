@@ -1,6 +1,7 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { useFlowStepReady } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 import { useRef, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Minus, Plus, ShoppingBag, ChevronDown } from "lucide-react";
@@ -173,29 +174,19 @@ export default function CartView() {
     <div className="min-h-dvh brand-evergreen flex flex-col app-root">
       <MenuHeaderBack />
 
-      <div className="w-full flex-1 flex flex-col">
-        <div className={sheetClasses.hero}>
-          {cartState.items.length === 0 ? (
+      <FlowStepCard
+        step="cart"
+        // Sin artículos solo se muestra el contexto, sin título.
+        hero={
+          cartState.items.length === 0 ? (
             <div className="pt-6 md:pt-8 lg:pt-10 pb-2 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
+              <p className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                 {tc("tableLabel", { table: tableState.tableNumber ?? "" })}
-              </h1>
+              </p>
             </div>
-          ) : (
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
-                {tc("tableLabel", { table: tableState.tableNumber ?? "" })}
-              </h1>
-              <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("confirmYourOrder")}
-              </h2>
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 h-full flex flex-col overflow-hidden">
-          {/* Cart Items */}
-          <div className={`${sheetClasses.card} overflow-hidden`}>
+          ) : undefined
+        }
+      >
             {/* Scrollable content */}
             <div
               ref={scrollContainerRef}
@@ -492,9 +483,7 @@ export default function CartView() {
                 )}
               </div>
             )}
-          </div>
-        </div>
-      </div>
+      </FlowStepCard>
 
       <RestaurantClosedModal
         isOpen={showClosedModal}

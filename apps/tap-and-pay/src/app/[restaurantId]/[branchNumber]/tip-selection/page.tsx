@@ -1,14 +1,12 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
-import { TipBody } from "@/app/components/flow-skeletons";
+import { EqualSplitView, FlowStepCard } from "@even/ui/diner";
 import { useSearchParams, useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import MenuHeader from "@/app/components/headers/MenuHeader";
-import EqualSplitView from "@/app/components/EqualSplitView";
 import { CircleAlert, X } from "lucide-react";
 import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
@@ -42,8 +40,6 @@ export default function TipSelectionPage() {
   const [isLoading, setIsLoading] = useState(
     () => !state.order?.items || state.order.items.length === 0,
   );
-  // El esqueleto de la transición se queda hasta que la cuenta esté cargada.
-  useFlowStepReady(!isLoading);
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
 
   const loadSplitStatus = async () => {
@@ -268,37 +264,16 @@ export default function TipSelectionPage() {
     );
   }
 
+  const isSelectItems = paymentType === "select-items";
+
+  // Aún sin la cuenta: el esqueleto del paso (su forma depende del tipo de pago) y la transición espera.
   if (isLoading) {
     return (
       <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
-        <div
-          className="fixed fixed-col top-0 z-50"
-          style={{ zIndex: 999 }}
-        >
-          <MenuHeader />
-        </div>
-        <div className="h-20"></div>
-
-        <div className="w-full flex-1 flex flex-col justify-end">
-          <div className="fixed fixed-col bottom-0 z-50 flex justify-center">
-            <div className="flex flex-col relative w-full">
-              <div className={sheetClasses.hero}>
-                <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-                  <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
-                    {tc("tableLabel", { table: tableNumber ?? "" })}
-                  </h1>
-                  <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                    {t("subtitle")}
-                  </h1>
-                </div>
-              </div>
-
-              <div className="sheet-card bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6">
-                <TipBody />
-              </div>
-            </div>
-          </div>
-        </div>
+        <MenuHeader />
+        <FlowStepCard step="tip-selection" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
@@ -306,93 +281,47 @@ export default function TipSelectionPage() {
   return (
     <div
       className={`min-h-dvh bg-even-evergreen flex flex-col app-root ${
-        paymentType === "select-items"
-          ? "overflow-y-auto overflow-x-hidden"
-          : ""
+        isSelectItems ? "overflow-y-auto overflow-x-hidden" : ""
       }`}
     >
-      {/* Fixed Header - solo cuando NO es select-items */}
-      {paymentType !== "select-items" && (
-        <>
-          <div
-            className="fixed fixed-col top-0 z-50"
-            style={{ zIndex: 999 }}
-          >
-            <MenuHeader />
-          </div>
-          <div className="h-20"></div>
-        </>
-      )}
+      <MenuHeader />
 
       {paymentType === "equal-shares" ? (
-        <EqualSplitView
-          tableNumber={tableNumber}
-          remaining={unpaidAmount}
-          share={baseAmount}
-          people={equalPeopleCount}
-          onPeopleChange={(n) => setEqualPeople(String(n))}
-          tipPercentage={tipPercentage}
-          showCustomTip={showCustomTipInput}
-          customTip={customTip}
-          onTipPercentage={(p) => {
-            handleTipPercentage(p);
-            setShowCustomTipInput(false);
-          }}
-          onCustomTipOpen={() => {
-            setShowCustomTipInput(true);
-            setTipPercentage(0);
-          }}
-          onCustomTipChange={handleCustomTipChange}
-          tipAmount={tipAmount}
-          total={paymentAmount}
-          isUnderMinimum={isUnderMinimum}
-          disabled={baseAmount <= 0 || isUnderMinimum}
-          onContinue={handleContinueToCardSelection}
-        />
+          <EqualSplitView
+            tableNumber={tableNumber}
+            remaining={unpaidAmount}
+            share={baseAmount}
+            people={equalPeopleCount}
+            onPeopleChange={(n) => setEqualPeople(String(n))}
+            tipPercentage={tipPercentage}
+            showCustomTip={showCustomTipInput}
+            customTip={customTip}
+            onTipPercentage={(p) => {
+              handleTipPercentage(p);
+              setShowCustomTipInput(false);
+            }}
+            onCustomTipOpen={() => {
+              setShowCustomTipInput(true);
+              setTipPercentage(0);
+            }}
+            onCustomTipChange={handleCustomTipChange}
+            tipAmount={tipAmount}
+            total={paymentAmount}
+            isUnderMinimum={isUnderMinimum}
+            disabled={baseAmount <= 0 || isUnderMinimum}
+            onContinue={handleContinueToCardSelection}
+          />
       ) : (
-        <div
-          className={`w-full flex-1 flex flex-col ${
-            paymentType === "select-items" ? "justify-between" : "justify-end"
-          }`}
-        >
-          {/* Header que hace scroll - solo cuando es select-items */}
-          {paymentType === "select-items" && (
-            <div className="relative z-50 shrink-0">
-              <MenuHeader />
-            </div>
-          )}
-
-          <div
-            className={`${
-              paymentType === "select-items"
-                ? "flex flex-col relative"
-                : "fixed fixed-col bottom-0 z-50 flex justify-center"
-            }`}
+        <>
+          <FlowStepCard
+            step="tip-selection"
+            // Con artículos la tarjeta crece con la lista y deja lugar al resumen fijo de abajo.
+            cardClassName={
+              isSelectItems
+                ? `flex-none px-0 md:px-0 lg:px-0 pt-8 md:pt-10 lg:pt-12 ${isUnderMinimum ? "pb-75" : "pb-60"}`
+                : undefined
+            }
           >
-            <div
-              className={`flex flex-col relative ${paymentType !== "select-items" ? "w-full" : ""}`}
-            >
-              <div
-                className={sheetClasses.hero}
-                style={{ zIndex: 0 }}
-              >
-                <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-                  <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
-                    {tc("tableLabel", { table: tableNumber ?? "" })}
-                  </h1>
-                  <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                    {t("subtitle")}
-                  </h1>
-                </div>
-              </div>
-
-              <div
-                className={`sheet-card bg-white rounded-t-4xl relative z-10 flex flex-col pt-8 md:pt-10 lg:pt-12 pb-4 md:pb-6 ${
-                  paymentType === "select-items"
-                    ? `${isUnderMinimum ? "pb-75" : "pb-60"}`
-                    : ""
-                }`}
-              >
                 {/* Seleccionar monto a pagar para choose-amount */}
                 {paymentType === "choose-amount" && (
                   <div className="px-8 md:px-10 lg:px-12 mb-6">
@@ -732,9 +661,7 @@ export default function TipSelectionPage() {
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
+          </FlowStepCard>
 
           {/* Tip Selection Section - Fijo cuando es select-items */}
           {paymentType === "select-items" && (
@@ -896,7 +823,7 @@ export default function TipSelectionPage() {
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Modal de resumen del total */}

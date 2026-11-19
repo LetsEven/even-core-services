@@ -1,7 +1,6 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
-import { FlowHero, OrderConfirmBody } from "@/components/flow-skeletons";
+import { FlowStepCard } from "@even/ui/diner";
 import { DEFAULT_TIP_PERCENTAGE, readCheckoutDraft, writeCheckoutDraft } from "@even/cart";
 import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 import { useParams } from "next/navigation";
@@ -103,27 +102,14 @@ export default function OrderConfirmPage() {
     navigateWithTable(`/card-selection?tipAmount=${tipAmount.toFixed(2)}`);
   };
 
-  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
-  useFlowStepReady(!isLoadingInitial);
-
+  // Aún sin los datos de la cuenta: el esqueleto del paso y la transición espera.
   if (isLoadingInitial) {
     return (
       <div className="min-h-dvh brand-evergreen flex flex-col app-root">
-        <div className="fixed fixed-col top-0 z-50">
-          <MenuHeaderBack />
-        </div>
-        <div className="h-20" />
-
-        <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
-          <div className="flex flex-col relative w-full">
-            <FlowHero step="order-confirm" />
-
-            {/* Cuerpo skeleton: mismas filas que la tarjeta cargada */}
-            <div className={`${sheetClasses.card} flex-none py-8`}>
-              <OrderConfirmBody />
-            </div>
-          </div>
-        </div>
+        <MenuHeaderBack />
+        <FlowStepCard step="order-confirm" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
@@ -134,24 +120,10 @@ export default function OrderConfirmPage() {
 
   return (
     <div className="min-h-dvh brand-evergreen flex flex-col app-root">
-      {/* Header fijo */}
-      <div className="fixed fixed-col top-0 z-50">
-        <MenuHeaderBack />
-      </div>
-      <div className="h-20" />
+      <MenuHeaderBack />
 
       {/* Tarjeta anclada al fondo */}
-      <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
-        <div className="flex flex-col relative w-full">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                {t("title")}
-              </h1>
-            </div>
-          </div>
-
-          <div className={`${sheetClasses.card} flex-none py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]`}>
+      <FlowStepCard step="order-confirm">
             {/* Subtotal */}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between items-center">
@@ -268,9 +240,7 @@ export default function OrderConfirmPage() {
             >
               {t("continueCta")}
             </button>
-          </div>
-        </div>
-      </div>
+      </FlowStepCard>
     </div>
   );
 }

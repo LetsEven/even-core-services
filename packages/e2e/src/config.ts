@@ -24,6 +24,10 @@ export interface EvenPlaywrightOptions {
 export function createPlaywrightConfig({ port, env, overrides }: EvenPlaywrightOptions) {
   const ci = !!process.env.CI;
   const baseURL = `http://localhost:${port}`;
+  // Chromium ya instalado en el equipo (p. ej. entornos sin red para `playwright install`): en CI no se define.
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+
+  const { use: overrideUse, ...restOverrides } = overrides ?? {};
 
   return defineConfig({
     testDir: "./e2e",
@@ -38,6 +42,8 @@ export function createPlaywrightConfig({ port, env, overrides }: EvenPlaywrightO
       timezoneId: "America/Mexico_City",
       trace: "on-first-retry",
       screenshot: "only-on-failure",
+      ...(executablePath ? { launchOptions: { executablePath } } : {}),
+      ...overrideUse,
     },
     projects: [
       { name: "chromium", use: { ...devices["Desktop Chrome"] } },
@@ -57,6 +63,6 @@ export function createPlaywrightConfig({ port, env, overrides }: EvenPlaywrightO
         ...env,
       },
     },
-    ...overrides,
+    ...restOverrides,
   });
 }

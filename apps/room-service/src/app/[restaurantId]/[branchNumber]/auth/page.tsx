@@ -44,7 +44,7 @@ export default function AuthPage() {
   const t = useTranslations("Auth");
   const tp = useTranslations("AuthPage");
   const router = useRouter();
-  const { navigateWithRoom } = useRoomNavigation();
+  const { navigateWithRoom, back } = useRoomNavigation();
   const params = useParams();
   const searchParams = useSearchParams();
   const { setRestaurantId, setBranchNumber } = useRestaurant();
@@ -246,8 +246,8 @@ export default function AuthPage() {
   // luego dispara un `popstate` duplicado en el siguiente back real.
   const goToPreviousStep = useCallback(() => {
     if (step === "profile") return;
-    router.back();
-  }, [step, router]);
+    back();
+  }, [step, back]);
 
   // Helper function to handle post-auth redirects
   const handleAuthRedirect = () => {

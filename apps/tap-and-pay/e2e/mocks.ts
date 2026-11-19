@@ -14,6 +14,8 @@ export const TABLE = "1";
 export const ORDER_ID = "order_e2e_1";
 export const ORDER_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/order?table=${TABLE}`;
 
+export const PAYMENT_OPTIONS_URL = `/${RESTAURANT_ID}/${BRANCH_NUMBER}/payment-options?table=${TABLE}`;
+
 /** Cuenta completa de $360 sin propina: 2 × Tacos al pastor de $180. */
 export const CARD_SELECTION_URL =
   `/${RESTAURANT_ID}/${BRANCH_NUMBER}/card-selection?table=${TABLE}` +

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Phone, ChevronDown, User } from "lucide-react";
 import Flag from "react-world-flags";
 import { useTranslations } from "next-intl";
@@ -44,8 +43,7 @@ const ageFromBirthDate = (birthDate?: string): number | "" => {
 export default function AuthSelectionPage() {
   const t = useTranslations("Auth");
   const tp = useTranslations("AuthSelectionPage");
-  const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const {
     user,
     profile,
@@ -112,8 +110,8 @@ export default function AuthSelectionPage() {
   // que volver un step o salir de verdad de la página.
   const goToPreviousStep = useCallback(() => {
     if (step === "profile") return; // no se puede retroceder, ya verificado
-    router.back();
-  }, [step, router]);
+    back();
+  }, [step, back]);
 
   useEffect(() => {
     const handlePopState = () => {

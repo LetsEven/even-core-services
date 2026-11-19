@@ -2,7 +2,7 @@
 
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -31,9 +31,8 @@ export default function MenuHeader({
   showBackButton = true,
 }: MenuHeaderProps) {
   const t = useTranslations("MenuHeader");
-  const router = useRouter();
   const { state } = useTable();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const pathname = usePathname();
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
   const [usersImages, setUsersImages] = useState<Record<string, UserImageData>>(
@@ -57,7 +56,7 @@ export default function MenuHeader({
     if (pathname?.includes("payment-options")) {
       navigateWithTable("/order");
     } else {
-      router.back();
+      back("/order");
     }
   };
 
@@ -159,6 +158,7 @@ export default function MenuHeader({
         <div className="flex items-center z-10">
           {showBackButton ? (
             <div
+              data-testid="flow-back"
               onClick={handleBack}
               className="size-10 md:size-12 lg:size-14 bg-white border border-tone-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-tone-200 active:scale-95 transition-transform duration-200"
             >

@@ -33,7 +33,7 @@ const countries: Country[] = [
 export default function AuthPage() {
   const t = useTranslations("Auth");
   const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const params = useParams();
   const searchParams = useSearchParams();
   const { setRestaurantId, setBranchNumber } = useRestaurant();
@@ -392,7 +392,7 @@ export default function AuthPage() {
   // consumir que luego dispara doble en el próximo back real.
   const goToPreviousStep = () => {
     if (step === "profile") return; // no se puede retroceder, ya autenticado
-    router.back();
+    back();
   };
 
   return (

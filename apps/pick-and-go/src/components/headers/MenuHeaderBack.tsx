@@ -1,18 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { ChevronLeft } from "lucide-react";
 
 export default function MenuHeaderBack({
   onBack,
 }: { onBack?: () => void } = {}) {
-  const router = useRouter();
+  const { back } = useNavigation();
 
   const handleBack = () => {
     if (onBack) {
       onBack();
     } else {
-      router.back();
+      // Vuelve a la vista anterior (con animación si es un paso del flujo); sin historial, al menú.
+      back("/menu");
     }
   };
 
@@ -22,6 +23,7 @@ export default function MenuHeaderBack({
         {/* Back */}
         <div className="flex items-center z-10">
           <div
+            data-testid="flow-back"
             onClick={handleBack}
             className="size-10 md:size-12 lg:size-14 bg-white border border-tone-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-tone-200 active:scale-95 transition-transform duration-200"
           >

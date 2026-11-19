@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useFlowNavigation } from "@even/ui/diner";
 import { useCallback } from "react";
 import { useRestaurant } from "../context/RestaurantContext";
-import { startRouteTransition } from "@even/ui";
-import { FLOW_STEPS } from "../lib/flow-steps";
 
 /**
  * Hook de navegación para Pick & Go
@@ -12,6 +11,7 @@ import { FLOW_STEPS } from "../lib/flow-steps";
  */
 export function useNavigation() {
   const router = useRouter();
+  const flow = useFlowNavigation();
   const params = useParams();
   const searchParams = useSearchParams();
   const { restaurantId } = useRestaurant();
@@ -27,27 +27,22 @@ export function useNavigation() {
    * @param path - Ruta a navegar (ej: "/menu", "/cart", "/dish/123")
    * @param options - Opciones de navegación
    */
-  const navigateWithRestaurantId = useCallback(
+  // Arma la URL con restaurantId y branch (query param) según lo que se conozca.
+  const buildUrl = useCallback(
     (
       path: string,
       options?: {
-        replace?: boolean;
         branchNumber?: number | string | null;
         preserveBranch?: boolean;
       }
     ) => {
-      const { replace = false, branchNumber, preserveBranch = true } = options || {};
+      const { branchNumber, preserveBranch = true } = options || {};
 
       if (!currentRestaurantId) {
         console.warn(
           "No restaurant ID found, navigating without restaurant context"
         );
-        if (replace) {
-          router.replace(path);
-        } else {
-          router.push(path);
-        }
-        return;
+        return path;
       }
 
       // Construir la URL completa con restaurantId
@@ -66,15 +61,45 @@ export function useNavigation() {
         fullPath = `${fullPath}${separator}branch=${finalBranchNumber}`;
       }
 
-      startRouteTransition(fullPath, () => {
-        if (replace) {
-          router.replace(fullPath);
-        } else {
-          router.push(fullPath);
-        }
-      }, FLOW_STEPS);
+      return fullPath;
     },
-    [router, currentRestaurantId, currentBranchNumber]
+    [currentRestaurantId, currentBranchNumber]
+  );
+
+  /**
+   * Navegar manteniendo el contexto del restaurante y branch. Entre pasos del flujo de compra la navegación
+   * lleva la animación de tarjeta.
+   * @param path - Ruta a navegar (ej: "/menu", "/cart", "/dish/123")
+   * @param options - Opciones de navegación
+   */
+  const navigateWithRestaurantId = useCallback(
+    (
+      path: string,
+      options?: {
+        replace?: boolean;
+        branchNumber?: number | string | null;
+        preserveBranch?: boolean;
+      }
+    ) => {
+      const url = buildUrl(path, options);
+      if (options?.replace) {
+        flow.replace(url);
+      } else {
+        flow.push(url);
+      }
+    },
+    [buildUrl, flow]
+  );
+
+  /**
+   * Volver a la vista anterior (con animación si ambas son del flujo). Sin historial previo (entró directo a la
+   * vista) navega a `fallbackPath`, con el contexto del restaurante.
+   */
+  const back = useCallback(
+    (fallbackPath?: string) => {
+      flow.back(fallbackPath ? buildUrl(fallbackPath) : undefined);
+    },
+    [flow, buildUrl]
   );
 
   /**
@@ -100,19 +125,9 @@ export function useNavigation() {
   );
 
   /**
-   * Navegar hacia atrás con contexto
-   * Si no hay restaurantId, usa router.back()
-   * Si hay restaurantId, navega al menú principal
+   * Navegar hacia atrás con contexto: a la vista anterior, o al menú principal si no hay historial
    */
-  const goBack = useCallback(() => {
-    if (!currentRestaurantId) {
-      router.back();
-      return;
-    }
-
-    // Navegar al menú principal del restaurante
-    navigateWithRestaurantId("/menu");
-  }, [router, currentRestaurantId, navigateWithRestaurantId]);
+  const goBack = useCallback(() => back("/menu"), [back]);
 
   /**
    * Construir URL completa con restaurantId sin navegar
@@ -192,6 +207,7 @@ export function useNavigation() {
     // Navegación general
     navigateWithRestaurantId,
     goBack,
+    back,
     getUrlWithRestaurantId,
     changeBranch,
 

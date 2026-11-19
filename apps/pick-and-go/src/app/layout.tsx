@@ -16,7 +16,6 @@ import { PepperProvider } from "@/context/PepperContext";
 import AuthCartSync from "@/components/AuthCartSync";
 import TermsUpdateToast from "@/components/TermsUpdateToast";
 import EnvBadge from "@/components/EnvBadge";
-import RouteTransitionGate from "@/components/RouteTransitionGate";
 import EcartPaySdk from "@/components/EcartPaySdk";
 
 const dmMono = DM_Mono({
@@ -71,7 +70,6 @@ export default async function RootLayout({
       >
         <EcartPaySdk />
         <EnvBadge />
-        <RouteTransitionGate />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
             <TermsUpdateToast />

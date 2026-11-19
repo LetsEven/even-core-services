@@ -55,6 +55,7 @@ npm run typecheck
 npm run lint
 npm run test
 npm run e2e          # Playwright (la primera vez: npx playwright install chromium)
+                     # con un Chromium ya instalado: PLAYWRIGHT_CHROMIUM_EXECUTABLE=/ruta/a/chromium npm run e2e
 ```
 
 Para una sola app: `npx turbo run dev --filter=checkout-demo`.
@@ -72,6 +73,27 @@ test("muestra el error del backend", async ({ page, paymentsApi }) => {
   await page.goto("/pagos");
 });
 ```
+
+## Transición de tarjeta del flujo de pago
+
+Las vistas de comensal con forma "título verde + tarjeta blanca" (carrito, confirmación, opciones de pago, propina, pago,
+nombre del invitado, agregar tarjeta...) se animan entre sí hacia adelante y hacia atrás: la tarjeta actual baja y sube la
+del paso destino con un esqueleto que mide lo mismo que la vista real. Todo vive en `@even/ui`; las apps solo declaran
+configuración:
+
+- `FlowTransitionProvider` (`@even/ui/diner`) va en el layout de la ruta del flujo y recibe `steps`, `screens` (título,
+  esqueleto y forma de cada paso, armadas con `cartScreen`, `tipScreen`, `cardSelectionScreen`... de `@even/ui`) y el
+  `header` del esqueleto. Ver `apps/*/**/FlowTransition.tsx`.
+- `useFlowNavigation()` devuelve `{ push, replace, back(fallbackUrl?) }`: envuelve el router de Next con la animación.
+  Los hooks de navegación de cada app arman la URL y delegan en él; todos los botones de volver usan `back()`, no
+  `router.back()`.
+- `FlowStepCard` pinta la hoja de la vista real con la misma pantalla que el esqueleto y, con `loading`, muestra el
+  esqueleto mientras faltan datos (`useFlowStepReady` mantiene la transición hasta entonces).
+- El gesto/botón atrás del navegador (`popstate`) anima solo la entrada. Sin vista anterior conocida, `back(fallbackUrl)`
+  navega al respaldo.
+
+No tienen forma de tarjeta (y no se animan): menú, detalle de platillo, dashboard, Pepper, `auth`/`auth-selection`
+(formularios sobre el verde, con subpasos propios) y `payment-success`/`order` de FlexBill (ticket/recibo).
 
 ## Comisiones
 

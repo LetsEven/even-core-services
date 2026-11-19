@@ -1,7 +1,7 @@
 "use client";
 
-import { PaymentResult, sheetClasses, useFlowStepReady } from "@even/ui";
-import { CardSelectionBody, FlowHero } from "@/app/components/flow-skeletons";
+import { PaymentResult } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 import { IVA_FACTOR, IVA_RATE } from "@/app/constants/fiscal";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useTranslations } from "next-intl";
@@ -1704,8 +1704,6 @@ export default function CardSelectionPage() {
   const MINIMUM_AMOUNT = 20;
   const isUnderMinimum = totalAmountCharged < MINIMUM_AMOUNT;
 
-  useFlowStepReady(!(isLoadingInitial || isLoadingProvider));
-
   if (isLoadingInitial || isLoadingProvider) {
     return (
       <div className="min-h-dvh brand-evergreen flex flex-col app-root">
@@ -1713,16 +1711,9 @@ export default function CardSelectionPage() {
           restaurant={restaurantData}
           tableNumber={state.tableNumber}
         />
-
-        <div className="w-full flex-1 flex flex-col">
-          <FlowHero step="card-selection" />
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden z-50`}>
-              <CardSelectionBody />
-            </div>
-          </div>
-        </div>
+        <FlowStepCard step="card-selection" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
@@ -1763,17 +1754,7 @@ export default function CardSelectionPage() {
         />
 
         {/* Contenido scrolleable */}
-        <div className="w-full flex-1 flex flex-col">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                {t("selectPaymentMethodTitle")}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden z-50`}>
+        <FlowStepCard step="card-selection">
               <div className="flex-1 overflow-y-auto py-8 pb-[120px]">
                 {/* Payment Summary */}
                 <div className="space-y-2 mb-6">
@@ -2039,9 +2020,7 @@ export default function CardSelectionPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+        </FlowStepCard>
 
         {/* Barra inferior fija — botón pagar */}
         <div

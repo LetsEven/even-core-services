@@ -34,7 +34,7 @@ export default function AuthPage() {
   const t = useTranslations("Auth");
   const tp = useTranslations("AuthPage");
   const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const params = useParams();
   const searchParams = useSearchParams();
   const {
@@ -162,8 +162,8 @@ export default function AuthPage() {
   // que volver un step o salir de verdad de la página.
   const goToPreviousStep = useCallback(() => {
     if (step === "profile") return; // no se puede retroceder, ya verificado
-    router.back();
-  }, [step, router]);
+    back();
+  }, [step, back]);
 
   useEffect(() => {
     const handlePopState = () => {

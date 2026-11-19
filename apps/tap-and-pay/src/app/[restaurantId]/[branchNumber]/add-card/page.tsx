@@ -1,11 +1,11 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 // NOTE: This page is maintained for users who want to manage payment methods separately
 // Main payment flows now use EcartPay SDK directly in payment/page.tsx and add-tip/page.tsx
 
 import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { useGuest, useIsGuest } from "@/app/context/GuestContext";
@@ -36,8 +36,7 @@ const YEARS = getCardExpiryYears();
 
 function AddCardContent() {
   const t = useTranslations("AddCardPage");
-  const { navigateWithTable } = useTableNavigation();
-  const router = useRouter();
+  const { navigateWithTable, back } = useTableNavigation();
   const searchParams = useSearchParams();
   const isGuest = useIsGuest();
   const { guestId, tableNumber } = useGuest();
@@ -148,7 +147,7 @@ function AddCardContent() {
         if (fromSavedCards) {
           navigateWithTable("/saved-cards");
         } else {
-          router.back();
+          back("/order");
         }
       } else {
         const rawError =
@@ -256,20 +255,7 @@ function AddCardContent() {
       <div className="min-h-screen bg-even-evergreen flex flex-col app-root">
         <MenuHeader />
 
-        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col justify-end">
-          <div className={sheetClasses.hero}>
-            <div className="pt-6 md:pt-7 lg:pt-8 pb-12 md:pb-14 lg:pb-16 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 mt-2 md:mt-3 lg:mt-4 mb-2 md:mb-3 lg:mb-4">
-                {t("title")}
-              </h2>
-              <p className="text-white/80 text-sm md:text-base lg:text-lg">
-                {t("subtitle")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex-1 h-full flex flex-col">
-            <div className={`${sheetClasses.card} min-h-full py-6 md:py-8 lg:py-10`}>
+        <FlowStepCard step="add-card">
               {/* Test Card Helper */}
               {process.env.NODE_ENV === "development" && (
                 <div className="bg-info-50 border border-info-200 rounded-lg p-4 mb-4">
@@ -406,9 +392,7 @@ function AddCardContent() {
                   {errors.general}
                 </p>
               )}
-            </div>
-          </div>
-        </div>
+        </FlowStepCard>
       </div>
     </>
   );

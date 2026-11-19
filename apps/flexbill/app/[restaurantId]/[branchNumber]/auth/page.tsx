@@ -32,7 +32,7 @@ export default function AuthPage() {
   const t = useTranslations("Auth");
   const tp = useTranslations("AuthPage");
   const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const params = useParams();
   const searchParams = useSearchParams();
   const { setRestaurantId, setBranchNumber } = useRestaurant();
@@ -372,14 +372,14 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-new brand-evergreen flex flex-col justify-center items-center px-4">
-      {/* Back Button — siempre pasa por router.back() (y por lo tanto por
+      {/* Back Button — siempre pasa por back("/menu") (y por lo tanto por
           el listener de popstate de arriba) en vez de tocar el step
           directamente, para no dejar una entrada de historial sin
           consumir que luego dispare el popstate handler por duplicado. */}
       <button
         onClick={() => {
           if (step === "profile") return; // no se puede regresar, ya autenticado
-          router.back();
+          back("/menu");
         }}
         disabled={step === "profile"}
         className={`absolute top-4 md:top-6 lg:top-8 left-4 md:left-6 lg:left-8 p-2 md:p-3 text-white rounded-full transition-all active:bg-white/10 z-20 ${
@@ -569,7 +569,7 @@ export default function AuthPage() {
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => back("/menu")}
                 className="text-sm text-white hover:text-tone-200 underline"
               >
                 {t("changeNumber")}

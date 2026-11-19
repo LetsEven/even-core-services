@@ -1,7 +1,6 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
-import { PaymentOptionsBody } from "@/app/components/flow-skeletons";
+import { FlowStepCard } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -180,9 +179,6 @@ export default function PaymentOptionsPage() {
     }
   }, [isLoading, unpaidAmount, navigateWithTable]);
 
-  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
-  useFlowStepReady(!isLoading);
-
   // Mostrar error de validación si existe
   if (validationError) {
     return <ValidationError errorType={validationError as any} />;
@@ -314,22 +310,9 @@ export default function PaymentOptionsPage() {
           restaurant={restaurantData}
           tableNumber={state.tableNumber}
         />
-
-        <div className="w-full flex-1 flex flex-col">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("title")}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex-1 h-full flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col overflow-hidden px-6 md:px-8 lg:px-10">
-              <PaymentOptionsBody />
-            </div>
-          </div>
-        </div>
+        <FlowStepCard step="payment-options" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
@@ -341,19 +324,9 @@ export default function PaymentOptionsPage() {
         tableNumber={state.tableNumber}
       />
 
-      <div className="w-full flex-1 flex flex-col">
-        <div className={sheetClasses.hero}>
-          <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-            <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-              {t("title")}
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex-1 h-full flex flex-col overflow-hidden">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col overflow-hidden">
+      <FlowStepCard step="payment-options">
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pb-35 md:pb-40 lg:pb-45">
+            <div className="flex-1 overflow-y-auto pb-35 md:pb-40 lg:pb-45">
               {/* 4 OPCIONES PRINCIPALES DE PAGO */}
               <div className="flex flex-col mt-4 md:mt-6">
                 {/* Opción 1: Pagar cuenta restante */}
@@ -507,9 +480,7 @@ export default function PaymentOptionsPage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
+      </FlowStepCard>
       <POSBlockedModal
         isOpen={showPOSModal}
         onClose={() => setShowPOSModal(false)}

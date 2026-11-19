@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -13,7 +13,6 @@ import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { useGuest, useIsGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { CardSelectionBody, FlowHero } from "@/components/flow-skeletons";
 import HighDemandBanner from "@/components/modals/HighDemandBanner";
 import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
@@ -1522,29 +1521,17 @@ export default function CardSelectionPage() {
   // Calcular si está bajo el mínimo usando el total con propina, comisiones, etc.
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
 
-  useFlowStepReady(!(isLoadingInitial || isLoadingProvider));
-
   if (isLoadingInitial || isLoadingProvider) {
     return (
       <div className="app-col relative z-10 isolate min-h-dvh flex flex-col">
-        <div className="fixed fixed-col top-0 z-50">
-          <MenuHeaderBack
-            onBack={() =>
-              navigateWithRestaurantId("/order-confirm", { replace: true })
-            }
-          />
-        </div>
-        <div className="h-20" />
-
-        <div className="w-full flex-1 flex flex-col">
-          <FlowHero step="card-selection" />
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden`}>
-              <CardSelectionBody />
-            </div>
-          </div>
-        </div>
+        <MenuHeaderBack
+          onBack={() =>
+            navigateWithRestaurantId("/order-confirm", { replace: true })
+          }
+        />
+        <FlowStepCard step="card-selection" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
@@ -1678,17 +1665,7 @@ export default function CardSelectionPage() {
           />
 
         {/* Contenido de página (flujo normal, scrolleable) */}
-        <div className="w-full flex-1 flex flex-col">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                {t("selectPaymentMethodTitle")}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} z-50 overflow-hidden`}>
+        <FlowStepCard step="card-selection">
               <div className={`flex-1 overflow-y-auto py-8 pb-[120px]`}>
                 {/* Resumen compacto del pedido */}
                 <div className="mb-3 space-y-2">
@@ -1955,9 +1932,7 @@ export default function CardSelectionPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+        </FlowStepCard>
 
         {/* Barra inferior fija — total + botón pagar */}
         <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">

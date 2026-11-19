@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Phone, User, ChevronDown, ArrowLeft } from "lucide-react";
 import Flag from "react-world-flags";
 import { useTranslations } from "next-intl";
@@ -45,8 +44,7 @@ const countries: Country[] = [
 
 export default function AuthSelectionPage() {
   const t = useTranslations("Auth");
-  const router = useRouter();
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithRestaurantId, back } = useNavigation();
   const { validationError } = useValidateAccess();
   const {
     verifyOTP,
@@ -117,8 +115,8 @@ export default function AuthSelectionPage() {
   // que volver un step o salir de verdad de la página.
   const goToPreviousStep = useCallback(() => {
     if (step === "profile") return; // no se puede retroceder, ya autenticado
-    router.back();
-  }, [step, router]);
+    back();
+  }, [step, back]);
 
   useEffect(() => {
     const handlePopState = () => {

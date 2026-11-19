@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { FlowStepCard } from "@even/ui/diner";
 import { useState, useRef, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCart } from "@/app/context/CartContext";
@@ -172,17 +173,7 @@ export default function UserPage() {
         tableNumber={state.tableNumber}
       />
 
-      <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
-        <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
-          <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-            <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-              {t("title")}
-            </h2>
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 pb-32">
+      <FlowStepCard step="user">
             <div className="flex flex-col items-center w-full pt-32 md:pt-36 lg:pt-40">
               <div className="mb-6 md:mb-8">
                 <h2 className="text-lg md:text-xl lg:text-2xl font-medium text-black">
@@ -217,9 +208,7 @@ export default function UserPage() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+      </FlowStepCard>
 
       {/* Fixed bottom button */}
       <div className="fixed fixed-col bottom-0 z-50 flex justify-center py-4 md:py-5 lg:py-6">

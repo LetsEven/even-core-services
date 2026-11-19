@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 import { useParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -8,7 +8,6 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { FlowHero, OrderConfirmBody } from "@/components/flow-skeletons";
 import { X, ChevronRight, Loader2, CircleAlert } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useBranch } from "@/context/BranchContext";
@@ -198,55 +197,28 @@ export default function OrderConfirmPage() {
     navigateWithRestaurantId(`/card-selection?${qs.toString()}`);
   };
 
-  // La transición del flujo no retira el esqueleto hasta tener los datos que definen la altura.
-  useFlowStepReady(!isLoadingInitial);
-
+  // Aún sin el carrito: el esqueleto del paso y la transición espera.
   if (isLoadingInitial) {
     return (
       <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
-        <div className="fixed fixed-col top-0 z-50">
-          <MenuHeaderBack
-            onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
-          />
-        </div>
-        <div className="h-20" />
-
-        <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
-          <div className="flex flex-col relative w-full">
-            <FlowHero step="order-confirm" />
-
-            {/* Cuerpo skeleton: mismas filas que la tarjeta cargada */}
-            <div className={`${sheetClasses.card} flex-none py-8`}>
-              <OrderConfirmBody />
-            </div>
-          </div>
-        </div>
+        <MenuHeaderBack
+          onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
+        />
+        <FlowStepCard step="order-confirm" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
 
   return (
     <div className="relative z-10 isolate h-screen overflow-hidden flex flex-col">
-      {/* Header fijo */}
-      <div className="fixed fixed-col top-0 z-50">
-        <MenuHeaderBack
-            onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
-          />
-      </div>
-      <div className="h-20" />
+      <MenuHeaderBack
+        onBack={() => navigateWithRestaurantId("/cart", { replace: true })}
+      />
 
       {/* Tarjeta anclada al fondo */}
-      <div className="fixed fixed-col bottom-0 z-40 flex justify-center">
-        <div className="flex flex-col relative w-full">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 px-8 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                {t("title")}
-              </h1>
-            </div>
-          </div>
-
-          <div className={`${sheetClasses.card} flex-none py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]`}>
+      <FlowStepCard step="order-confirm">
             {/* Sucursal */}
             {branches.length > 0 && (
               <div
@@ -398,9 +370,7 @@ export default function OrderConfirmPage() {
                 ? tc("selectBranch")
                 : t("continueCta")}
             </button>
-          </div>
-        </div>
-      </div>
+      </FlowStepCard>
 
       {/* Modal de confirmación de cambio de sucursal */}
       {showBranchChangeConfirmModal && (

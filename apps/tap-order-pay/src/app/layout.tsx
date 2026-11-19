@@ -14,7 +14,6 @@ import { GuestProvider } from "@/context/GuestContext";
 import { PaymentProvider } from "@/context/PaymentContext";
 import { PepperProvider } from "@/context/PepperContext";
 import Script from "next/script";
-import RouteTransitionGate from "@/components/RouteTransitionGate";
 
 // DM Mono — voz funcional de Even (UI, body, labels, datos)
 const dmMono = DM_Mono({
@@ -72,7 +71,6 @@ export default async function RootLayout({
           src="https://pay.ecart.com/sdk/pay.js"
           strategy="afterInteractive"
         />
-        <RouteTransitionGate />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
             <TermsUpdateToast />

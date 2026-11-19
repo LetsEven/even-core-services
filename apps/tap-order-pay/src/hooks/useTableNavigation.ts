@@ -1,13 +1,12 @@
 "use client";
 
-import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import { useCallback } from "react";
-import { startRouteTransition } from "@even/ui";
-import { FLOW_STEPS } from "@/lib/flow-steps";
+import { useFlowNavigation } from "@even/ui/diner";
 import { useRestaurant } from "../context/RestaurantContext";
 
 export function useTableNavigation() {
-  const router = useRouter();
+  const flow = useFlowNavigation();
   const searchParams = useSearchParams();
   const params = useParams();
   const { restaurantId, branchNumber } = useRestaurant();
@@ -18,37 +17,23 @@ export function useTableNavigation() {
   const currentRestaurantId = params?.restaurantId || restaurantId;
   const currentBranchNumber = params?.branchNumber || branchNumber;
 
-  // Función para navegar manteniendo el parámetro table, restaurantId y branchNumber
-  const navigateWithTable = useCallback(
-    (path: string, replace: boolean = false) => {
+  // Arma la URL con restaurantId, branchNumber y table (según lo que se conozca).
+  const buildUrl = useCallback(
+    (path: string) => {
       if (!tableNumber) {
         console.warn(
           "No table number found in URL, navigating without table context"
         );
-        if (replace) {
-          router.replace(path);
-        } else {
-          router.push(path);
-        }
-        return;
+        return path;
       }
 
       if (!currentRestaurantId || !currentBranchNumber) {
         console.warn(
           "No restaurant ID or branch number found, navigating without full context"
         );
-        const separator = path.includes("?") ? "&" : "?";
-        const newUrl = `${path}${separator}table=${tableNumber}`;
-
-        if (replace) {
-          router.replace(newUrl);
-        } else {
-          router.push(newUrl);
-        }
-        return;
+        return `${path}${path.includes("?") ? "&" : "?"}table=${tableNumber}`;
       }
 
-      // Construir la URL con restaurantId, branchNumber y table
       // Si el path ya incluye la estructura completa, no agregarlo
       let fullPath = path;
       if (!path.startsWith(`/${currentRestaurantId}/${currentBranchNumber}/`)) {
@@ -58,30 +43,36 @@ export function useTableNavigation() {
       }
 
       // Verificar si ya existe un query string en el path
-      const separator = fullPath.includes("?") ? "&" : "?";
-      const newUrl = `${fullPath}${separator}table=${tableNumber}`;
-
-      startRouteTransition(newUrl, () => {
-        if (replace) {
-          router.replace(newUrl);
-        } else {
-          router.push(newUrl);
-        }
-      }, FLOW_STEPS);
+      return `${fullPath}${fullPath.includes("?") ? "&" : "?"}table=${tableNumber}`;
     },
-    [router, tableNumber, currentRestaurantId, currentBranchNumber]
+    [tableNumber, currentRestaurantId, currentBranchNumber]
   );
 
-  // Función para ir hacia atrás manteniendo el contexto de mesa
-  const goBack = useCallback(() => {
-    if (!tableNumber || !currentRestaurantId || !currentBranchNumber) {
-      router.back();
-      return;
-    }
+  // Función para navegar manteniendo el parámetro table, restaurantId y branchNumber.
+  // Entre pasos del flujo de compra la navegación lleva la animación de tarjeta.
+  const navigateWithTable = useCallback(
+    (path: string, replace: boolean = false) => {
+      const newUrl = buildUrl(path);
+      if (replace) {
+        flow.replace(newUrl);
+      } else {
+        flow.push(newUrl);
+      }
+    },
+    [buildUrl, flow]
+  );
 
-    // En lugar de router.back(), navegar a la página principal del menú
-    navigateWithTable("/menu");
-  }, [router, tableNumber, currentRestaurantId, currentBranchNumber, navigateWithTable]);
+  // Volver a la vista anterior (con animación si ambas son del flujo). Sin historial previo (entró directo a la
+  // vista) navega a `fallbackPath`, con el contexto de mesa.
+  const back = useCallback(
+    (fallbackPath?: string) => {
+      flow.back(fallbackPath ? buildUrl(fallbackPath) : undefined);
+    },
+    [flow, buildUrl]
+  );
+
+  // Volver con el menú de la mesa como respaldo.
+  const goBack = useCallback(() => back("/menu"), [back]);
 
   // Función para obtener URL completa con restaurantId, branchNumber y table parameter
   const getUrlWithTable = useCallback(
@@ -108,6 +99,7 @@ export function useTableNavigation() {
     branchNumber: currentBranchNumber,
     navigateWithTable,
     goBack,
+    back,
     getUrlWithTable,
     hasTable: !!tableNumber,
     hasRestaurant: !!currentRestaurantId,

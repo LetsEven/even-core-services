@@ -231,6 +231,7 @@ export default function ParticipantsHeader({
         {/* Back */}
         <div className="flex items-center z-10">
           <div
+            data-testid="flow-back"
             onClick={onBack}
             className="size-10 md:size-12 lg:size-14 bg-white border border-tone-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-tone-200 active:scale-95 transition-transform duration-200"
           >

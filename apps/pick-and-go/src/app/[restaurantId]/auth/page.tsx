@@ -31,7 +31,7 @@ const countries: Country[] = [
 export default function AuthPage() {
   const t = useTranslations("Auth");
   const router = useRouter();
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithRestaurantId, back } = useNavigation();
   const params = useParams();
   const { setRestaurantId } = useRestaurant();
   const {
@@ -355,7 +355,7 @@ export default function AuthPage() {
             sessionStorage.removeItem("authFromMenu");
             sessionStorage.removeItem("even-post-auth-redirect");
             sessionStorage.removeItem("pendingRestaurantId");
-            router.back();
+            back();
           }
         }}
         disabled={step === "profile"}

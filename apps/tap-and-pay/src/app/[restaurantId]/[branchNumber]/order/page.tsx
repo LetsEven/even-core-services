@@ -1,6 +1,6 @@
 "use client";
 
-import { sheetClasses } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 import { useCallback, useEffect, useState } from "react";
 import {
   Clock,
@@ -317,20 +317,7 @@ export default function OrderPage() {
         showBackButton={false}
       />
 
-      <div className="w-full flex-1 flex flex-col">
-        <div className={sheetClasses.hero}>
-          <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-            <h1 className="font-medium text-white/60 text-xl md:text-2xl lg:text-3xl">
-              {tc("tableLabel", { table: state.tableNumber ?? "" })}
-            </h1>
-            <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-              {t("subtitle")}
-            </h2>
-          </div>
-        </div>
-
-        <div className="flex-1 h-full flex flex-col overflow-hidden relative">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col overflow-hidden">
+      <FlowStepCard step="order" waiting={!initialLoadDone || state.isLoading}>
             {/* Mesa pagada completamente */}
             {state.order?.payment_status === "paid" ? (
               <div className="flex-1 flex items-center justify-center py-8 md:py-12 text-center">
@@ -369,7 +356,7 @@ export default function OrderPage() {
             ) : (
               <>
                 {/* Contenido scrollable */}
-                <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pb-45 md:pb-50 lg:pb-55">
+                <div className="flex-1 overflow-y-auto pb-45 md:pb-50 lg:pb-55">
                   {/* Items ordenados */}
                   <div className="w-full mx-auto pb-6 md:pb-8">
                     <div className="flex justify-center items-start relative mt-6 md:mt-8">
@@ -653,9 +640,7 @@ export default function OrderPage() {
                 )}
               </>
             )}
-          </div>
-        </div>
-      </div>
+      </FlowStepCard>
     </div>
   );
 }

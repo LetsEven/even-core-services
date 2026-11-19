@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
-import { usePendingFlowStep } from "../lib/route-transition";
+import { usePendingFlowTarget } from "../lib/route-transition";
 import { FlowCard, type FlowCardLayout } from "./flow-card";
 
 export type FlowScreen = {
@@ -22,9 +22,15 @@ export type FlowScreen = {
   anchored?: boolean;
 };
 
+/** Destino de la transición: paso, ruta completa y su query (p. ej. `type=equal-shares`). */
+export type FlowScreenContext = { step: string; path: string; params: URLSearchParams };
+
+/** Pantalla fija, o función cuando la forma del paso depende de la query del destino. */
+export type FlowScreenSource = FlowScreen | ((context: FlowScreenContext) => FlowScreen);
+
 export type FlowNavOverlayProps = {
   /** Pantalla de cada paso del flujo, por segmento de ruta. */
-  screens: Record<string, FlowScreen>;
+  screens: Record<string, FlowScreenSource>;
   /** Cabecera con el botón de volver (solo visual). */
   header: ReactNode;
 };
@@ -46,11 +52,19 @@ export function Ghost({ className, children }: { className?: string; children: R
  * Va en el layout de la ruta, junto con `RouteTransitionGate` en el layout raíz.
  */
 export function FlowNavOverlay({ screens, header }: FlowNavOverlayProps) {
-  const step = usePendingFlowStep();
-  const screen = step ? screens[step] : undefined;
-  if (!screen) return null;
+  const target = usePendingFlowTarget();
+  const source = target ? screens[target.step] : undefined;
+  if (!target || !source) return null;
+  const screen =
+    typeof source === "function"
+      ? source({ step: target.step, path: target.path, params: new URLSearchParams(target.path.split("?")[1] ?? "") })
+      : source;
   return (
-    <div className="fixed inset-0 z-1000 flex flex-col overflow-hidden bg-even-evergreen" aria-hidden>
+    <div
+      className="fixed inset-0 z-1000 flex flex-col overflow-hidden bg-even-evergreen"
+      aria-hidden
+      data-flow-overlay={target.step}
+    >
       <style>{`
         @keyframes flow-rise { from { transform: translateY(100%); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
         @keyframes flow-fade { from { opacity: 0; } to { opacity: 1; } }

@@ -3,6 +3,8 @@
 import { Loader2, Minus, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Ghost, type FlowScreen } from "../components/flow-nav-overlay";
+import { FlowStepCard } from "./FlowTransition";
 
 const TIP_OPTIONS = [0, 10, 15, 20];
 const MIN_PEOPLE = 2;
@@ -39,6 +41,8 @@ function useTweened(target: number) {
 }
 
 type Props = {
+  /** Paso del flujo cuya tarjeta pinta (por defecto la propina). */
+  step?: string;
   tableNumber: string | null | undefined;
   remaining: number;
   share: number;
@@ -112,7 +116,99 @@ function SplitRing({ people }: { people: number }) {
   );
 }
 
+/**
+ * Forma de la tarjeta de "dividir cuenta": título y anillo sobre el verde, controles en una tarjeta del alto de su
+ * contenido pegada abajo. La comparten la vista real y el esqueleto de la transición.
+ */
+const EQUAL_SPLIT_CARD =
+  "flex-none px-8 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-10 lg:px-12";
+
+const DISPLAY_FONT = { fontFamily: "var(--font-jakarta), system-ui, sans-serif" };
+
+function EqualSplitHero({
+  tableNumber,
+  title,
+  ring,
+  children,
+}: {
+  tableNumber: string | null | undefined;
+  title: React.ReactNode;
+  ring: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const tc = useTranslations("Common");
+  return (
+    <div className="flex flex-col">
+      <div className="px-6 pt-2 md:px-10">
+        <p className="text-base text-even-grass/80">{tc("tableLabel", { table: tableNumber ?? "" })}</p>
+        <h1 className="mt-1 text-3xl font-bold text-white md:text-4xl" style={DISPLAY_FONT}>
+          {title}
+        </h1>
+      </div>
+      <div className="flex items-center justify-center pt-6 pb-12">
+        <div className="relative size-64 md:size-72">
+          {ring}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Pantalla de "dividir cuenta" para la transición (esqueleto con las mismas medidas que la vista real).
+ * Se registra en `screens` como variante del paso de propina (`type=equal-shares`): la pantalla puede ser una función de la query del destino.
+ */
+export function useEqualSplitScreen(tableNumber: string | null | undefined): FlowScreen {
+  const t = useTranslations("TipSelectionPage");
+  return {
+    hero: (
+      <EqualSplitHero
+        tableNumber={tableNumber}
+        title={t("splitTitle")}
+        ring={<div aria-hidden className="size-full animate-pulse rounded-full border-[22px] border-white/10" />}
+      >
+        <Ghost className="text-sm md:text-base">{t("yourShareTitle")}</Ghost>
+        <Ghost className="text-5xl leading-tight font-bold md:text-6xl">$000.00</Ghost>
+        <Ghost className="text-sm md:text-base">{t("ofAmount", { amount: "000.00" })}</Ghost>
+      </EqualSplitHero>
+    ),
+    body: (
+      <>
+        <div className="flex items-center justify-between">
+          <div className="size-14 animate-pulse rounded-full bg-tone-100" />
+          <div className="flex items-baseline gap-2">
+            <Ghost className="text-4xl font-bold">2</Ghost>
+            <span className="text-lg text-even-evergreen">{t("peopleUnit")}</span>
+          </div>
+          <div className="size-14 animate-pulse rounded-full bg-even-grass/40" />
+        </div>
+        <div className="mt-5 flex items-center gap-4">
+          <span className="text-base font-medium whitespace-nowrap text-black md:text-lg lg:text-xl">{t("tipLabel")}</span>
+          <div className="grid flex-1 grid-cols-5 gap-2">
+            {["0%", "10%", "15%", "20%", "$"].map((label) => (
+              <div
+                key={label}
+                className="animate-pulse rounded-full border border-transparent bg-tone-100 py-1 md:py-1.5 lg:py-2"
+              >
+                <span className="invisible">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-tone-200 pt-5">
+          <Ghost className="text-3xl font-bold">$000.00</Ghost>
+          <div className="h-14 max-w-48 flex-1 animate-pulse rounded-full bg-even-grass/40" />
+        </div>
+      </>
+    ),
+    layout: "anchored",
+    cardClassName: EQUAL_SPLIT_CARD,
+  };
+}
+
 export default function EqualSplitView({
+  step = "tip-selection",
   tableNumber,
   remaining,
   share,
@@ -132,8 +228,7 @@ export default function EqualSplitView({
   onContinue,
 }: Props) {
   const t = useTranslations("TipSelectionPage");
-  const tc = useTranslations("Common");
-  const display = { fontFamily: "var(--font-jakarta), system-ui, sans-serif" };
+  const display = DISPLAY_FONT;
 
   const chipClass = (active: boolean) =>
     `py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
@@ -143,43 +238,18 @@ export default function EqualSplitView({
     }`;
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="px-6 md:px-10 pt-2">
-        <p className="text-even-grass/80 text-base">
-          {tc("tableLabel", { table: tableNumber ?? "" })}
-        </p>
-        <h1
-          className="text-white text-3xl md:text-4xl font-bold mt-1"
-          style={display}
-        >
-          {t("splitTitle")}
-        </h1>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center py-6">
-        <div className="relative size-64 md:size-72">
-          <SplitRing people={people} />
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-white/80 text-sm md:text-base">
-              {t("yourShareTitle")}
-            </span>
-            <span
-              className="text-white text-5xl md:text-6xl font-bold leading-tight"
-              style={display}
-            >
-              ${share.toFixed(2)}
-            </span>
-            <span className="text-white/80 text-sm md:text-base">
-              {t("ofAmount", { amount: remaining.toFixed(2) })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className="sheet-card bg-white rounded-t-4xl px-8 md:px-10 lg:px-12 pt-6"
-        style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-      >
+    <FlowStepCard
+      step={step}
+      layout="anchored"
+      cardClassName={EQUAL_SPLIT_CARD}
+      hero={<EqualSplitHero tableNumber={tableNumber} title={t("splitTitle")} ring={<SplitRing people={people} />}>
+        <span className="text-white/80 text-sm md:text-base">{t("yourShareTitle")}</span>
+        <span className="text-white text-5xl md:text-6xl font-bold leading-tight" style={display}>
+          ${share.toFixed(2)}
+        </span>
+        <span className="text-white/80 text-sm md:text-base">{t("ofAmount", { amount: remaining.toFixed(2) })}</span>
+      </EqualSplitHero>}
+    >
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -296,7 +366,7 @@ export default function EqualSplitView({
             )}
           </button>
         </div>
-      </div>
-    </div>
+    </FlowStepCard>
   );
 }
+

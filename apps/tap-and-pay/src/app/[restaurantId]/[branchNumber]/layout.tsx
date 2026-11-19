@@ -1,12 +1,7 @@
 import type { ReactNode } from "react";
-import FlowNavOverlay from "@/app/components/FlowNavOverlay";
+import FlowTransition from "@/app/components/FlowTransition";
 
-/** El esqueleto de la transición entre pasos del pago vive fuera de las rutas, para sobrevivir al cambio. */
+/** Transición de tarjeta entre los pasos del pago: historial, esqueleto del paso destino y navegación. */
 export default function BranchLayout({ children }: { children: ReactNode }) {
-  return (
-    <>
-      {children}
-      <FlowNavOverlay />
-    </>
-  );
+  return <FlowTransition>{children}</FlowTransition>;
 }

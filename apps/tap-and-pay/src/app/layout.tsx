@@ -12,7 +12,6 @@ import { PaymentProvider } from "@/app/context/PaymentContext";
 import { GuestProvider } from "./context/GuestContext";
 import { SocketProvider } from "./context/SocketContext";
 import Script from "next/script";
-import RouteTransitionGate from "@/app/components/RouteTransitionGate";
 
 const dmMono = DM_Mono({
   subsets: ["latin"],
@@ -81,7 +80,6 @@ export default async function RootLayout({
           strategy="afterInteractive"
         />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <RouteTransitionGate />
           <AuthProvider>
             <TermsUpdateToast />
             <GuestProvider>

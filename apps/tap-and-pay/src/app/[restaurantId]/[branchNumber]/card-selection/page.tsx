@@ -1,7 +1,6 @@
 "use client";
 
-import { sheetClasses, useFlowStepReady } from "@even/ui";
-import { CardSelectionBody } from "@/app/components/flow-skeletons";
+import { FlowStepCard } from "@even/ui/diner";
 import { useSearchParams, useParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -116,8 +115,6 @@ export default function CardSelectionPage() {
   // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
   const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-  // El esqueleto de la transición se queda hasta que carguen los métodos de pago.
-  useFlowStepReady(!isLoadingInitial && !authLoading);
   const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
@@ -1218,27 +1215,10 @@ export default function CardSelectionPage() {
   if (isLoadingInitial || authLoading) {
     return (
       <div className="min-h-dvh bg-even-evergreen flex flex-col app-root">
-        <div
-          className="fixed fixed-col top-0 z-50"
-          style={{ zIndex: 999 }}
-        >
-          <MenuHeader />
-        </div>
-        <div className="h-20"></div>
-        <div className="w-full flex-1 flex flex-col">
-          <div className={sheetClasses.hero}>
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("selectPaymentMethodTitle")}
-              </h1>
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden`}>
-              <CardSelectionBody />
-            </div>
-          </div>
-        </div>
+        <MenuHeader />
+        <FlowStepCard step="card-selection" loading>
+          {null}
+        </FlowStepCard>
       </div>
     );
   }
@@ -1292,19 +1272,7 @@ export default function CardSelectionPage() {
         </div>
 
         {/* Contenido scrolleable */}
-        <div
-          className={`w-full flex-1 flex flex-col ${isAnimatingOut ? "animate-slide-down" : ""}`}
-        >
-          <div className={sheetClasses.hero}>
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("selectPaymentMethodTitle")}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className={`${sheetClasses.card} overflow-hidden`}>
+        <FlowStepCard step="card-selection" className={isAnimatingOut ? "animate-slide-down" : undefined}>
               <div className="flex-1 overflow-y-auto py-8 pb-30">
                 {/* Payment Summary */}
                 <div className="space-y-2 mb-6">
@@ -1530,9 +1498,7 @@ export default function CardSelectionPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+        </FlowStepCard>
 
         {/* Barra inferior fija — botón pagar */}
         <div

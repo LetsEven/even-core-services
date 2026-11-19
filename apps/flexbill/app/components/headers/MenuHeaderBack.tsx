@@ -2,7 +2,7 @@
 
 import { Restaurant } from "../../interfaces/restaurante";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import ParticipantsHeader from "./ParticipantsHeader";
 
 interface MenuHeaderProps {
@@ -16,8 +16,7 @@ export default function MenuHeaderBack({
   tableNumber,
   onBack,
 }: MenuHeaderProps) {
-  const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const pathname = usePathname();
 
   const handleBack = () => {
@@ -26,7 +25,7 @@ export default function MenuHeaderBack({
     } else if (pathname?.includes("payment-options")) {
       navigateWithTable("/order");
     } else {
-      router.back();
+      back("/menu");
     }
   };
 

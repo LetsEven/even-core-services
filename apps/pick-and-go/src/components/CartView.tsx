@@ -6,7 +6,8 @@ import { Minus, Plus, ChevronDown, ShoppingBag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
-import { SheetCard, SheetFooter, SheetHero, SheetScreen, useFlowStepReady } from "@even/ui";
+import { SheetFooter, SheetScreen, useFlowStepReady } from "@even/ui";
+import { FlowStepCard } from "@even/ui/diner";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "@/context/AuthContext";
 import { useBranch } from "@/context/BranchContext";
@@ -165,29 +166,22 @@ export default function CartView({
         <MenuHeaderBack onBack={goToMenu} />
       </div>
 
-      <div className="w-full flex-1 flex flex-col">
-        <SheetHero className={onClose ? "bg-transparent p-0" : "p-0"} style={fadeStyle}>
-          {state.items.length === 0 ? (
+      <FlowStepCard
+        step="cart"
+        // En modo hoja (sobre el menú) la tarjeta sube y el título se desvanece con su propia animación.
+        heroStyle={fadeStyle}
+        cardStyle={cardStyle}
+        // Sin artículos solo se muestra el contexto, sin título.
+        hero={
+          state.items.length === 0 ? (
             <div className="pt-6 md:pt-8 lg:pt-10 pb-2 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
+              <p className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                 Pick & Go
-              </h1>
+              </p>
             </div>
-          ) : (
-            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
-                Pick & Go
-              </h1>
-              <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                {t("confirmYourOrder")}
-              </h2>
-            </div>
-          )}
-        </SheetHero>
-
-        <div className="flex-1 h-full flex flex-col overflow-hidden">
-          {/* Cart Items */}
-          <SheetCard className="overflow-hidden" style={cardStyle}>
+          ) : undefined
+        }
+      >
             {/* Scrollable content */}
             <div
               ref={scrollContainerRef}
@@ -468,9 +462,7 @@ export default function CartView({
                 )}
               </SheetFooter>
             )}
-          </SheetCard>
-        </div>
-      </div>
+      </FlowStepCard>
       <POSBlockedModal
         isOpen={showPOSModal}
         onClose={() => setShowPOSModal(false)}

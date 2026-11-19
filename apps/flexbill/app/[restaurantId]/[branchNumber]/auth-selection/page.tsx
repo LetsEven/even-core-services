@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Phone, ChevronDown, User } from "lucide-react";
 import Flag from "react-world-flags";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -36,8 +35,7 @@ const countries: Country[] = [
 export default function AuthSelectionPage() {
   const t = useTranslations("Auth");
   const tp = useTranslations("AuthSelectionPage");
-  const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithTable, back } = useTableNavigation();
   const { validationError } = useValidateAccess();
   const { state, joinTableWithoutOrdering } = useTable();
   const { guestName } = useGuest();
@@ -474,7 +472,7 @@ export default function AuthSelectionPage() {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => router.back()}
+                  onClick={() => back("/menu")}
                   className="text-sm text-white/80 hover:text-white underline"
                 >
                   {t("changeNumber")}

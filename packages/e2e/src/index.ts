@@ -8,3 +8,9 @@ export {
   type PaymentsApiOptions,
   type RecordedRequest,
 } from "./mocks/payments";
+export {
+  CARD_HEIGHT_TOLERANCE,
+  expectFlowTransition,
+  type FlowTransitionOptions,
+  type FlowTransitionResult,
+} from "./flow-transition";

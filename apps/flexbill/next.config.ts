@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@even/api-client",
     "@even/cart",
+    "@even/i18n",
     "@even/payments",
     "@even/ui",
   ],

@@ -35,9 +35,6 @@
     "showMoreOptions": "+{count} más",
     "showLessOptions": "Ver menos"
   },
-  "MenuCategory": {
-    "noItemsInSection": "No hay items en esta sección"
-  },
   "MenuView": {
     "profileAlt": "Perfil",
     "restaurantNotFound": "Restaurante no encontrado",
@@ -158,22 +155,6 @@
     "paymentRejectedMessage": "No pudimos procesar el pago con esta tarjeta. Intenta con otra tarjeta.",
     "walletUnavailableMessage": "Apple Pay y Google Pay no están disponibles para este pedido. Paga con una tarjeta guardada."
   },
-  "AddCardPage": {
-    "title": "Agrega tu tarjeta para continuar",
-    "subtitle": "Tu tarjeta se guardará de forma segura para pagos futuros",
-    "fullNameLabel": "Nombre Completo",
-    "cardNumberLabel": "Número de tarjeta",
-    "expiryLabel": "Fecha de expiración",
-    "saveCta": "Guardar",
-    "savingCta": "Guardando...",
-    "errorFullNameRequired": "Ingresa tu nombre completo",
-    "errorCardNumberRequired": "Ingresa el número de tarjeta",
-    "errorCvvRequired": "Ingresa el CVV",
-    "duplicateCard": "Ya existe una tarjeta terminada en {digits}",
-    "errorInvalidExpiry": "Fecha de expiración inválida",
-    "errorAddCardGeneric": "No se pudo agregar la tarjeta. Intenta de nuevo.",
-    "errorAddCardNetwork": "No se pudo agregar la tarjeta. Verifica tu conexión e intenta de nuevo."
-  },
   "ProfileTab": {
     "firstNameLabel": "Nombre",
     "firstNamePlaceholder": "Tu nombre",
@@ -226,58 +207,6 @@
     "tipLabelPrefix": "+ Propina",
     "serviceCommissionLabel": "+ Comisión de servicio"
   },
-  "SupportTab": {
-    "welcomeTitle": "Bienvenido",
-    "errorMessage": "Lo siento, hubo un error al procesar tu mensaje.",
-    "errorTechnicalDetails": "Detalles técnicos: {message}"
-  },
-  "InvoiceModal": {
-    "stepInfoTitle": "Facturación",
-    "stepFormTitle": "Datos de facturación",
-    "previewTitle": "Vista previa",
-    "stepDoneTitle": "Factura emitida",
-    "billingDeadlineTitle": "Plazo de facturación",
-    "billingDeadlineMessage": "Solo puedes facturar esta compra dentro del mes en curso. La fecha límite para solicitar tu factura es el <strong>{date}</strong>.",
-    "loadingSavedData": "Cargando datos guardados...",
-    "razonSocialLabel": "Razón Social",
-    "regimenFiscalLabel": "Régimen Fiscal",
-    "codigoPostalLabel": "Código Postal",
-    "usoCfdiLabel": "Uso CFDI",
-    "emailLabelOptional": "Correo (opcional)",
-    "errorRfcRequired": "El RFC es requerido.",
-    "errorRazonSocialRequired": "La Razón Social es requerida.",
-    "errorRegimenFiscalRequired": "El Régimen Fiscal es requerido.",
-    "errorCodigoPostalRequired": "El Código Postal es requerido.",
-    "errorUsoCfdiRequired": "El Uso CFDI es requerido.",
-    "errorPreview": "Error al generar la vista previa.",
-    "errorCreate": "Error al emitir la factura.",
-    "errorDownload": "Error al descargar el PDF.",
-    "errorSendEmail": "Error al enviar el correo.",
-    "previewDisclaimer": "Vista previa sin timbrar. Revisa que los datos sean correctos antes de emitir.",
-    "openPreview": "Abrir vista previa",
-    "invoiceIssuedSuccess": "Tu factura fue emitida correctamente",
-    "downloadPdf": "Descargar PDF",
-    "sendByEmail": "Enviar por correo",
-    "sent": "Enviado",
-    "send": "Enviar",
-    "continueCta": "Continuar",
-    "issueInvoiceCta": "Emitir factura"
-  },
-  "ChatView": {
-    "toolThinking": "Pensando",
-    "toolGetRestaurantInfo": "Obteniendo información del restaurante",
-    "toolGetMenu": "Obteniendo el menú",
-    "toolViewCart": "Revisando tu carrito",
-    "toolAddToCart": "Agregando al carrito",
-    "toolUpdateCartItem": "Actualizando carrito",
-    "toolRemoveFromCart": "Eliminando del carrito",
-    "toolClearCart": "Vaciando el carrito",
-    "errorGeneric": "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.",
-    "addedToCart": "Agregado al carrito",
-    "addingEllipsis": "Agregando...",
-    "errorTryAgain": "Error, intenta de nuevo",
-    "addDish": "Agregar {dishName}"
-  },
   "PaymentSuccessPage": {
     "heroTitle": "¡Gracias por tu pedido!",
     "heroSubtitle": "Hemos recibido tu pago y tu orden está en proceso.",
@@ -305,10 +234,6 @@
     "errorLoadOrder": "Error al cargar la orden",
     "errorNetworkLoadOrder": "Error de red al cargar la orden"
   },
-  "HighDemandBanner": {
-    "title": "Alta demanda en cocina",
-    "message": "Actualmente estamos experimentando un volumen alto de pedidos. Tu orden podría tardar un poco más de lo habitual."
-  },
   "OutOfStockModal": {
     "title": "Producto no disponible",
     "itemUnavailableSuffix": "no está disponible en este momento.",
@@ -320,15 +245,6 @@
     "serviceUnavailableTitle": "Servicio no disponible",
     "turnoClosedMessage": "Lo sentimos, el restaurante no está aceptando órdenes en este momento. Intenta más tarde.",
     "agentDisconnectedMessage": "El sistema de caja no está disponible en este momento. Intenta más tarde."
-  },
-  "RestaurantClosedModal": {
-    "title": "El restaurante está cerrado",
-    "message": "Lo sentimos, el restaurante {name} está cerrado en este momento.",
-    "notYetTitle": "Aún no abrimos",
-    "notYetMessage": "Podrás pedir a partir de {when}.",
-    "whenToday": "hoy a las {time}",
-    "whenTomorrow": "mañana a las {time}",
-    "whenDay": "el {day} a las {time}"
   },
   "PromoClaimModal": {
     "accountDiscountLabel": "Descuento en tu cuenta",
@@ -343,9 +259,6 @@
     "multiplePromosTitle": "¡Tienes promociones disponibles!",
     "singlePromoTitle": "¡Tienes una promoción disponible!",
     "promoPageAriaLabel": "Promoción {index} de {count}"
-  },
-  "PromoActivationBanner": {
-    "errorClaimGeneric": "Error al reclamar"
   },
   "ValidationError": {
     "restaurantNotFoundTitle": "Restaurante no encontrado",
@@ -384,12 +297,6 @@
     "nameLabel": "Tu nombre",
     "namePlaceholder": "Nombre",
     "continueCta": "Continuar"
-  },
-  "PepperMascots": {
-    "idleAriaLabel": "Pepper en espera",
-    "thinkingAriaLabel": "Pepper pensando",
-    "workingAriaLabel": "Pepper trabajando",
-    "approvedAriaLabel": "Pepper aprobado"
   },
   "OrderAnimation": {
     "creatingOrder": "Estamos creando tu pedido",
@@ -467,18 +374,5 @@
     "errorLoadingMessage": "No pudimos cargar el platillo",
     "backToHomeSubtitle": "Regresar a la página principal",
     "tryAgainLater": "Por favor intenta de nuevo más tarde"
-  },
-  "Terms": {
-    "checkbox": "He leído y acepto los <terms>Términos y Condiciones</terms> y el <privacy>Aviso de Privacidad</privacy>.",
-    "updateTitle": "Actualizamos nuestros términos",
-    "updateBody": "Actualizamos nuestros Términos y Condiciones y Aviso de Privacidad.",
-    "updateCta": "Entendido",
-    "errorSave": "No pudimos guardar tu aceptación. Intenta de nuevo."
-  },
-  "UnavailableItemsModal": {
-    "title": "Fuera de horario",
-    "subtitle": "{count, plural, one {Este platillo ya no está disponible a esta hora.} other {Estos platillos ya no están disponibles a esta hora.}}",
-    "remove": "{count, plural, one {Quitar platillo} other {Quitar # platillos}}",
-    "cancel": "Volver"
   }
 }

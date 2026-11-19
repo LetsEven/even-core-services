@@ -35,9 +35,6 @@
     "showMoreOptions": "+{count} more",
     "showLessOptions": "Show less"
   },
-  "MenuCategory": {
-    "noItemsInSection": "No items in this section"
-  },
   "MenuView": {
     "profileAlt": "Profile",
     "restaurantNotFound": "Restaurant not found",
@@ -158,22 +155,6 @@
     "paymentRejectedMessage": "We couldn't process the payment with this card. Try another card.",
     "walletUnavailableMessage": "Apple Pay and Google Pay are not available for this order. Pay with a saved card."
   },
-  "AddCardPage": {
-    "title": "Add your card to continue",
-    "subtitle": "Your card will be saved securely for future payments",
-    "fullNameLabel": "Full Name",
-    "cardNumberLabel": "Card number",
-    "expiryLabel": "Expiration date",
-    "saveCta": "Save",
-    "savingCta": "Saving...",
-    "errorFullNameRequired": "Enter your full name",
-    "errorCardNumberRequired": "Enter the card number",
-    "errorCvvRequired": "Enter the CVV",
-    "duplicateCard": "A card ending in {digits} already exists",
-    "errorInvalidExpiry": "Invalid expiration date",
-    "errorAddCardGeneric": "Couldn't add the card. Please try again.",
-    "errorAddCardNetwork": "Couldn't add the card. Check your connection and try again."
-  },
   "ProfileTab": {
     "firstNameLabel": "First name",
     "firstNamePlaceholder": "Your first name",
@@ -226,58 +207,6 @@
     "tipLabelPrefix": "+ Tip",
     "serviceCommissionLabel": "+ Service fee"
   },
-  "SupportTab": {
-    "welcomeTitle": "Welcome",
-    "errorMessage": "Sorry, there was an error processing your message.",
-    "errorTechnicalDetails": "Technical details: {message}"
-  },
-  "InvoiceModal": {
-    "stepInfoTitle": "Billing",
-    "stepFormTitle": "Billing details",
-    "previewTitle": "Preview",
-    "stepDoneTitle": "Invoice issued",
-    "billingDeadlineTitle": "Billing deadline",
-    "billingDeadlineMessage": "You can only invoice this purchase within the current month. The deadline to request your invoice is <strong>{date}</strong>.",
-    "loadingSavedData": "Loading saved data...",
-    "razonSocialLabel": "Business Name",
-    "regimenFiscalLabel": "Tax Regime",
-    "codigoPostalLabel": "ZIP Code",
-    "usoCfdiLabel": "CFDI Use",
-    "emailLabelOptional": "Email (optional)",
-    "errorRfcRequired": "RFC is required.",
-    "errorRazonSocialRequired": "Business Name is required.",
-    "errorRegimenFiscalRequired": "Tax Regime is required.",
-    "errorCodigoPostalRequired": "ZIP Code is required.",
-    "errorUsoCfdiRequired": "CFDI Use is required.",
-    "errorPreview": "Error generating the preview.",
-    "errorCreate": "Error issuing the invoice.",
-    "errorDownload": "Error downloading the PDF.",
-    "errorSendEmail": "Error sending the email.",
-    "previewDisclaimer": "Unstamped preview. Check that the details are correct before issuing.",
-    "openPreview": "Open preview",
-    "invoiceIssuedSuccess": "Your invoice was issued successfully",
-    "downloadPdf": "Download PDF",
-    "sendByEmail": "Send by email",
-    "sent": "Sent",
-    "send": "Send",
-    "continueCta": "Continue",
-    "issueInvoiceCta": "Issue invoice"
-  },
-  "ChatView": {
-    "toolThinking": "Thinking",
-    "toolGetRestaurantInfo": "Getting restaurant info",
-    "toolGetMenu": "Getting the menu",
-    "toolViewCart": "Reviewing your cart",
-    "toolAddToCart": "Adding to cart",
-    "toolUpdateCartItem": "Updating cart",
-    "toolRemoveFromCart": "Removing from cart",
-    "toolClearCart": "Clearing cart",
-    "errorGeneric": "Sorry, there was an error processing your message. Please try again.",
-    "addedToCart": "Added to cart",
-    "addingEllipsis": "Adding...",
-    "errorTryAgain": "Error, please try again",
-    "addDish": "Add {dishName}"
-  },
   "PaymentSuccessPage": {
     "heroTitle": "Thanks for your order!",
     "heroSubtitle": "We've received your payment and your order is in progress.",
@@ -305,10 +234,6 @@
     "errorLoadOrder": "Error loading the order",
     "errorNetworkLoadOrder": "Network error loading the order"
   },
-  "HighDemandBanner": {
-    "title": "High demand in the kitchen",
-    "message": "We're currently experiencing a high volume of orders. Your order might take a bit longer than usual."
-  },
   "OutOfStockModal": {
     "title": "Product not available",
     "itemUnavailableSuffix": "is not available right now.",
@@ -320,15 +245,6 @@
     "serviceUnavailableTitle": "Service not available",
     "turnoClosedMessage": "Sorry, the restaurant isn't accepting orders right now. Please try again later.",
     "agentDisconnectedMessage": "The checkout system isn't available right now. Please try again later."
-  },
-  "RestaurantClosedModal": {
-    "title": "The restaurant is closed",
-    "message": "Sorry, {name} is closed right now.",
-    "notYetTitle": "We are not open yet",
-    "notYetMessage": "You can order starting {when}.",
-    "whenToday": "today at {time}",
-    "whenTomorrow": "tomorrow at {time}",
-    "whenDay": "{day} at {time}"
   },
   "PromoClaimModal": {
     "accountDiscountLabel": "Discount on your bill",
@@ -343,9 +259,6 @@
     "multiplePromosTitle": "You have promotions available!",
     "singlePromoTitle": "You have a promotion available!",
     "promoPageAriaLabel": "Promotion {index} of {count}"
-  },
-  "PromoActivationBanner": {
-    "errorClaimGeneric": "Error claiming"
   },
   "ValidationError": {
     "restaurantNotFoundTitle": "Restaurant not found",
@@ -384,12 +297,6 @@
     "nameLabel": "Your name",
     "namePlaceholder": "Name",
     "continueCta": "Continue"
-  },
-  "PepperMascots": {
-    "idleAriaLabel": "Pepper waiting",
-    "thinkingAriaLabel": "Pepper thinking",
-    "workingAriaLabel": "Pepper working",
-    "approvedAriaLabel": "Pepper approved"
   },
   "OrderAnimation": {
     "creatingOrder": "We're creating your order",
@@ -467,18 +374,5 @@
     "errorLoadingMessage": "We couldn't load the dish",
     "backToHomeSubtitle": "Return to the home page",
     "tryAgainLater": "Please try again later"
-  },
-  "Terms": {
-    "checkbox": "I have read and accept the <terms>Terms and Conditions</terms> and the <privacy>Privacy Notice</privacy>.",
-    "updateTitle": "We updated our terms",
-    "updateBody": "We updated our Terms and Conditions and Privacy Notice.",
-    "updateCta": "Got it",
-    "errorSave": "We couldn't save your acceptance. Please try again."
-  },
-  "UnavailableItemsModal": {
-    "title": "Not available now",
-    "subtitle": "{count, plural, one {This item is no longer available at this time.} other {These items are no longer available at this time.}}",
-    "remove": "{count, plural, one {Remove item} other {Remove # items}}",
-    "cancel": "Back"
   }
 }

@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "@even/ui/theme.css";
 
+/* Titulares en display (Jakarta), resto DM Mono: el tema compartido no lo trae */
+h1,
+h2 {
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  letter-spacing: -0.015em;
+}
+
 .brand-evergreen {
   background-color: var(--color-even-evergreen);
 }

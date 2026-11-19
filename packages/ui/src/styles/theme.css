@@ -391,3 +391,83 @@
 .sheet-hero[data-flow-leaving] {
   animation: sheet-leave-fade 0.35s ease forwards !important;
 }
+
+/* Pago finalizado (PaymentResult): círculo blanco que abre, círculo verde que
+   sale del logo y anillos pulsantes. Nombres con prefijo para no chocar con
+   las copias antiguas que aún viven en los globals.css de las apps. */
+@keyframes pay-circle-expand {
+  from {
+    transform: scale(0.01);
+    opacity: 1;
+  }
+  to {
+    transform: scale(35);
+    opacity: 1;
+  }
+}
+@keyframes pay-green-expand {
+  0% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(50);
+    opacity: 1;
+  }
+}
+@keyframes pay-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+@keyframes pay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.pay-circle {
+  width: 50px;
+  height: 50px;
+  background: white;
+  border-radius: 50%;
+  transform: scale(0.01);
+  will-change: transform;
+  animation: pay-circle-expand 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.pay-green-circle {
+  width: 96px;
+  height: 96px;
+  background: var(--color-even-grass);
+  border-radius: 50%;
+  transform-origin: center center;
+  will-change: transform;
+  animation: pay-green-expand 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.pay-ring {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border: 5px solid var(--color-line);
+  border-radius: 50%;
+  animation: pay-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.pay-ring-1 {
+  animation-delay: 0.6s;
+}
+.pay-ring-2 {
+  animation-delay: 1.2s;
+}
+.pay-fade-in {
+  animation: pay-fade-in 0.4s ease-in forwards;
+}

@@ -20,7 +20,7 @@ describe("FlowCard", () => {
         <p>Contenido</p>
       </FlowCard>,
     );
-    expect(container.firstElementChild?.className).toContain("justify-end");
+    expect(container.querySelector("[aria-hidden].flex-1")).toBeTruthy();
     expect(container.querySelector(".sheet-card")?.className).toContain("flex-none");
   });
 });

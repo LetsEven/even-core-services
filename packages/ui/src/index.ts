@@ -138,6 +138,9 @@ export {
   type PaymentResultProps,
   type PaymentResultTiming,
 } from "./components/payment-result";
+export { AmountHero, TitleHero } from "./components/flow-hero";
+export { CARD_LABEL, PAY_BUTTON, PayButton, TIP_OPTIONS, TipPicker, type TipPickerProps } from "./components/flow-tip";
+export { formatMoney, setFlowAmount, useFlowAmountValue, type FlowAmount } from "./lib/flow-amount";
 export { FlowCard, type FlowCardLayout, type FlowCardProps } from "./components/flow-card";
 export {
   CardSelectionSkeleton,

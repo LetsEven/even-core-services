@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { Ghost } from "./flow-nav-overlay";
 import { sheetClasses } from "./sheet-screen";
+import { CARD_LABEL, PAY_BUTTON, TIP_CHIP, TIP_GRID } from "./flow-tip";
+import { TitleHero } from "./flow-hero";
 
 /**
  * Esqueletos del flujo de compra (carrito → confirmación → pago) compartidos por las apps de pedido.
@@ -16,20 +18,11 @@ import { sheetClasses } from "./sheet-screen";
  */
 
 /**
- * Título de un paso: línea de contexto opcional (marca, mesa, habitación) y título, con la tipografía de las
- * vistas reales. `labelClassName` cambia el color de la línea de contexto (por defecto `text-mist`).
+ * Hero de un paso sin monto: línea de contexto y título grande, en la posición fija del hero. `label` es el contexto
+ * ("Mesa 12"); `labelClassName` cambia su color.
  */
 export function StepHero({ label, title, labelClassName }: { label?: ReactNode; title: ReactNode; labelClassName?: string }) {
-  return (
-    <div className="flex flex-col justify-center px-8 py-6 md:px-10 md:py-8 lg:px-12 lg:py-10">
-      {label != null && (
-        <p className={cn("text-xl font-medium text-mist md:text-2xl lg:text-3xl", labelClassName)}>{label}</p>
-      )}
-      <p className="mt-2 mb-6 text-3xl leading-7 font-medium text-white md:mt-3 md:mb-8 md:text-4xl md:leading-9 lg:text-5xl lg:leading-tight">
-        {title}
-      </p>
-    </div>
-  );
+  return <TitleHero context={label} title={title} contextClassName={labelClassName} />;
 }
 
 /** Bloque de título completo (hero) para las vistas reales mientras cargan; dentro del overlay lo pone `FlowCard`. */
@@ -40,53 +33,49 @@ export function FlowHeroBlock({ className, children }: { className?: string; chi
 export type OrderConfirmSkeletonLabels = {
   /** "Sucursal:" — solo si la vista real muestra la sucursal. */
   branch?: string;
-  subtotal: string;
   tip: string;
-  totalToPay: string;
-  continueCta: string;
+  /** "Pagar" (el botón real lleva el monto). */
+  payCta: string;
 };
 
-/** Cuerpo de la tarjeta de confirmación: mismas filas y márgenes que la vista cargada. */
+/** Selector de propina en esqueleto: misma etiqueta, chips y alturas que `TipPicker`. */
+function TipPickerSkeleton({ label }: { label: string }) {
+  return (
+    <div>
+      <span className={CARD_LABEL}>{label}</span>
+      <div className={TIP_GRID}>
+        {["0%", "10%", "15%", "20%", "$"].map((chip) => (
+          <div key={chip} className={cn(TIP_CHIP, "animate-pulse border-transparent bg-tone-100")}>
+            <span className="invisible">{chip}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PayButtonSkeleton({ label }: { label: string }) {
+  return (
+    <div className={cn(PAY_BUTTON, "animate-pulse bg-even-grass/40")}>
+      <span className="invisible">{label}</span>
+    </div>
+  );
+}
+
+/** Cuerpo de la tarjeta de confirmación: sucursal (si aplica), propina y botón de pagar. */
 export function OrderConfirmSkeleton({ labels }: { labels: OrderConfirmSkeletonLabels }) {
   return (
     <>
       {labels.branch != null && (
         <div className="mb-4 flex w-full items-center justify-between">
-          <p className="text-base text-tone-600">
+          <p className="text-base text-tone-600 md:text-lg lg:text-xl">
             {labels.branch} <Ghost className="font-medium">Sucursal</Ghost>
           </p>
         </div>
       )}
-      <div className="mb-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="font-medium text-black">{labels.subtotal}</span>
-          <Ghost className="font-medium">$000.00 MXN</Ghost>
-        </div>
-      </div>
-      <div className="mb-4">
-        <div className="mb-3 flex items-center gap-4">
-          <span className="text-base font-medium whitespace-nowrap text-black md:text-lg lg:text-xl">{labels.tip}</span>
-          <div className="grid flex-1 grid-cols-5 gap-2">
-            {["0%", "10%", "15%", "20%", "$"].map((label) => (
-              <div
-                key={label}
-                className="animate-pulse rounded-full border border-transparent bg-tone-100 py-1 md:py-1.5 lg:py-2"
-              >
-                <span className="invisible">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-end text-sm">
-          <Ghost className="font-medium">+$00.00 MXN</Ghost>
-        </div>
-      </div>
-      <div className="mb-6 flex items-center justify-between border-t pt-4">
-        <span className="text-base font-medium text-black md:text-lg lg:text-xl">{labels.totalToPay}</span>
-        <Ghost className="text-base font-medium md:text-lg lg:text-xl">$000.00 MXN</Ghost>
-      </div>
-      <div className="w-full animate-pulse rounded-full bg-even-grass/40 py-3 text-center">
-        <span className="invisible">{labels.continueCta}</span>
+      <TipPickerSkeleton label={labels.tip} />
+      <div className="mt-6">
+        <PayButtonSkeleton label={labels.payCta} />
       </div>
     </>
   );
@@ -125,147 +114,69 @@ export function CartSkeleton({ labels }: { labels: { myCart: string } }) {
 }
 
 export type CardSelectionSkeletonLabels = {
-  subtotal: string;
-  totalToPay: string;
   paymentMethods: string;
+  /** "Pagar" (el botón real lleva el monto: "Pagar $50.60"). */
+  payCta: string;
 };
 
 /**
- * Cuerpo del pago: resumen, métodos y la barra fija con el botón de pagar (96 px como la real).
- * `showSubtotal={false}` para las apps cuyo resumen es solo la fila del total (Tap & Pay, FlexBill).
+ * Cuerpo del pago: métodos de pago y la barra fija con el botón de pagar. El resumen del total vive en el hero.
  */
-export function CardSelectionSkeleton({
-  labels,
-  showSubtotal = true,
-}: {
-  labels: CardSelectionSkeletonLabels;
-  showSubtotal?: boolean;
-}) {
+export function CardSelectionSkeleton({ labels }: { labels: CardSelectionSkeletonLabels }) {
   return (
-    <div className="flex-1 py-8 pb-[120px]">
-      {showSubtotal ? (
-        <div className="mb-3 space-y-2">
-          <div className="flex items-center justify-between text-base font-medium text-black">
-            <span>{labels.subtotal}</span>
-            <Ghost>$000.00 MXN</Ghost>
-          </div>
-          <div className="flex items-center justify-between border-t pt-3 text-base font-medium text-black">
-            <span>{labels.totalToPay}</span>
-            <Ghost>$000.00 MXN</Ghost>
-          </div>
-        </div>
-      ) : (
-        <div className="mb-6 space-y-2">
-          <div className="flex items-center justify-between text-base font-medium text-black md:text-lg lg:text-xl">
-            <span>{labels.totalToPay}</span>
-            <Ghost>$000.00 MXN</Ghost>
-          </div>
-        </div>
-      )}
-      <h3 className="mb-3 font-medium text-black">{labels.paymentMethods}</h3>
+    <div className="flex-1 py-8 pb-[130px]">
+      <h3 className={cn("mb-3", CARD_LABEL)}>{labels.paymentMethods}</h3>
       <div className="space-y-2.5">
-        <div className="h-[46px] w-full animate-pulse rounded-full bg-tone-100" />
-        <div className="h-[46px] w-full animate-pulse rounded-full bg-tone-100" />
+        <div className="h-[58px] w-full animate-pulse rounded-full bg-tone-100" />
+        <div className="h-[58px] w-full animate-pulse rounded-full bg-tone-100" />
       </div>
       <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
-        <div className="h-12 w-full animate-pulse rounded-full bg-even-grass/40" />
+        <PayButtonSkeleton label={labels.payCta} />
       </div>
     </div>
   );
 }
 
-/** Cuerpo de "opciones de pago": cuatro filas con icono, título y flecha, y el total fijo abajo. */
+/** Cuerpo de "opciones de pago": cuatro filas con icono, título y flecha. El saldo vive en el hero. */
 export function PaymentOptionsSkeleton() {
   return (
-    <>
-      <div className="flex-1 overflow-y-auto pb-35 md:pb-40 lg:pb-45">
-        <div className="mt-4 flex flex-col md:mt-6">
-          {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="w-full animate-pulse border-b border-stroke bg-white">
-              <div className="flex items-center gap-3 px-4 py-3 md:gap-4 md:px-5 md:py-4 lg:gap-5 lg:px-6 lg:py-5">
-                <div className="size-16 rounded-sm bg-tone-200 md:size-20 md:rounded-md lg:size-24" />
-                <div className="flex-1">
-                  <div className="mb-2 h-5 w-3/4 rounded bg-tone-200" />
-                  <div className="h-4 w-1/2 rounded bg-tone-200" />
-                </div>
-                <div className="size-5 rounded bg-tone-200 md:size-6 lg:size-7" />
+    <div className="flex-1 overflow-y-auto pb-8">
+      <div className="mt-4 flex flex-col md:mt-6">
+        {[1, 2, 3, 4].map((item) => (
+          <div key={item} className="w-full animate-pulse border-b border-stroke bg-white">
+            <div className="flex items-center gap-4 px-4 py-4 md:gap-5 md:px-5 md:py-5 lg:gap-6 lg:px-6 lg:py-6">
+              <div className="size-16 rounded-sm bg-tone-200 md:size-20 md:rounded-md lg:size-24" />
+              <div className="flex-1">
+                <div className="h-6 w-3/4 rounded bg-tone-200" />
               </div>
+              <div className="size-5 rounded bg-tone-200 md:size-6 lg:size-7" />
             </div>
-          ))}
-        </div>
-      </div>
-      <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
-        <div className="animate-pulse space-y-2 py-4 md:space-y-3 md:py-8 lg:py-12">
-          <div className="flex items-center justify-between">
-            <div className="h-6 w-32 rounded bg-tone-200" />
-            <div className="h-6 w-24 rounded bg-tone-200" />
           </div>
-          <div className="flex items-center justify-between">
-            <div className="h-5 w-24 rounded bg-tone-200" />
-            <div className="h-5 w-20 rounded bg-tone-200" />
-          </div>
-        </div>
+        ))}
       </div>
-    </>
+    </div>
   );
 }
 
 export type TipSkeletonLabels = {
-  /** Fila del total/subtotal ("Total:"). */
-  total: string;
+  /** "Propina". */
   tip: string;
-  totalToPay: string;
+  /** "Pagar" (el botón real lleva el monto). */
   payCta: string;
 };
 
 /**
- * Cuerpo de "propina" (cuenta completa): resumen, selector de propina, y total con botón de pagar.
- * Mismas clases que la vista real, de modo que la tarjeta mide lo mismo antes y después de cargar.
+ * Cuerpo de "propina": selector de propina y botón de pagar de ancho completo. Mismas clases que la vista real,
+ * de modo que la tarjeta mide lo mismo antes y después de cargar. El total vive en el hero.
  */
 export function TipSkeleton({ labels, before }: { labels: TipSkeletonLabels; before?: ReactNode }) {
   return (
     <>
       {before}
-      <div className="space-y-4 px-8 md:space-y-5 md:px-10 lg:space-y-6 lg:px-12">
-        <div className="space-y-2 md:space-y-3 lg:space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-base font-medium text-black md:text-lg lg:text-xl">{labels.total}</span>
-            <Ghost className="text-base font-medium md:text-lg lg:text-xl">$000.00 MXN</Ghost>
-          </div>
-        </div>
-        <div className="md:mb-4 lg:mb-5">
-          <div className="mb-3 flex items-center gap-4">
-            <span className="text-base font-medium whitespace-nowrap text-black md:text-lg lg:text-xl">{labels.tip}</span>
-            <div className="grid flex-1 grid-cols-5 gap-2">
-              {["0%", "10%", "15%", "20%", "$"].map((label) => (
-                <div
-                  key={label}
-                  className="animate-pulse rounded-full border border-transparent bg-tone-100 py-1 md:py-1.5 lg:py-2"
-                >
-                  <span className="invisible">{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-2 flex items-center justify-end text-sm">
-            <Ghost className="font-medium">+$00.00 MXN</Ghost>
-          </div>
-        </div>
-      </div>
       <div className="px-8 md:px-10 lg:px-12">
-        <div className="border-t border-tone-200 pt-6">
-          <div className="flex w-full justify-between gap-3">
-            <div className="flex -translate-y-2 flex-col justify-center">
-              <span className="text-sm text-tone-600 md:text-base lg:text-lg">{labels.totalToPay}</span>
-              <div className="flex w-fit items-center justify-center gap-2 text-2xl font-medium text-black md:text-3xl lg:text-4xl">
-                <Ghost>$000.00</Ghost>
-                <span className="size-4" />
-              </div>
-            </div>
-            <div className="flex h-10 animate-pulse items-center justify-center rounded-full bg-even-grass/40 px-15 text-base md:h-12 md:text-lg lg:h-12 lg:text-xl">
-              <span className="invisible">{labels.payCta}</span>
-            </div>
-          </div>
+        <TipPickerSkeleton label={labels.tip} />
+        <div className="mt-6">
+          <PayButtonSkeleton label={labels.payCta} />
         </div>
       </div>
     </>
@@ -368,7 +279,7 @@ export function ChooseAmountSkeletonBlock({
   return (
     <div className={cn("px-8 md:px-10 lg:px-12", spaced && "mb-6")}>
       <div className="flex w-full flex-col items-center">
-        <span className="mb-4 block text-xl font-medium text-black md:mb-5 md:text-2xl lg:mb-6 lg:text-3xl">
+        <span className={cn("mb-4 block md:mb-5 lg:mb-6", CARD_LABEL)}>
           {labels.amountToPay}
         </span>
         <div className="w-full max-w-xs">

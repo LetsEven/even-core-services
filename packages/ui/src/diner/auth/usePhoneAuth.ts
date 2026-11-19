@@ -7,8 +7,10 @@ import {
   MIN_PHONE_DIGITS,
   OTP_LENGTH,
   RESEND_SECONDS,
+  ageFromBirthDate,
   birthDateFromAge,
   formatPhoneInput,
+  isProfileComplete,
 } from "./phone";
 
 export type AuthResult = { success: boolean; error?: string | null };
@@ -19,6 +21,15 @@ export type ProfileFields = {
   lastName: string;
   birthDate: string;
   acceptedTerms: true;
+};
+
+/** Sesión del contexto de la app (`useAuth()`), para las apps donde el contexto —no una consulta aparte— dice si el perfil está completo. */
+export type PhoneAuthSession = {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  profile?: { firstName?: string | null; lastName?: string | null; birthDate?: string | null } | null;
+  /** Con sesión y perfil completo desde el paso del teléfono, terminar de inmediato en vez de pedir el número otra vez. */
+  skipIfComplete?: boolean;
 };
 
 export type PhoneAuthOptions = {
@@ -32,11 +43,16 @@ export type PhoneAuthOptions = {
   refreshProfile?: () => Promise<unknown>;
   /**
    * Tras verificar el código: `true` = ya tiene perfil completo (se llama `onAuthenticated`), `false` = pedir el perfil.
-   * Si se omite, el hook no decide: la app lo hace al reaccionar al contexto (`goToProfile` / `onAuthenticated`).
+   * Alternativa: `session` (el contexto decide). Si no se pasa ninguna, la app llama `goToProfile` / `onAuthenticated`.
    */
   hasProfile?: () => Promise<boolean>;
+  /**
+   * El contexto de la app decide el siguiente paso: tras verificar el código (o al llegar ya con sesión) pasa al
+   * perfil si está incompleto (nombre y fecha de nacimiento, precargados) o termina con `onAuthenticated`.
+   */
+  session?: PhoneAuthSession;
   /** El usuario terminó de iniciar sesión (código verificado y perfil completo). La app navega o cierra. */
-  onAuthenticated: () => void;
+  onAuthenticated: () => void | Promise<void>;
 };
 
 /**
@@ -75,6 +91,36 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  const goToProfile = useCallback((prefill?: { firstName?: string; lastName?: string; age?: number | "" }) => {
+    if (prefill) {
+      setFirstName(prefill.firstName ?? "");
+      setLastName(prefill.lastName ?? "");
+      setAge(prefill.age ?? "");
+    }
+    setError("");
+    setStep("profile");
+  }, []);
+
+  // Sesión del contexto: decide perfil o fin sin consultar aparte. `finishedRef` evita terminar dos veces mientras
+  // la navegación sigue en curso y el contexto vuelve a cambiar.
+  const finishedRef = useRef(false);
+  const session = options.session;
+  useEffect(() => {
+    if (!session || session.isLoading || !session.isAuthenticated || step === "profile" || finishedRef.current) return;
+    if (isProfileComplete(session.profile)) {
+      if (step === "verify" || session.skipIfComplete) {
+        finishedRef.current = true;
+        void optionsRef.current.onAuthenticated();
+      }
+    } else {
+      goToProfile({
+        firstName: session.profile?.firstName ?? "",
+        lastName: session.profile?.lastName ?? "",
+        age: ageFromBirthDate(session.profile?.birthDate),
+      });
+    }
+  }, [session, step, goToProfile]);
+
   const changePhone = useCallback((raw: string) => {
     const digits = raw.replace(/\D/g, "");
     setPhoneNumber(digits);
@@ -107,16 +153,6 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
     [countryCode, phoneNumber, t],
   );
 
-  const goToProfile = useCallback((prefill?: { firstName?: string; lastName?: string; age?: number | "" }) => {
-    if (prefill) {
-      setFirstName(prefill.firstName ?? "");
-      setLastName(prefill.lastName ?? "");
-      setAge(prefill.age ?? "");
-    }
-    setError("");
-    setStep("profile");
-  }, []);
-
   const verifyCode = useCallback(
     async (event?: FormEvent) => {
       event?.preventDefault();
@@ -136,7 +172,7 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
         if (!hasProfile) return;
         if (await hasProfile().catch(() => false)) {
           await refreshProfile?.();
-          onAuthenticated();
+          await onAuthenticated();
         } else {
           setStep("profile");
         }
@@ -180,7 +216,7 @@ export function usePhoneAuth(options: PhoneAuthOptions) {
         });
         if (response.success) {
           await refreshProfile?.();
-          onAuthenticated();
+          await onAuthenticated();
         } else {
           setError(response.error || t("errorSaveProfile"));
         }

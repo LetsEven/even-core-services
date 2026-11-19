@@ -50,6 +50,7 @@ export {
   type AuthResult,
   type PhoneAuth,
   type PhoneAuthOptions,
+  type PhoneAuthSession,
   type PhoneAuthStep,
   type ProfileFields,
 } from "./auth/usePhoneAuth";

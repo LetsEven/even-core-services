@@ -25,7 +25,8 @@ const SHEET_PADDING_X = "px-6 md:px-8 lg:px-10";
  */
 export const sheetClasses = {
   screen: "app-col relative z-10 isolate flex min-h-dvh flex-col",
-  hero: "sheet-hero z-0 mx-4 translate-y-7 rounded-t-4xl md:mx-6 lg:mx-8",
+  // Bloque superior fijo del flujo: misma posición en todas las vistas (la tarjeta se ancla abajo).
+  hero: "sheet-hero z-0 flex-none px-8 pt-9 pb-6 md:px-10 md:pt-10 md:pb-8 lg:px-12 lg:pt-12 lg:pb-10",
   card: cn("sheet-card relative z-10 flex w-full flex-1 flex-col rounded-t-4xl bg-white", SHEET_PADDING_X),
 } as const;
 
@@ -71,13 +72,10 @@ export function SheetScreen({ className, ...props }: SheetScreenProps) {
 
 export type SheetHeroProps = ComponentProps<"div">;
 
-/** Bloque de título que asoma detrás de la tarjeta (efecto de capas). */
+/** Bloque superior (contexto, título o monto) anclado arriba, sobre el espacio libre sobre la tarjeta. */
 export function SheetHero({ className, ...props }: SheetHeroProps) {
   return (
-    <div
-      className={cn(sheetClasses.hero, "px-8 py-6 md:px-10 md:py-8 lg:px-12 lg:py-10", className)}
-      {...props}
-    />
+    <div className={cn(sheetClasses.hero, className)} {...props} />
   );
 }
 

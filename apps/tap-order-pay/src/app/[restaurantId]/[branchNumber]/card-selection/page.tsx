@@ -1,6 +1,7 @@
 "use client";
 
-import { FlowStepCard } from "@even/ui/diner";
+import { PayButton, formatMoney } from "@even/ui";
+import { FlowStepCard, useFlowAmount } from "@even/ui/diner";
 import { useCart } from "@/context/CartContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
 import { usePayment } from "@/context/PaymentContext";
@@ -117,7 +118,6 @@ export default function CardSelectionPage() {
   const tipAmountFromParam = parseFloat(searchParams.get("tipAmount") || "0");
   const tipAmount = tipAmountFromParam;
 
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [showPOSModal, setShowPOSModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
@@ -1385,6 +1385,20 @@ export default function CardSelectionPage() {
   const displayTotal = getDisplayTotal();
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
 
+  // El hero lee este mismo `displayTotal`: es lo que se cobra (con el costo de los meses sin intereses, si aplica).
+  const financingCost = Math.max(displayTotal - totalAmount, 0);
+  useFlowAmount(
+    isLoadingInitial || isLoadingProvider
+      ? null
+      : {
+          total: displayTotal,
+          bill: baseAmount,
+          tip: tipAmount,
+          commission: evenClientCharge,
+          financing: financingCost > 0.004 ? financingCost : undefined,
+        },
+  );
+
   if (isLoadingInitial || isLoadingProvider) {
     return (
       <div className="min-h-dvh brand-evergreen flex flex-col app-root">
@@ -1480,28 +1494,18 @@ export default function CardSelectionPage() {
         <MenuHeaderBack />
 
         <FlowStepCard step="card-selection">
-              <div className="flex-1 overflow-y-auto py-8 pb-30">
-                {/* Resumen del pedido */}
-                <div className="space-y-2 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      {tc("subtotal")}
+              <div className="flex-1 overflow-y-auto py-8 pb-[130px]">
+                {/* Descuento (el total vive en el hero) */}
+                {accountDiscount && orderDiscountAmount > 0 && (
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-lg font-medium text-even-evergreen md:text-xl lg:text-2xl">
+                      {tc("discount")} ({accountDiscount.discountPercentage}%)
                     </span>
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      ${cartBaseAmount.toFixed(2)} MXN
+                    <span className="text-lg font-medium text-even-evergreen md:text-xl lg:text-2xl">
+                      -${orderDiscountAmount.toFixed(2)} MXN
                     </span>
                   </div>
-                  {accountDiscount && orderDiscountAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-even-evergreen font-medium text-base md:text-lg lg:text-xl">
-                        {tc("discount")} ({accountDiscount.discountPercentage}%)
-                      </span>
-                      <span className="text-even-evergreen font-medium text-base md:text-lg lg:text-xl">
-                        -${orderDiscountAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
+                )}
 
                 {/* Alerta de mínimo */}
                 {isUnderMinimum && totalAmount > 0 && (
@@ -1517,34 +1521,8 @@ export default function CardSelectionPage() {
                   </div>
                 )}
 
-                {/* Total */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between items-center border-t pt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                        {tc("totalToPay")}
-                      </span>
-                      <CircleAlert
-                        className="size-4 cursor-pointer text-tone-500"
-                        strokeWidth={2.3}
-                        onClick={() => setShowTotalModal(true)}
-                      />
-                    </div>
-                    <div className="text-right">
-                      {selectedMSI !== null ? (
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${(displayTotal / selectedMSI).toFixed(2)} MXN x{" "}
-                          {selectedMSI} meses
-                        </span>
-                      ) : (
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${displayTotal.toFixed(2)} MXN
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pago a meses — solo tarjeta de crédito */}
+                {/* Pago a meses — solo tarjeta de crédito */}
+                <div className="mb-4">
                   {(() => {
                     const selectedMethod = allPaymentMethods.find(
                       (pm) => pm.id === selectedPaymentMethodId,
@@ -1553,11 +1531,11 @@ export default function CardSelectionPage() {
                       msiConfig.isActive &&
                       totalAmount >= 300 ? (
                       <div
-                        className="py-2 cursor-pointer"
+                        className="cursor-pointer py-2"
                         onClick={() => setShowPaymentOptionsModal(true)}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                          <span className="font-medium text-black text-lg md:text-xl lg:text-2xl">
                             Pago a meses
                           </span>
                           <div
@@ -1572,6 +1550,12 @@ export default function CardSelectionPage() {
                             )}
                           </div>
                         </div>
+                        {selectedMSI !== null && (
+                          <p className="mt-1 text-base text-tone-600 md:text-lg">
+                            ${(displayTotal / selectedMSI).toFixed(2)} MXN x{" "}
+                            {selectedMSI} meses
+                          </p>
+                        )}
                       </div>
                     ) : null;
                   })()}
@@ -1579,7 +1563,7 @@ export default function CardSelectionPage() {
 
                 {/* Métodos de pago */}
                 <div className="mb-2.5">
-                  <h3 className="text-black font-medium mb-3">
+                  <h3 className="mb-3 text-lg font-medium text-black md:text-xl lg:text-2xl">
                     Métodos de pago
                   </h3>
                   <div className="space-y-2.5">
@@ -1591,7 +1575,7 @@ export default function CardSelectionPage() {
                     ).map((method) => (
                       <div
                         key={method.id}
-                        className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
+                        className={`flex items-center py-4 px-5 pl-10 border rounded-full transition-colors ${
                           selectedPaymentMethodId === method.id
                             ? "border-even-grass bg-even-grass/10"
                             : "border-black/50 bg-surface"
@@ -1761,16 +1745,11 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija */}
         <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button
+          <PayButton
             onClick={handleInitiatePayment}
             disabled={
               isProcessing || !selectedPaymentMethodId || isUnderMinimum
             }
-            className={`py-3 text-even-evergreen rounded-full cursor-pointer font-normal h-fit w-full flex items-center justify-center text-base active:scale-95 transition-transform ${
-              isProcessing || !selectedPaymentMethodId || isUnderMinimum
-                ? "bg-even-grass opacity-50 cursor-not-allowed px-10"
-                : "bg-even-grass px-10 animate-pulse-button"
-            }`}
           >
             {isProcessing ? (
               <div className="flex items-center justify-center gap-2">
@@ -1782,83 +1761,11 @@ export default function CardSelectionPage() {
             ) : isUnderMinimum ? (
               t("minimumNotReachedCta")
             ) : (
-              t("payAndOrderCta")
+              tc("payCtaAmount", { amount: formatMoney(displayTotal) })
             )}
-          </button>
+          </PayButton>
         </div>
 
-        {/* Modal resumen del total */}
-        {showTotalModal && (
-          <div
-            className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-            style={{ zIndex: 99999 }}
-          >
-            <div
-              className="absolute inset-0 bg-black/20"
-              onClick={() => setShowTotalModal(false)}
-            />
-            <div className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8">
-              <div className="px-6 md:px-8 pt-4">
-                <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                  <h3 className="text-lg md:text-xl font-semibold text-black">
-                    Resumen del total
-                  </h3>
-                  <button
-                    onClick={() => setShowTotalModal(false)}
-                    className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                  >
-                    <X className="size-5 text-tone-500" />
-                  </button>
-                </div>
-              </div>
-              <div className="px-6 md:px-8 py-4 md:py-5">
-                <p className="text-black mb-4 text-base md:text-lg">
-                  El total se obtiene de la suma de:
-                </p>
-                <div className="space-y-3 md:space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg">
-                      {t("subtotalBreakdownLabel")}
-                    </span>
-                    <span className="text-black font-medium text-base md:text-lg">
-                      ${baseAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                  {tipAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg">
-                        {t("tipLabelPrefix")}
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg">
-                        ${tipAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {evenClientCharge > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg">
-                        {t("serviceCommissionLabel")}
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg">
-                        ${evenClientCharge.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {selectedMSI !== null && displayTotal > totalAmount && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg">
-                        + Financiamiento ({selectedMSI} meses)
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg">
-                        ${(displayTotal - totalAmount).toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal opciones de pago (MSI) */}
         {showPaymentOptionsModal && (

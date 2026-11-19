@@ -16,7 +16,7 @@ test("payment_rejected descarta el intento y el reintento usa otra clave", async
 
   const charges = () => paymentsApi.requests.filter((r) => r.method === "POST" && r.path === "/payments");
   const firstCharge = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/payments"));
-  await page.getByRole("button", { name: "Pagar y ordenar" }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
   await firstCharge;
 
   await expect(page.getByText("Pago rechazado")).toBeVisible();
@@ -28,7 +28,7 @@ test("payment_rejected descarta el intento y el reintento usa otra clave", async
   // La selección es compacta: solo se ve la tarjeta elegida hasta pedir las otras.
   await page.getByRole("button", { name: /Ver otras tarjetas/ }).click();
   await page.getByText("•••• 5454").click();
-  await page.getByRole("button", { name: "Pagar y ordenar" }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
   await expect.poll(() => charges().length, { timeout: 20_000 }).toBe(2);
 
   const [first, second] = charges().map((r) => r.body as { intentKey: string; paymentMethodId: string });

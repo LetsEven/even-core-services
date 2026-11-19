@@ -1,7 +1,17 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { FlowCard } from "../components/flow-card";
 import {
   FlowNavOverlay,
@@ -18,6 +28,7 @@ import {
   useFlowStepReady,
   type FlowTiming,
 } from "../lib/route-transition";
+import { formatMoney, setFlowAmount } from "../lib/flow-amount";
 import RouteTransitionGate from "./RouteTransitionGate";
 
 type FlowTransitionValue = {
@@ -186,4 +197,55 @@ export function FlowStepCard({
       {loading && screen ? screen.body : children}
     </FlowCard>
   );
+}
+
+export type FlowAmountInput = {
+  /** Lo que cobra el botón de pagar: el mismo número que usa la tarjeta de la vista. */
+  total: number;
+  /** Desglose: cuenta/consumo, propina y comisión de servicio (solo si el servicio se la cobra al cliente). */
+  bill?: number;
+  /** Texto de la cuenta si no es "Cuenta" (p. ej. "Tu parte"). */
+  billLabel?: string;
+  tip?: number;
+  commission?: number;
+  /** Costo de pagar a meses sin intereses. */
+  financing?: number;
+  /** Etiqueta distinta a "Total a pagar" (p. ej. el saldo de la mesa). */
+  label?: string;
+  /** Desglose ya armado; sustituye al de bill/tip/commission. */
+  breakdown?: string;
+};
+
+/**
+ * Publica el monto vivo de la vista para el hero del paso (`AmountHero`). Cada vista lo llama con el mismo `total`
+ * que usa su tarjeta y su botón de pagar, así el hero nunca recalcula nada. `null` mientras no hay datos; al
+ * desmontar se retira. Las etiquetas del desglose salen de `Common` (`heroBill`, `heroTip`, `heroCommission`).
+ */
+export function useFlowAmount(input: FlowAmountInput | null) {
+  const t = useTranslations("Common");
+  const total = input ? formatMoney(input.total) : null;
+  const label = input?.label;
+  const breakdown = input ? (input.breakdown ?? buildBreakdown(input, t)) : undefined;
+
+  useLayoutEffect(() => {
+    setFlowAmount(total == null ? null : { total, breakdown: breakdown || undefined, label });
+  }, [total, breakdown, label]);
+  useLayoutEffect(() => () => setFlowAmount(null), []);
+}
+
+const cents = (n: number) => Math.round(n * 100);
+
+/**
+ * "Cuenta $46.00 + propina $4.60". Omite los componentes en 0 y, si solo queda uno igual al total, no hay desglose
+ * (la línea conserva su alto en el hero para que el monto no se mueva).
+ */
+function buildBreakdown(input: FlowAmountInput, t: (key: string) => string): string | undefined {
+  const parts = [
+    { label: input.billLabel ?? t("heroBill"), value: input.bill },
+    { label: t("heroTip"), value: input.tip },
+    { label: t("heroCommission"), value: input.commission },
+    { label: t("heroFinancing"), value: input.financing },
+  ].filter((part): part is { label: string; value: number } => part.value != null && cents(part.value) > 0);
+  if (parts.length === 0 || (parts.length === 1 && cents(parts[0].value) === cents(input.total))) return undefined;
+  return parts.map((part) => `${part.label} ${formatMoney(part.value)}`).join(" + ");
 }

@@ -7,7 +7,7 @@ import { sheetClasses } from "./sheet-screen";
 export type FlowCardLayout = "fill" | "anchored";
 
 export type FlowCardProps = {
-  /** Título del paso, asoma detrás de la tarjeta. */
+  /** Bloque superior del paso (contexto + monto o título), anclado arriba. */
   hero?: ReactNode;
   /** Clases extra del bloque del título (p. ej. `p-0` si el título trae su propio relleno). */
   heroClassName?: string;
@@ -50,12 +50,14 @@ export function FlowCard({
 }: FlowCardProps) {
   const anchored = layout === "anchored";
   return (
-    <div className={cn("flex w-full flex-1 flex-col", anchored && "justify-end", className)}>
+    <div className={cn("flex w-full flex-1 flex-col", className)}>
       {hero != null && (
-        <div style={heroStyle}>
+        <div style={heroStyle} className="flex-none">
           <div className={cn(sheetClasses.hero, heroClassName)}>{hero}</div>
         </div>
       )}
+      {/* Espacio flexible: el hero queda arriba y la tarjeta abajo. */}
+      {anchored && <div aria-hidden className="min-h-6 flex-1" />}
       <div
         className={cn(sheetClasses.card, cardClassName ?? (anchored ? "flex-none py-8" : "overflow-hidden"))}
         style={cardStyle}

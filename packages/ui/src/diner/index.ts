@@ -13,7 +13,9 @@ export { useTermsText } from "./use-terms-text";
 export {
   FlowStepCard,
   FlowTransitionProvider,
+  useFlowAmount,
   useFlowNavigation,
+  type FlowAmountInput,
   type FlowStepCardProps,
   type FlowTransitionProviderProps,
 } from "./FlowTransition";

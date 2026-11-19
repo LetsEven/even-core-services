@@ -1,6 +1,7 @@
 "use client";
 
-import { FlowStepCard } from "@even/ui/diner";
+import { formatMoney } from "@even/ui";
+import { FlowStepCard, useFlowAmount } from "@even/ui/diner";
 import { useEffect, useState } from "react";
 import { useSearchParams, useParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
@@ -89,21 +90,6 @@ export default function PaymentOptionsPage() {
     }
   }, [isLoading, state.order, navigateWithTable]);
 
-  if (!tableNumber) {
-    return (
-      <div className="min-h-dvh bg-tone-50 flex items-center justify-center">
-        <div className="text-center px-4 md:px-6 lg:px-8">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium text-tone-800 mb-4 md:mb-6">
-            {tc("invalidTableTitle")}
-          </h1>
-          <p className="text-tone-600 text-base md:text-lg lg:text-xl">
-            {tc("invalidTableMessage")}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Calcular totales usando los datos de la orden
   const dishes = state.order?.items || [];
 
@@ -127,6 +113,35 @@ export default function PaymentOptionsPage() {
   // remaining_amount de la orden es lo que falta por pagar
   const unpaidAmount =
     state.order?.remaining_amount || tableTotalPrice - paidAmount;
+
+  // Saldo de la cuenta en el hero (el mismo `unpaidAmount` que se paga en las opciones).
+  useFlowAmount(
+    isLoading
+      ? null
+      : {
+          total: unpaidAmount,
+          bill: tableTotalPrice,
+          breakdown:
+            paidAmount > 0
+              ? t("heroPaidBreakdown", { total: formatMoney(tableTotalPrice), paid: formatMoney(paidAmount) })
+              : undefined,
+        },
+  );
+
+  if (!tableNumber) {
+    return (
+      <div className="min-h-dvh bg-tone-50 flex items-center justify-center">
+        <div className="text-center px-4 md:px-6 lg:px-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium text-tone-800 mb-4 md:mb-6">
+            {tc("invalidTableTitle")}
+          </h1>
+          <p className="text-tone-600 text-base md:text-lg lg:text-xl">
+            {tc("invalidTableMessage")}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handlePayFullBill = () => {
     if (unpaidAmount <= 0) {
@@ -202,7 +217,7 @@ export default function PaymentOptionsPage() {
 
       <FlowStepCard step="payment-options">
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto pb-35 md:pb-40 lg:pb-45">
+            <div className="flex-1 overflow-y-auto pb-8">
               {/* 4 OPCIONES PRINCIPALES DE PAGO */}
               <div className="flex flex-col mt-4 md:mt-6">
                 {/* Opción 1: Pagar cuenta restante */}
@@ -211,7 +226,7 @@ export default function PaymentOptionsPage() {
                     onClick={handlePayFullBill}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-3 md:gap-4 lg:gap-5 py-3 md:py-4 lg:py-5 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <ReceiptText
                           className="text-black size-9 md:size-11 lg:size-12"
@@ -219,7 +234,7 @@ export default function PaymentOptionsPage() {
                         />
                       </div>
                       <div className="flex-1 text-left">
-                        <h3 className="text-black text-base md:text-lg lg:text-xl">
+                        <h3 className="text-black text-lg md:text-xl lg:text-2xl">
                           {t("payFullBill")}
                         </h3>
                       </div>
@@ -236,7 +251,7 @@ export default function PaymentOptionsPage() {
                     onClick={handleSelectItems}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-3 md:gap-4 lg:gap-5 py-3 md:py-4 lg:py-5 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <img
                           src="/icons/select-items-logo.svg"
@@ -245,7 +260,7 @@ export default function PaymentOptionsPage() {
                         />
                       </div>
                       <div className="flex-1 text-left">
-                        <h3 className="text-black text-base md:text-lg lg:text-xl">
+                        <h3 className="text-black text-lg md:text-xl lg:text-2xl">
                           {t("selectItems")}
                         </h3>
                       </div>
@@ -262,7 +277,7 @@ export default function PaymentOptionsPage() {
                     onClick={handleEqualShares}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-3 md:gap-4 lg:gap-5 py-3 md:py-4 lg:py-5 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <img
                           src="/icons/split-bill-logo.png"
@@ -271,7 +286,7 @@ export default function PaymentOptionsPage() {
                         />
                       </div>
                       <div className="flex-1 text-left">
-                        <h3 className="text-black text-base md:text-lg lg:text-xl">
+                        <h3 className="text-black text-lg md:text-xl lg:text-2xl">
                           {t("splitBill")}
                         </h3>
                       </div>
@@ -288,7 +303,7 @@ export default function PaymentOptionsPage() {
                     onClick={handleChooseAmount}
                     className="w-full bg-white cursor-pointer active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-3 md:gap-4 lg:gap-5 py-3 md:py-4 lg:py-5 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <DollarSign
                           className="text-black size-9 md:size-11 lg:size-12"
@@ -296,7 +311,7 @@ export default function PaymentOptionsPage() {
                         />
                       </div>
                       <div className="flex-1 text-left">
-                        <h3 className="text-black text-base md:text-lg lg:text-xl">
+                        <h3 className="text-black text-lg md:text-xl lg:text-2xl">
                           {t("chooseAmount")}
                         </h3>
                       </div>
@@ -308,40 +323,6 @@ export default function PaymentOptionsPage() {
                 )}
               </div>
             </div>
-
-            {/* Total - Fixed to bottom */}
-            {unpaidAmount > 0 && (
-              <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                <div className="py-4 md:py-8 lg:py-12 space-y-2 md:space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg md:text-2xl lg:text-3xl font-medium text-black">
-                      {t("totalTable", { table: tableNumber ?? "" })}
-                    </span>
-                    <span className="text-lg md:text-2xl lg:text-3xl font-medium text-black">
-                      ${tableTotalPrice.toFixed(2)}
-                    </span>
-                  </div>
-                  {paidAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-even-shamrock font-medium text-base md:text-xl lg:text-2xl">
-                        {tc("paidColon")}
-                      </span>
-                      <span className="text-even-shamrock font-medium text-base md:text-xl lg:text-2xl">
-                        ${paidAmount.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-evergreen font-medium text-base md:text-xl lg:text-2xl">
-                      {t("remainingLabel")}
-                    </span>
-                    <span className="text-evergreen font-medium text-base md:text-xl lg:text-2xl">
-                      ${unpaidAmount.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
       </FlowStepCard>
     </div>
   );

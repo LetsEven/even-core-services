@@ -1,6 +1,7 @@
 "use client";
 
-import { FlowStepCard } from "@even/ui/diner";
+import { PayButton, formatMoney } from "@even/ui";
+import { FlowStepCard, useFlowAmount } from "@even/ui/diner";
 import { useSearchParams, useParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -115,7 +116,6 @@ export default function CardSelectionPage() {
   // Solo se muestra la tarjeta elegida; el resto aparece al pedir "Ver otras tarjetas".
   const [showAllCards, setShowAllCards] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
   const [pendingPaymentData, setPendingPaymentData] = useState<{
@@ -687,6 +687,20 @@ export default function CardSelectionPage() {
 
   const displayTotal = getDisplayTotal();
 
+  // El hero lee este mismo `displayTotal`: es lo que se cobra (con el costo de los meses sin intereses, si aplica).
+  const financingCost = Math.max(displayTotal - totalAmountCharged, 0);
+  useFlowAmount(
+    isLoadingInitial || authLoading
+      ? null
+      : {
+          total: displayTotal,
+          bill: baseAmount,
+          tip: tipAmount,
+          commission: evenClientCharge,
+          financing: financingCost > 0.004 ? financingCost : undefined,
+        },
+  );
+
   // Esta función se ejecuta DESPUÉS de que expira el período de cancelación (4 segundos)
   // Es cuando realmente se procesa el pago en el servidor
   const handleConfirmPayment = async () => {
@@ -1188,7 +1202,6 @@ export default function CardSelectionPage() {
 
   // El back gesto/botón del dispositivo cierra estos modales en vez de
   // salir de la página.
-  useModalBackClose(showTotalModal, () => setShowTotalModal(false));
   useModalBackClose(showPaymentOptionsModal, () =>
     setShowPaymentOptionsModal(false),
   );
@@ -1273,35 +1286,9 @@ export default function CardSelectionPage() {
 
         {/* Contenido scrolleable */}
         <FlowStepCard step="card-selection" className={isAnimatingOut ? "animate-slide-down" : undefined}>
-              <div className="flex-1 overflow-y-auto py-8 pb-30">
-                {/* Payment Summary */}
-                <div className="space-y-2 mb-6">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                        {tc("totalToPay")}
-                      </span>
-                      <CircleAlert
-                        className="size-4 cursor-pointer text-tone-500"
-                        strokeWidth={2.3}
-                        onClick={() => setShowTotalModal(true)}
-                      />
-                    </div>
-                    <div className="text-right">
-                      {selectedMSI !== null ? (
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${(displayTotal / selectedMSI).toFixed(2)} MXN{" "}
-                          {t("monthsSuffix", { months: selectedMSI })}
-                        </span>
-                      ) : (
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${displayTotal.toFixed(2)} MXN
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
+              <div className="flex-1 overflow-y-auto py-8 pb-[130px]">
+                {/* "Pagar en meses" (el total vive en el hero) */}
+                <div className="mb-6">
                   {(() => {
                     const selectedMethod = allPaymentMethods.find(
                       (pm) => pm.id === selectedPaymentMethodId,
@@ -1310,11 +1297,11 @@ export default function CardSelectionPage() {
                       msiConfig.isActive &&
                       totalAmountCharged >= 300 ? (
                       <div
-                        className="py-2 cursor-pointer"
+                        className="cursor-pointer py-2"
                         onClick={() => setShowPaymentOptionsModal(true)}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                          <span className="font-medium text-black text-lg md:text-xl lg:text-2xl">
                             {t("payInMonths")}
                           </span>
                           <div
@@ -1329,6 +1316,12 @@ export default function CardSelectionPage() {
                             )}
                           </div>
                         </div>
+                        {selectedMSI !== null && (
+                          <p className="mt-1 text-base text-tone-600 md:text-lg">
+                            ${(displayTotal / selectedMSI).toFixed(2)} MXN{" "}
+                            {t("monthsSuffix", { months: selectedMSI })}
+                          </p>
+                        )}
                       </div>
                     ) : null;
                   })()}
@@ -1336,7 +1329,7 @@ export default function CardSelectionPage() {
 
                 {/* Saved Cards List */}
                 <div className="mb-2.5">
-                  <h3 className="text-black font-medium mb-3">
+                  <h3 className="mb-3 text-lg font-medium text-black md:text-xl lg:text-2xl">
                     {t("paymentMethodsLabel")}
                   </h3>
                   <div className="space-y-2.5">
@@ -1348,7 +1341,7 @@ export default function CardSelectionPage() {
                     ).map((method) => (
                       <div
                         key={method.id}
-                        className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
+                        className={`flex items-center py-4 px-5 pl-10 border rounded-full transition-colors ${
                           selectedPaymentMethodId === method.id
                             ? "border-even-grass bg-even-grass/10"
                             : "border-black/50 bg-surface"
@@ -1359,7 +1352,7 @@ export default function CardSelectionPage() {
                             setSelectedPaymentMethodId(method.id);
                             setShowAllCards(false);
                           }}
-                          className="flex items-center justify-center gap-3 mx-auto cursor-pointer text-base md:text-lg lg:text-xl"
+                          className="flex items-center justify-center gap-3 mx-auto cursor-pointer text-lg md:text-xl lg:text-2xl"
                         >
                           <div>{getCardTypeIcon(method.cardBrand)}</div>
                           <div>
@@ -1505,20 +1498,13 @@ export default function CardSelectionPage() {
           className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
-          <button
+          <PayButton
             onClick={handlePayment}
             disabled={
               isProcessing ||
               !selectedPaymentMethodId ||
               totalAmountCharged <= 0
             }
-            className={`w-full py-3 text-even-evergreen rounded-full cursor-pointer transition-colors text-base md:text-lg lg:text-xl active:scale-90 ${
-              isProcessing ||
-              !selectedPaymentMethodId ||
-              totalAmountCharged <= 0
-                ? "bg-even-grass opacity-50 cursor-not-allowed"
-                : "bg-even-grass animate-pulse-button"
-            }`}
           >
             {isProcessing ? (
               <div className="flex items-center justify-center gap-2 md:gap-3">
@@ -1530,77 +1516,11 @@ export default function CardSelectionPage() {
             ) : totalAmountCharged <= 0 ? (
               t("invalidAmount")
             ) : (
-              tc("payCta")
+              tc("payCtaAmount", { amount: formatMoney(displayTotal) })
             )}
-          </button>
+          </PayButton>
         </div>
 
-        {/* Modal de resumen del total */}
-        {showTotalModal && (
-          <div
-            className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-            style={{ zIndex: 99999 }}
-          >
-            {/* Fondo */}
-            <div
-              className="absolute inset-0 bg-black/20"
-              onClick={() => setShowTotalModal(false)}
-            ></div>
-
-            {/* Modal */}
-            <div className="relative bg-white rounded-t-4xl w-full mx-4">
-              {/* Titulo */}
-              <div className="px-6 pt-4">
-                <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                  <h3 className="text-lg font-semibold text-black">
-                    {t("totalSummaryTitle")}
-                  </h3>
-                  <button
-                    onClick={() => setShowTotalModal(false)}
-                    className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                  >
-                    <X className="size-5 text-tone-500" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Contenido */}
-              <div className="px-6 py-4">
-                <p className="text-black mb-4">{t("totalBreakdownIntro")}</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium">
-                      {t("consumptionBreakdown")}
-                    </span>
-                    <span className="text-black font-medium">
-                      ${baseAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                  {tipAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium">
-                        {t("tipBreakdown")}
-                      </span>
-                      <span className="text-black font-medium">
-                        ${tipAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                  {evenCommissionClient + ivaEvenClient > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium">
-                        {t("serviceCommissionBreakdown")}
-                      </span>
-                      <span className="text-black font-medium">
-                        ${(evenCommissionClient + ivaEvenClient).toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal de opciones de pago */}
         {showPaymentOptionsModal && (

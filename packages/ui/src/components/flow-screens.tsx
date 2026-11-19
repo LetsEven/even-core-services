@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { FlowScreen } from "./flow-nav-overlay";
+import { AmountHero, TitleHero } from "./flow-hero";
 import {
   AddCardSkeleton,
   CardSelectionSkeleton,
@@ -8,7 +9,6 @@ import {
   CartSkeleton,
   OrderConfirmSkeleton,
   PaymentOptionsSkeleton,
-  StepHero,
   TipSkeleton,
   UserSkeleton,
   type AddCardSkeletonLabels,
@@ -29,9 +29,17 @@ import {
 type Context = {
   /** Línea de contexto sobre el título ("Mesa 12", "Habitación 301", "Pick & Go"). */
   context?: ReactNode;
-  /** Color de la línea de contexto (por defecto `text-mist`). */
+  /** Color de la línea de contexto (por defecto `text-mint`). */
   contextClassName?: string;
 };
+
+/** Las vistas con monto llevan además la etiqueta sobre la cifra ("Total a pagar"). */
+type AmountContext = Context & { amountLabel: ReactNode };
+
+/** Hero "Monto protagonista": contexto · título, etiqueta y monto vivo que publica la vista (`useFlowAmount`). */
+function amountHero({ context, contextClassName, title, amountLabel }: AmountContext & { title: ReactNode }) {
+  return <AmountHero context={context} contextClassName={contextClassName} title={title} label={amountLabel} />;
+}
 
 /** Carrito: tarjeta que llena la pantalla con la lista y la barra inferior fija. */
 export function cartScreen({
@@ -41,7 +49,7 @@ export function cartScreen({
   labels,
 }: Context & { title: ReactNode; labels: { myCart: string } }): FlowScreen {
   return {
-    hero: <StepHero label={context} labelClassName={contextClassName} title={title} />,
+    hero: <TitleHero context={context} contextClassName={contextClassName} title={title} />,
     body: <CartSkeleton labels={labels} />,
   };
 }
@@ -51,20 +59,21 @@ export function orderConfirmScreen({
   context,
   contextClassName,
   title,
+  amountLabel,
   labels,
-}: Context & { title: ReactNode; labels: OrderConfirmSkeletonLabels }): FlowScreen {
+}: AmountContext & { title: ReactNode; labels: OrderConfirmSkeletonLabels }): FlowScreen {
   return {
-    hero: <StepHero label={context} labelClassName={contextClassName} title={title} />,
+    hero: amountHero({ context, contextClassName, title, amountLabel }),
     body: <OrderConfirmSkeleton labels={labels} />,
     layout: "anchored",
-    cardClassName: "flex-none overflow-y-auto py-8 max-h-[calc(100dvh-8rem)]",
+    cardClassName: "flex-none pt-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]",
   };
 }
 
 /** Opciones de pago (pagar todo, seleccionar artículos, dividir, elegir monto). */
-export function paymentOptionsScreen({ context, contextClassName, title }: Context & { title: ReactNode }): FlowScreen {
+export function paymentOptionsScreen({ context, contextClassName, title, amountLabel }: AmountContext & { title: ReactNode }): FlowScreen {
   return {
-    hero: <StepHero label={context} labelClassName={contextClassName} title={title} />,
+    hero: amountHero({ context, contextClassName, title, amountLabel }),
     body: <PaymentOptionsSkeleton />,
   };
 }
@@ -74,14 +83,15 @@ export function tipScreen({
   context,
   contextClassName,
   title,
+  amountLabel,
   labels,
-}: Context & { title: ReactNode; labels: TipSkeletonLabels }): FlowScreen {
+}: AmountContext & { title: ReactNode; labels: TipSkeletonLabels }): FlowScreen {
   return {
-    hero: <StepHero label={context} labelClassName={contextClassName} title={title} />,
+    hero: amountHero({ context, contextClassName, title, amountLabel }),
     body: <TipSkeleton labels={labels} />,
     layout: "anchored",
     // px-0: el cuerpo de la propina trae su propio relleno lateral (px-8…).
-    cardClassName: "flex-none px-0 md:px-0 lg:px-0 pt-8 pb-4 md:pt-10 md:pb-6 lg:pt-12",
+    cardClassName: "flex-none px-0 md:px-0 lg:px-0 pt-8 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pt-10 lg:pt-12",
   };
 }
 
@@ -90,10 +100,11 @@ export function chooseAmountScreen({
   context,
   contextClassName,
   title,
+  amountLabel,
   labels,
   amountLabels,
   spaced,
-}: Context & {
+}: AmountContext & {
   title: ReactNode;
   labels: TipSkeletonLabels;
   amountLabels: { amountToPay: string; maximum: string };
@@ -101,7 +112,7 @@ export function chooseAmountScreen({
   spaced?: boolean;
 }): FlowScreen {
   return {
-    ...tipScreen({ context, contextClassName, title, labels }),
+    ...tipScreen({ context, contextClassName, title, amountLabel, labels }),
     body: <TipSkeleton labels={labels} before={<ChooseAmountSkeletonBlock labels={amountLabels} spaced={spaced} />} />,
   };
 }
@@ -111,11 +122,12 @@ export function selectItemsScreen({
   context,
   contextClassName,
   title,
+  amountLabel,
   labels,
   showImages,
   showGuest,
   rows,
-}: Context & {
+}: AmountContext & {
   title: ReactNode;
   labels: TipSkeletonLabels & { qty: string; price: string; hint: string };
   showImages?: boolean;
@@ -124,7 +136,7 @@ export function selectItemsScreen({
   rows?: number;
 }): FlowScreen {
   return {
-    hero: <StepHero label={context} labelClassName={contextClassName} title={title} />,
+    hero: amountHero({ context, contextClassName, title, amountLabel }),
     body: <SelectItemsSkeleton labels={labels} showImages={showImages} showGuest={showGuest} rows={rows} />,
     layout: "anchored",
     // Al inicio no hay nada elegido (bajo el mínimo): la tarjeta reserva el alto del resumen fijo con su aviso.
@@ -132,25 +144,30 @@ export function selectItemsScreen({
   };
 }
 
-/** Selección de método de pago. `showSubtotal={false}` para las apps cuyo resumen es solo el total. */
+/** Selección de método de pago: el total va en el hero y el botón de pagar abajo. */
 export function cardSelectionScreen({
   context,
   contextClassName,
   title,
+  amountLabel,
   labels,
-  showSubtotal,
-}: Context & { title: ReactNode; labels: CardSelectionSkeletonLabels; showSubtotal?: boolean }): FlowScreen {
+}: AmountContext & { title: ReactNode; labels: CardSelectionSkeletonLabels }): FlowScreen {
   return {
-    hero: <StepHero label={context} labelClassName={contextClassName} title={title} />,
-    body: <CardSelectionSkeleton labels={labels} showSubtotal={showSubtotal} />,
+    hero: amountHero({ context, contextClassName, title, amountLabel }),
+    body: <CardSelectionSkeleton labels={labels} />,
     cardClassName: "z-50 overflow-hidden",
   };
 }
 
 /** Captura de nombre del invitado. */
-export function userScreen({ title, labels }: { title: ReactNode; labels: UserSkeletonLabels }): FlowScreen {
+export function userScreen({
+  context,
+  contextClassName,
+  title,
+  labels,
+}: Context & { title: ReactNode; labels: UserSkeletonLabels }): FlowScreen {
   return {
-    hero: <StepHero title={title} />,
+    hero: <TitleHero context={context} contextClassName={contextClassName} title={title} />,
     body: <UserSkeleton labels={labels} />,
     cardClassName: "pb-32",
   };
@@ -158,23 +175,18 @@ export function userScreen({ title, labels }: { title: ReactNode; labels: UserSk
 
 /** Agregar tarjeta: formulario con título y subtítulo. */
 export function addCardScreen({
+  context,
+  contextClassName,
   title,
   subtitle,
   labels,
-}: {
+}: Context & {
   title: ReactNode;
   subtitle: ReactNode;
   labels: AddCardSkeletonLabels;
 }): FlowScreen {
   return {
-    hero: (
-      <div className="flex flex-col justify-center px-8 pt-6 pb-12 md:px-10 md:pt-7 md:pb-14 lg:px-12 lg:pt-8 lg:pb-16">
-        <p className="mt-2 mb-2 text-3xl leading-7 font-medium text-white md:mt-3 md:mb-3 md:text-4xl lg:mt-4 lg:mb-4 lg:text-5xl">
-          {title}
-        </p>
-        <p className="text-sm text-white/80 md:text-base lg:text-lg">{subtitle}</p>
-      </div>
-    ),
+    hero: <TitleHero context={context} contextClassName={contextClassName} title={title} subtitle={subtitle} />,
     body: <AddCardSkeleton labels={labels} />,
     cardClassName: "py-6 md:py-8 lg:py-10",
   };

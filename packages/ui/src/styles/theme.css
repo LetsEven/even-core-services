@@ -112,6 +112,7 @@
   --color-even-grass-hover: #74cf4e; /* hover del botón primario */
   --color-white: #ffffff;
   --color-mist: #e0e0e0; /* texto tenue sobre fondo oscuro */
+  --color-mint: #9fbfb2; /* texto secundario del hero del flujo (contexto, desglose) */
   --color-line: #e5e7eb; /* trazos claros (spinners, separadores) */
   --color-field: #f3f4f6; /* fondo de controles de formulario */
   --color-field-border: #d1d5db; /* borde de controles de formulario */

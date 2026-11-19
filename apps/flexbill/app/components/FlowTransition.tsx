@@ -40,9 +40,9 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const equalSplit = useEqualSplitScreen(state.tableNumber);
 
   const context = tc("tableLabel", { table: state.tableNumber });
-  const contextClassName = "text-white/60";
-  const tipLabels = { total: tip("totalLabel"), tip: tip("tipLabel"), totalToPay: tip("totalToPay"), payCta: tip("payCta") };
-  const tipProps = { context, contextClassName, title: tip("title") };
+  const payCta = tc("payCtaAmount", { amount: "$000.00" });
+  const tipLabels = { tip: tip("tipLabel"), payCta };
+  const tipProps = { context, title: tip("title"), amountLabel: tip("totalToPay") };
   const tipPlain = tipScreen({ ...tipProps, labels: tipLabels });
   const tipChooseAmount = chooseAmountScreen({
     ...tipProps,
@@ -57,8 +57,8 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   });
 
   const screens: Record<(typeof FLOW_STEPS)[number], FlowScreenSource> = {
-    cart: cartScreen({ context, contextClassName, title: cart("confirmYourOrder"), labels: { myCart: cart("myCart") } }),
-    "payment-options": paymentOptionsScreen({ title: options("title") }),
+    cart: cartScreen({ context, title: cart("confirmYourOrder"), labels: { myCart: cart("myCart") } }),
+    "payment-options": paymentOptionsScreen({ context, title: options("title"), amountLabel: options("heroLabel") }),
     // La propina cambia de forma según lo que se paga (`type=`): dividir cuenta, elegir monto o artículos.
     "tip-selection": ({ params }) => {
       switch (params.get("type")) {
@@ -73,15 +73,18 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
       }
     },
     "card-selection": cardSelectionScreen({
+      context,
       title: pay("selectPaymentMethodTitle"),
-      showSubtotal: false,
-      labels: { subtotal: tc("subtotal"), totalToPay: pay("totalToPay"), paymentMethods: pay("paymentMethodsLabel") },
+      amountLabel: pay("totalToPay"),
+      labels: { paymentMethods: pay("paymentMethodsLabel"), payCta },
     }),
     user: userScreen({
+      context,
       title: user("title"),
       labels: { name: user("nameLabel"), terms, continueCta: user("continueCta") },
     }),
     "add-card": addCardScreen({
+      context,
       title: addCard("title"),
       subtitle: addCard("subtitle"),
       labels: {

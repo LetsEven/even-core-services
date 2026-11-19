@@ -14,7 +14,7 @@ test.describe("transición de tarjeta del flujo de pago", () => {
     await expect(page).toHaveURL(/\/tip-selection\?/);
 
     // Adelante: propina → pago
-    await expectFlowTransition(page, () => page.getByRole("button", { name: "Pagar", exact: true }).click(), {
+    await expectFlowTransition(page, () => page.getByRole("button", { name: /^Pagar \$/ }).click(), {
       step: "card-selection",
     });
     await expect(page).toHaveURL(/\/card-selection\?/);

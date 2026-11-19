@@ -28,30 +28,34 @@ export default function FlowTransition({ children }: { children: ReactNode }) {
   const addCard = useTranslations("AddCardPage");
   const terms = useTermsText();
 
+  const context = tc("roomLabel", { room: state.roomNumber ?? "" });
+  const payCta = tc("payCtaAmount", { amount: "$000.00" });
+
   const screens = {
     cart: cartScreen({
-      context: tc("roomLabel", { room: state.roomNumber ?? "" }),
+      context,
       title: cart("confirmYourOrder"),
       labels: { myCart: cart("myCart") },
     }),
     "order-confirm": orderConfirmScreen({
+      context,
       title: confirm("title"),
-      labels: {
-        subtotal: tc("subtotal"),
-        tip: tc("tip"),
-        totalToPay: tc("totalToPay"),
-        continueCta: confirm("continueCta"),
-      },
+      amountLabel: tc("totalToPay"),
+      labels: { tip: tc("tip"), payCta },
     }),
     "card-selection": cardSelectionScreen({
+      context,
       title: pay("selectPaymentMethodTitle"),
-      labels: { subtotal: tc("subtotal"), totalToPay: tc("totalToPay"), paymentMethods: pay("paymentMethodsLabel") },
+      amountLabel: tc("totalToPay"),
+      labels: { paymentMethods: pay("paymentMethodsLabel"), payCta },
     }),
     user: userScreen({
+      context,
       title: user("title"),
       labels: { name: user("nameLabel"), terms, continueCta: user("continueCta") },
     }),
     "add-card": addCardScreen({
+      context,
       title: addCard("title"),
       subtitle: addCard("subtitle"),
       labels: {

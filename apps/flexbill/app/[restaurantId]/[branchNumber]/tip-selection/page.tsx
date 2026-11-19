@@ -1,6 +1,7 @@
 "use client";
 
-import { EqualSplitView, FlowStepCard } from "@even/ui/diner";
+import { AmountHero, PayButton, TipPicker, formatMoney } from "@even/ui";
+import { EqualSplitView, FlowStepCard, useFlowAmount } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -8,7 +9,7 @@ import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { getRestaurantData } from "@/app/utils/restaurantData";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
-import { CircleAlert, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   calculateFlexBillItemCommission,
   calculateFlexBillProportionalCommission,
@@ -51,7 +52,6 @@ export default function TipSelectionPage() {
   const [customTip, setCustomTip] = useState("");
   const [customPaymentAmount, setCustomPaymentAmount] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [showTotalModal, setShowTotalModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
@@ -388,6 +388,18 @@ export default function TipSelectionPage() {
   const displayPropina =
     Math.round((paymentAmount - displaySubtotal) * 100) / 100;
 
+  // El hero lee este mismo `paymentAmount`: es el que cobra el botón de pagar.
+  useFlowAmount(
+    isLoading
+      ? null
+      : {
+          total: paymentAmount,
+          bill: displaySubtotal,
+          billLabel: paymentType === "equal-shares" ? t("yourShareTitle") : undefined,
+          tip: displayPropina,
+        },
+  );
+
   // Validación de compra mínima - usar el total con propina, comisiones, etc.
   const MINIMUM_AMOUNT = 20; // Mínimo de compra requerido
   const isUnderMinimum = paymentAmount < MINIMUM_AMOUNT;
@@ -511,7 +523,6 @@ export default function TipSelectionPage() {
         (
           <EqualSplitView
             tableNumber={state.tableNumber}
-            remaining={displayUnpaidAmount}
             share={displaySubtotal}
             people={equalPeopleCount}
             onPeopleChange={(n) => setEqualPeople(String(n))}
@@ -547,46 +558,30 @@ export default function TipSelectionPage() {
             }
             hero={
               isSelectItems ? (
-                <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h1 className="text-white/60 text-xl md:text-2xl lg:text-3xl font-medium">
-                        {tc("tableLabel", { table: state.tableNumber })}
-                      </h1>
-                      <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                        {t("title")}
-                      </h1>
-                    </div>
-
-                    {/* Filtro de usuarios - solo para select-items */}
-                    {paymentType === "select-items" &&
-                      unpaidUsers.length > 1 && (
-                        <button
-                          ref={buttonRef}
-                          onClick={() => setShowUserSelector(!showUserSelector)}
-                          className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-2"
-                        >
-                          <span>
-                            {selectedUserFilter === "all"
-                              ? t("allUsersFilter")
-                              : selectedUserFilter}
-                          </span>
-                          <svg
-                            className={`w-4 h-4 transition-transform ${showUserSelector ? "rotate-180" : ""}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                  </div>
+                <div className="relative">
+                  <AmountHero
+                    context={tc("tableLabel", { table: state.tableNumber })}
+                    title={t("title")}
+                    label={t("totalToPay")}
+                  />
+                  {/* Filtro de usuarios - solo para select-items */}
+                  {unpaidUsers.length > 1 && (
+                    <button
+                      ref={buttonRef}
+                      onClick={() => setShowUserSelector(!showUserSelector)}
+                      className="absolute right-0 bottom-0 flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+                    >
+                      <span>{selectedUserFilter === "all" ? t("allUsersFilter") : selectedUserFilter}</span>
+                      <svg
+                        className={`w-4 h-4 transition-transform ${showUserSelector ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               ) : undefined
             }
@@ -749,237 +744,53 @@ export default function TipSelectionPage() {
                   </div>
                 )}
 
-                {/* Tip Selection Section - Incluido en contenedor blanco cuando NO es select-items */}
-                {paymentType !== "select-items" && (
-                  <div className="space-y-4 md:space-y-5 lg:space-y-6 px-8 md:px-10 lg:px-12">
-                    {/* Resumen del pago */}
-                    <div className="space-y-2 md:space-y-3 lg:space-y-4">
-                      {/* Restante de la Mesa - solo mostrar si NO es full-bill ni choose-amount ni select-items.
-                        Usa displayUnpaidAmount (lo que de verdad falta, ya
-                        descontando pagos genéricos previos), no el total
-                        original de la mesa — de ahí el label "Restante". */}
-                      {paymentType !== "full-bill" &&
-                        paymentType !== "choose-amount" &&
-                        paymentType !== "select-items" && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-base md:text-lg lg:text-xl font-medium text-black">
-                              {t("remainingTableLabel")}
-                            </span>
-                            <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                              ${displayUnpaidAmount.toFixed(2)} MXN
-                            </span>
-                          </div>
-                        )}
-
-                      {/* Pagado */}
-                      {paidAmount > 0 && paymentType !== "equal-shares" && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                            {t("paidLabel")}
-                          </span>
-                          <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                            ${displayPaidAmount.toFixed(2)} MXN
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Restante por pagar - solo mostrar si NO es full-bill ni equal-shares */}
-                      {paymentType !== "full-bill" &&
-                        paymentType !== "equal-shares" && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                              {t("remainingToPayLabel")}
-                            </span>
-                            <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                              ${displayUnpaidAmount.toFixed(2)} MXN
-                            </span>
-                          </div>
-                        )}
-
-                      {/* Tu parte - NO mostrar si es select-items */}
-                      {paymentType !== "select-items" && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                            {paymentType === "full-bill"
-                              ? t("totalLabel")
-                              : paymentType === "equal-shares"
-                                ? t("yourShareLabel")
-                                : paymentType === "choose-amount"
-                                  ? t("yourAmountLabel")
-                                  : t("yourShareLabel")}
-                          </span>
-                          <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                            ${displaySubtotal.toFixed(2)} MXN
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Selección de propina */}
-                    <div className="md:mb-4 lg:mb-5">
-                      {/* Propina label y botones de porcentaje */}
-                      <div className="flex items-center gap-4 mb-3">
-                        <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
-                          {t("tipLabel")}
-                        </span>
-                        {/* Tip Percentage Buttons */}
-                        <div className="grid grid-cols-5 gap-2 flex-1">
-                          {[0, 10, 15, 20].map((percentage) => (
-                            <button
-                              key={percentage}
-                              onClick={() => {
-                                handleTipPercentage(percentage);
-                                setShowCustomTipInput(false);
-                              }}
-                              className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                                tipPercentage === percentage &&
-                                !showCustomTipInput
-                                  ? "bg-even-grass text-even-evergreen"
-                                  : "bg-surface hover:border-tone-400"
-                              }`}
-                            >
-                              {percentage === 0 ? "0%" : `${percentage}%`}
-                            </button>
-                          ))}
-                          {/* Custom Tip Button */}
-                          <button
-                            onClick={() => {
-                              setShowCustomTipInput(true);
-                              setTipPercentage(0);
-                            }}
-                            className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                              showCustomTipInput
-                                ? "bg-even-grass text-even-evergreen"
-                                : "bg-surface hover:border-tone-400"
-                            }`}
-                          >
-                            $
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Custom Tip Input - Solo se muestra cuando showCustomTipInput es true */}
-                      {showCustomTipInput && (
-                        <div className="flex flex-col gap-2 mb-3">
-                          <div className="relative w-full">
-                            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-base">
-                              $
-                            </span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              pattern="[0-9]*\.?[0-9]*"
-                              value={customTip}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                                  handleCustomTipChange(value);
-                                }
-                              }}
-                              placeholder="0.00"
-                              autoFocus
-                              className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-stroke/40 rounded-full focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent text-black text-center text-base bg-surface"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {displayPropina > 0 && (
-                        <div className="flex justify-end items-center mt-2 text-sm">
-                          <span className="text-even-evergreen font-medium">
-                            +${displayPropina.toFixed(2)} MXN
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Alerta de mínimo de compra */}
-                {isUnderMinimum &&
-                  baseAmount > 0 &&
-                  paymentType !== "select-items" && (
-                    <div className="bg-linear-to-br from-danger-50 to-danger-100 px-4 py-2">
-                      <div className="flex items-center gap-3 px-8 md:px-10 lg:px-12">
-                        <X className="size-6 text-danger-500 shrink-0" />
-                        <p className="text-danger-700 font-medium text-base md:text-lg">
-                          {t("underMinimumWarning")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Tip Selection Section - Incluido en contenedor blanco cuando NO es select-items */}
+                {/* Propina y botón de pagar (el total vive en el hero) */}
                 {paymentType !== "select-items" && (
                   <div className="px-8 md:px-10 lg:px-12">
-                    {/* Total final */}
-                    <div
-                      className={`border-t border-tone-200 ${isUnderMinimum && baseAmount > 0 ? "pt-4 mt-0" : "pt-6"}`}
-                    >
-                      <div className="w-full flex gap-3 justify-between">
-                        <div className="flex flex-col justify-center -translate-y-2">
-                          <span className="text-tone-600 text-sm md:text-base lg:text-lg">
-                            {t("totalToPay")}
-                          </span>
-                          <div
-                            className="flex items-center justify-center w-fit text-2xl md:text-3xl lg:text-4xl font-medium text-black text-center gap-2"
-                            style={{
-                              WebkitFontSmoothing: "antialiased",
-                              MozOsxFontSmoothing: "grayscale",
-                              transform: "translateZ(0)",
-                              backfaceVisibility: "hidden" as const,
-                            }}
-                            key={paymentAmount}
-                          >
-                            ${paymentAmount.toFixed(2)}
-                            <CircleAlert
-                              className="size-4 cursor-pointer text-tone-500"
-                              strokeWidth={2.3}
-                              onClick={() => setShowTotalModal(true)}
-                            />
-                          </div>
-                        </div>
+                    <TipPicker
+                      label={t("tipLabel")}
+                      percentage={tipPercentage}
+                      showCustom={showCustomTipInput}
+                      customTip={customTip}
+                      onPercentage={(p) => {
+                        handleTipPercentage(p);
+                        setShowCustomTipInput(false);
+                      }}
+                      onCustomOpen={() => {
+                        setShowCustomTipInput(true);
+                        setTipPercentage(0);
+                      }}
+                      onCustomChange={handleCustomTipChange}
+                    />
 
-                        {/* Pagar Button */}
-                        {(() => {
-                          const isChooseAmountInvalid =
-                            paymentType === "choose-amount" &&
+                    {/* Alerta de mínimo de compra */}
+                    {isUnderMinimum && baseAmount > 0 && (
+                      <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
+                        <X className="size-6 shrink-0 text-danger-500" />
+                        <p className="text-base font-medium text-danger-700 md:text-lg">{t("underMinimumWarning")}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-6">
+                      <PayButton
+                        onClick={handleContinueToCardSelection}
+                        disabled={
+                          baseAmount <= 0 ||
+                          (paymentType === "choose-amount" &&
                             (!customPaymentAmount ||
                               parseFloat(customPaymentAmount) <= 0 ||
-                              parseFloat(customPaymentAmount) >
-                                displayUnpaidAmount);
-
-                          const isSelectItemsInvalid =
-                            paymentType === "select-items" &&
-                            selectedItems.length === 0;
-
-                          const isDisabled =
-                            baseAmount <= 0 ||
-                            isChooseAmountInvalid ||
-                            isSelectItemsInvalid ||
-                            isUnderMinimum;
-
-                          return (
-                            <button
-                              onClick={handleContinueToCardSelection}
-                              disabled={isDisabled}
-                              className={`rounded-full transition-all px-15 h-10 md:h-12 lg:h-12 flex items-center justify-center text-base md:text-lg lg:text-xl bg-even-grass text-even-evergreen ${
-                                isDisabled
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : "animate-pulse-button active:scale-90 cursor-pointer"
-                              }`}
-                            >
-                              {t("payCta")}
-                            </button>
-                          );
-                        })()}
-                      </div>
+                              parseFloat(customPaymentAmount) > displayUnpaidAmount)) ||
+                          isUnderMinimum
+                        }
+                      >
+                        {tc("payCtaAmount", { amount: formatMoney(paymentAmount) })}
+                      </PayButton>
                     </div>
                   </div>
                 )}
           </FlowStepCard>
 
-          {/* Tip Selection Section - Fijo cuando es select-items */}
+          {/* Propina y botón de pagar - fijos cuando es select-items */}
           {paymentType === "select-items" && (
             <div
               className="fixed fixed-col bottom-0 bg-white pt-8 md:pt-10 lg:pt-12"
@@ -988,183 +799,48 @@ export default function TipSelectionPage() {
                 zIndex: 40,
               }}
             >
-              <div className="px-8 md:px-10 lg:px-12 space-y-4">
-                {/* Resumen del pago */}
-                <div className="space-y-2 md:space-y-3 lg:space-y-4">
-                  {/* Pagado */}
-                  {paidAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                        {t("paidLabel")}
-                      </span>
-                      <span className="text-even-shamrock font-medium text-base md:text-lg lg:text-xl">
-                        ${displayPaidAmount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Restante por pagar */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-even-evergreen font-medium text-base md:text-lg lg:text-xl">
-                      {t("remainingToPayLabel")}
-                    </span>
-                    <span className="text-even-evergreen font-medium text-base md:text-lg lg:text-xl">
-                      ${displayUnpaidAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                  {selectItemsExceedsRemaining && (
-                    <p className="text-sm text-danger-600 mt-1">
-                      {t("selectedItemsExceedMessage", {
-                        selected: displaySelectedItemsAmount.toFixed(2),
-                        remaining: displayUnpaidAmount.toFixed(2),
-                      })}
-                    </p>
-                  )}
-                </div>
-
-                {/* Selección de propina */}
-                <div>
-                  {/* Propina label y botones de porcentaje */}
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
-                      {t("tipLabel")}
-                    </span>
-                    {/* Tip Percentage Buttons */}
-                    <div className="grid grid-cols-5 gap-2 flex-1">
-                      {[0, 10, 15, 20].map((percentage) => (
-                        <button
-                          key={percentage}
-                          onClick={() => {
-                            handleTipPercentage(percentage);
-                            setShowCustomTipInput(false);
-                          }}
-                          className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                            tipPercentage === percentage && !showCustomTipInput
-                              ? "bg-even-grass text-even-evergreen"
-                              : "bg-surface hover:border-tone-400"
-                          }`}
-                        >
-                          {percentage === 0 ? "0%" : `${percentage}%`}
-                        </button>
-                      ))}
-                      {/* Custom Tip Button */}
-                      <button
-                        onClick={() => {
-                          setShowCustomTipInput(true);
-                          setTipPercentage(0);
-                        }}
-                        className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
-                          showCustomTipInput
-                            ? "bg-even-grass text-even-evergreen"
-                            : "bg-surface hover:border-tone-400"
-                        }`}
-                      >
-                        $
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Custom Tip Input - Solo se muestra cuando showCustomTipInput es true */}
-                  {showCustomTipInput && (
-                    <div className="flex flex-col gap-2 mb-3">
-                      <div className="relative w-full">
-                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-base">
-                          $
-                        </span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          pattern="[0-9]*\.?[0-9]*"
-                          value={customTip}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                              handleCustomTipChange(value);
-                            }
-                          }}
-                          placeholder="0.00"
-                          autoFocus
-                          className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-stroke/40 rounded-full focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent text-black text-center text-base bg-surface"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {displayPropina > 0 && (
-                    <div className="flex justify-end items-center mt-2 text-sm">
-                      <span className="text-even-grass font-medium text-base md:text-lg lg:text-xl">
-                        +${displayPropina.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Alerta de mínimo de compra - select-items */}
-              {isUnderMinimum && baseAmount > 0 && (
-                <div className="bg-linear-to-br from-danger-50 to-danger-100 px-4 py-2">
-                  <div className="flex items-center gap-3 px-8 md:px-10 lg:px-12">
-                    <X className="size-6 text-danger-500 shrink-0" />
-                    <p className="text-danger-700 font-medium text-base md:text-lg">
-                      {t("underMinimumWarning")}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               <div className="px-8 md:px-10 lg:px-12">
-                {/* Total final */}
-                <div
-                  className={`border-t border-tone-200 ${isUnderMinimum && baseAmount > 0 ? "pt-4 mt-0" : "pt-6"}`}
-                >
-                  <div className="w-full flex gap-3 justify-between">
-                    <div className="flex flex-col justify-center -translate-y-2">
-                      <span className="text-tone-600 text-sm md:text-base lg:text-lg">
-                        {t("totalToPay")}
-                      </span>
-                      <div
-                        className="flex items-center justify-center w-fit text-2xl font-medium text-black text-center gap-2"
-                        style={{
-                          WebkitFontSmoothing: "antialiased",
-                          MozOsxFontSmoothing: "grayscale",
-                          transform: "translateZ(0)",
-                          backfaceVisibility: "hidden" as const,
-                        }}
-                        key={paymentAmount}
-                      >
-                        ${paymentAmount.toFixed(2)}
-                        <CircleAlert
-                          className="size-4 cursor-pointer text-tone-500"
-                          strokeWidth={2.3}
-                          onClick={() => setShowTotalModal(true)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Pagar Button */}
-                    {(() => {
-                      const isSelectItemsInvalid = selectedItems.length === 0;
-                      const isDisabled =
-                        baseAmount <= 0 ||
-                        isSelectItemsInvalid ||
-                        selectItemsExceedsRemaining ||
-                        isUnderMinimum;
-
-                      return (
-                        <button
-                          onClick={handleContinueToCardSelection}
-                          disabled={isDisabled}
-                          className={`rounded-full h-10 md:h-12 lg:h-12 flex items-center justify-center px-15 text-base md:text-lg lg:text-xl transition-all bg-even-grass text-even-evergreen ${
-                            isDisabled
-                              ? "opacity-50 cursor-not-allowed"
-                              : "animate-pulse-button active:scale-90 cursor-pointer"
-                          }`}
-                        >
-                          {t("payCta")}
-                        </button>
-                      );
-                    })()}
+                {selectItemsExceedsRemaining && (
+                  <p className="mb-3 text-base text-danger-600">
+                    {t("selectedItemsExceedMessage", {
+                      selected: displaySelectedItemsAmount.toFixed(2),
+                      remaining: displayUnpaidAmount.toFixed(2),
+                    })}
+                  </p>
+                )}
+                <TipPicker
+                  label={t("tipLabel")}
+                  percentage={tipPercentage}
+                  showCustom={showCustomTipInput}
+                  customTip={customTip}
+                  onPercentage={(p) => {
+                    handleTipPercentage(p);
+                    setShowCustomTipInput(false);
+                  }}
+                  onCustomOpen={() => {
+                    setShowCustomTipInput(true);
+                    setTipPercentage(0);
+                  }}
+                  onCustomChange={handleCustomTipChange}
+                />
+                {isUnderMinimum && baseAmount > 0 && (
+                  <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
+                    <X className="size-6 shrink-0 text-danger-500" />
+                    <p className="text-base font-medium text-danger-700 md:text-lg">{t("underMinimumWarning")}</p>
                   </div>
+                )}
+                <div className="mt-6">
+                  <PayButton
+                    onClick={handleContinueToCardSelection}
+                    disabled={
+                      baseAmount <= 0 ||
+                      selectedItems.length === 0 ||
+                      selectItemsExceedsRemaining ||
+                      isUnderMinimum
+                    }
+                  >
+                    {tc("payCtaAmount", { amount: formatMoney(paymentAmount) })}
+                  </PayButton>
                 </div>
               </div>
             </div>
@@ -1228,73 +904,6 @@ export default function TipSelectionPage() {
           </>
         )}
 
-      {/* Modal de resumen del total */}
-      {showTotalModal && (
-        <div
-          className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-          style={{ zIndex: 99999 }}
-        >
-          {/* Fondo */}
-          <div
-            className="absolute inset-0 bg-black/20"
-            onClick={() => setShowTotalModal(false)}
-          ></div>
-
-          {/* Modal */}
-          <div className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8">
-            {/* Titulo */}
-            <div className="px-6 pt-4 md:px-8 lg:px-10 md:pt-6 lg:pt-8">
-              <div className="flex items-center justify-between pb-4 border-b border-stroke">
-                <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-black">
-                  {t("totalSummaryTitle")}
-                </h3>
-                <button
-                  onClick={() => setShowTotalModal(false)}
-                  className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
-                >
-                  <X className="size-5 text-tone-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Contenido */}
-            <div className="px-6 py-4 md:px-8 lg:px-10 md:py-6 lg:py-8">
-              <p className="text-black mb-4 text-base md:text-lg lg:text-xl">
-                {t("breakdownIntro")}
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                    +{" "}
-                    {paymentType === "full-bill"
-                      ? t("consumptionLabel")
-                      : paymentType === "select-items"
-                        ? t("itemsLabel")
-                        : paymentType === "equal-shares"
-                          ? t("yourShareLabel").replace(":", "")
-                          : paymentType === "choose-amount"
-                            ? t("yourAmountLabel").replace(":", "")
-                            : t("yourShareLabel").replace(":", "")}
-                  </span>
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                    ${displaySubtotal.toFixed(2)} MXN
-                  </span>
-                </div>
-                {displayPropina > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      {t("tipLabelPrefix")}
-                    </span>
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      ${displayPropina.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

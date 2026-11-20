@@ -1,0 +1,15 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`next.config > headers() 1`] = `
+[
+  {
+    "headers": [
+      {
+        "key": "Cache-Control",
+        "value": "public, max-age=86400, stale-while-revalidate=604800",
+      },
+    ],
+    "source": "/app.webmanifest",
+  },
+]
+`;

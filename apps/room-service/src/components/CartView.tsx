@@ -232,7 +232,7 @@ export default function CartView() {
               ) : (
                 <div>
                   <div
-                    className={`text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-17 justify-end ${showImages ? "translate-y-4" : "mb-1 md:mb-2"}`}
+                    className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-17 justify-end translate-y-4"
                   >
                     <span>{t("qtyLabel")}</span>
                     <span>{t("priceLabel")}</span>

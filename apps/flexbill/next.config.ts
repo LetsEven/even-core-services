@@ -33,6 +33,7 @@ export default withNextIntl(
     "@even/i18n",
     "@even/next-config",
     "@even/payments",
+    "@even/security",
     "@even/ui",
   ]),
 );

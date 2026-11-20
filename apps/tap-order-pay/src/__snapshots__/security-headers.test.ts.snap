@@ -1,0 +1,172 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`security headers del middleware > desarrollo, backend local 1`] = `
+[
+  [
+    "content-security-policy",
+    "default-src 'self'; script-src 'self' 'nonce-MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw' https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:5000 https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com; font-src 'self' https://applepay.cdn-apple.com; connect-src 'self' http://localhost:5000 ws://localhost:5000 http://localhost:5000 ws://localhost:5000 https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com; frame-src https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://app.ecart.com https://checkout.ecartpay.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  ],
+  [
+    "permissions-policy",
+    "camera=(), microphone=(), geolocation=()",
+  ],
+  [
+    "referrer-policy",
+    "strict-origin-when-cross-origin",
+  ],
+  [
+    "strict-transport-security",
+    "max-age=31536000; includeSubDomains; preload",
+  ],
+  [
+    "x-content-type-options",
+    "nosniff",
+  ],
+  [
+    "x-dns-prefetch-control",
+    "off",
+  ],
+  [
+    "x-frame-options",
+    "DENY",
+  ],
+  [
+    "x-middleware-next",
+    "1",
+  ],
+  [
+    "x-middleware-override-headers",
+    "content-security-policy,cookie,x-nonce",
+  ],
+  [
+    "x-middleware-request-content-security-policy",
+    "default-src 'self'; script-src 'self' 'nonce-MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw' https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:5000 https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com; font-src 'self' https://applepay.cdn-apple.com; connect-src 'self' http://localhost:5000 ws://localhost:5000 http://localhost:5000 ws://localhost:5000 https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com; frame-src https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://app.ecart.com https://checkout.ecartpay.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  ],
+  [
+    "x-middleware-request-cookie",
+    "NEXT_LOCALE=es",
+  ],
+  [
+    "x-middleware-request-x-nonce",
+    "MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw",
+  ],
+  [
+    "x-permitted-cross-domain-policies",
+    "none",
+  ],
+]
+`;
+
+exports[`security headers del middleware > producción, backend configurado 1`] = `
+[
+  [
+    "content-security-policy",
+    "default-src 'self'; script-src 'self' 'nonce-MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw' https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.example.com https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com; font-src 'self' https://applepay.cdn-apple.com; connect-src 'self' https://api.example.com wss://api.example.com https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com; frame-src https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://app.ecart.com https://checkout.ecartpay.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  ],
+  [
+    "permissions-policy",
+    "camera=(), microphone=(), geolocation=()",
+  ],
+  [
+    "referrer-policy",
+    "strict-origin-when-cross-origin",
+  ],
+  [
+    "strict-transport-security",
+    "max-age=31536000; includeSubDomains; preload",
+  ],
+  [
+    "x-content-type-options",
+    "nosniff",
+  ],
+  [
+    "x-dns-prefetch-control",
+    "off",
+  ],
+  [
+    "x-frame-options",
+    "DENY",
+  ],
+  [
+    "x-middleware-next",
+    "1",
+  ],
+  [
+    "x-middleware-override-headers",
+    "content-security-policy,cookie,x-nonce",
+  ],
+  [
+    "x-middleware-request-content-security-policy",
+    "default-src 'self'; script-src 'self' 'nonce-MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw' https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://api.example.com https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com; font-src 'self' https://applepay.cdn-apple.com; connect-src 'self' https://api.example.com wss://api.example.com https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com; frame-src https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://app.ecart.com https://checkout.ecartpay.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  ],
+  [
+    "x-middleware-request-cookie",
+    "NEXT_LOCALE=es",
+  ],
+  [
+    "x-middleware-request-x-nonce",
+    "MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw",
+  ],
+  [
+    "x-permitted-cross-domain-policies",
+    "none",
+  ],
+]
+`;
+
+exports[`security headers del middleware > producción, backend por defecto 1`] = `
+[
+  [
+    "content-security-policy",
+    "default-src 'self'; script-src 'self' 'nonce-MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw' https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://even-backend-production.up.railway.app https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com; font-src 'self' https://applepay.cdn-apple.com; connect-src 'self' https://even-backend-production.up.railway.app wss://even-backend-production.up.railway.app https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com; frame-src https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://app.ecart.com https://checkout.ecartpay.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  ],
+  [
+    "permissions-policy",
+    "camera=(), microphone=(), geolocation=()",
+  ],
+  [
+    "referrer-policy",
+    "strict-origin-when-cross-origin",
+  ],
+  [
+    "strict-transport-security",
+    "max-age=31536000; includeSubDomains; preload",
+  ],
+  [
+    "x-content-type-options",
+    "nosniff",
+  ],
+  [
+    "x-dns-prefetch-control",
+    "off",
+  ],
+  [
+    "x-frame-options",
+    "DENY",
+  ],
+  [
+    "x-middleware-next",
+    "1",
+  ],
+  [
+    "x-middleware-override-headers",
+    "content-security-policy,cookie,x-nonce",
+  ],
+  [
+    "x-middleware-request-content-security-policy",
+    "default-src 'self'; script-src 'self' 'nonce-MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw' https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://even-backend-production.up.railway.app https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com; font-src 'self' https://applepay.cdn-apple.com; connect-src 'self' https://even-backend-production.up.railway.app wss://even-backend-production.up.railway.app https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com; frame-src https://ecartpay.com https://sandbox.ecartpay.com https://pay.ecart.com https://app.ecart.com https://checkout.ecartpay.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  ],
+  [
+    "x-middleware-request-cookie",
+    "NEXT_LOCALE=es",
+  ],
+  [
+    "x-middleware-request-x-nonce",
+    "MDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAw",
+  ],
+  [
+    "x-permitted-cross-domain-policies",
+    "none",
+  ],
+]
+`;

@@ -77,7 +77,7 @@ export {
   type TransactionRecordParams,
 } from "./transaction-record";
 export { computeMsiTotal } from "./msi";
-export { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS, type TipRounding } from "./tip";
+export { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "./tip";
 export { CARD_EXPIRY_YEARS_AHEAD, getCardExpiryYears } from "./card-expiry";
 export {
   createInvoiceService,

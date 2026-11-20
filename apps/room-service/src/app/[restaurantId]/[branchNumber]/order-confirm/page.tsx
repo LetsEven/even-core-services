@@ -27,7 +27,7 @@ export default function OrderConfirmPage() {
 
   const calculateTipAmount = () => {
     if (customTip && parseFloat(customTip) > 0) return parseFloat(customTip);
-    return computeTipAmount(baseAmount, tipPercentage, "none");
+    return computeTipAmount(baseAmount, tipPercentage);
   };
 
   const tipAmount = calculateTipAmount();

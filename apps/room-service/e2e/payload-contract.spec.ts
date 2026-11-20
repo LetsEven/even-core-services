@@ -273,7 +273,7 @@ test.describe("máquina de estados de la tarjeta guardada", () => {
 
 test.describe("propina de Room Service: no se redondea antes de calcular", () => {
   // $20.90 de consumo, 15 %: propina cruda 3.135. El total mostrado depende de si la propina se redondea
-  // antes de calcular la comisión (PG/RS/TP no; TOP/FB sí).
+  // antes de calcular la comisión (ninguna app la redondea; solo el total final).
   const cart = [{ id: "ci_e2e_2", menu_item_id: 101, name: "Club sándwich", price: 20.9, quantity: 1 }];
   test("15% -> total y tipAmount de la URL", async ({ page }) => {
     await mockRoomServiceApi(page, { cartItems: cart });

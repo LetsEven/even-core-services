@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { chargeSavedCard, type ChargeSavedCardParams } from "./charge";
 import { createPaymentIntentStore, type FingerprintInput } from "./idempotency";
-import { pollConfirm, waitForChargedIntent } from "./polling";
+import { isConfirmInProgress, pollConfirm, waitForChargedIntent, type ConfirmResponse } from "./polling";
 import { fakeClock, memoryStorage } from "./test/helpers";
 
 interface ConfirmResult {
@@ -184,5 +184,23 @@ describe("reglas de idempotencia (audit R6) de chargeSavedCard", () => {
       reason: "declined",
       message: "Fondos insuficientes",
     });
+  });
+});
+
+describe("pollConfirm con isConfirmRetryable inyectado (Tap Order & Pay)", () => {
+  it.each(CASES)("$name: reintenta = $top", async ({ result, top }) => {
+    const confirm = vi
+      .fn<() => Promise<ConfirmResponse<unknown>>>()
+      .mockResolvedValueOnce(result)
+      .mockResolvedValue({ success: true, data: { order: { id: "o1" } } });
+
+    const outcome = await pollConfirm(confirm, { ...fakeClock(), isConfirmRetryable: topIsTransient });
+
+    expect(confirm).toHaveBeenCalledTimes(top ? 2 : 1);
+    expect(outcome.success).toBe(top);
+  });
+
+  it("el predicado por defecto sigue siendo solo confirm_in_progress", () => {
+    for (const c of CASES) expect(isConfirmInProgress(c.result)).toBe(c.pgRs);
   });
 });

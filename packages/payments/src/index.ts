@@ -15,13 +15,21 @@ export {
   type StoredPaymentIntent,
 } from "./idempotency";
 export {
+  isConfirmInProgress,
   POLL_INTERVAL_MS,
   POLL_TIMEOUT_MS,
   pollConfirm,
   waitForChargedIntent,
   type ConfirmResponse,
+  type PollConfirmOptions,
   type PollOptions,
 } from "./polling";
+export {
+  createSavedCardCharge,
+  type SavedCardCharge,
+  type SavedCardChargeOptions,
+  type SavedCardChargeRequest,
+} from "./saved-card-charge";
 export {
   chargeSavedCard,
   getErrorCode,

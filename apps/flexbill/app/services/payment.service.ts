@@ -103,6 +103,11 @@ async function makeRequest(
     typeof window !== "undefined"
       ? localStorage.getItem("even-table-session")
       : null;
+  // Sin token, el backend identifica al invitado por este header
+  const guestId =
+    !token && typeof window !== "undefined"
+      ? localStorage.getItem("even-guest-id")
+      : null;
 
   const response = await fetch(url, {
     ...options,
@@ -110,6 +115,7 @@ async function makeRequest(
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(tableSession ? { "x-table-session": tableSession } : {}),
+      ...(guestId ? { "x-guest-id": guestId } : {}),
       ...options.headers,
     },
   });

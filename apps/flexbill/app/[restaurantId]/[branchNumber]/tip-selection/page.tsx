@@ -21,7 +21,13 @@ import {
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import { useRestaurant } from "@/app/context/RestaurantContext";
-import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
+import {
+  computeTipAmount,
+  equalShare,
+  TABLE_PAYMENT_MINIMUM_AMOUNT as MINIMUM_AMOUNT,
+  TIP_PRESETS,
+  withoutHeldAmount,
+} from "@even/payments";
 
 export default function TipSelectionPage() {
   const { restaurant: menuRestaurant } = useRestaurant();
@@ -107,7 +113,7 @@ export default function TipSelectionPage() {
     }
   }, [paymentType, amount]);
 
-  // "Dividir cuenta": N local por comensal; "Tu parte" = restante / N.
+  // "Dividir cuenta": N local por comensal; "Tu parte" = total / N (tope: lo que falta).
   // Default: personas activas en la mesa (mín. 2), solo una vez.
   const [equalPeople, setEqualPeople] = useState("2");
   const hasSetDefaultPeopleRef = useRef(false);
@@ -145,6 +151,12 @@ export default function TipSelectionPage() {
     selectedUserFilter === "all"
       ? unpaidDishes
       : unpaidDishes.filter((dish) => dish.guest_name === selectedUserFilter);
+
+  // En la selección se ven todos; los pagados quedan marcados y sin poder elegirse
+  const filteredDishes =
+    selectedUserFilter === "all"
+      ? dishOrders
+      : dishOrders.filter((dish) => dish.guest_name === selectedUserFilter);
 
   // Usar tableSummary.data.data si está disponible, sino calcular desde dishOrders
   const tableTotalPrice =
@@ -215,16 +227,24 @@ export default function TipSelectionPage() {
     0,
   );
 
+  // Lo que otro comensal está pagando con Apple/Google Pay no se puede pagar
+  const montoApartado = state.tableSummary?.data?.data?.monto_apartado || 0;
+  const sinApartado = (monto: number) => withoutHeldAmount(monto, montoApartado);
+
   const getPaymentAmount = () => {
     switch (paymentType) {
       case "full-bill":
         // Usar el monto restante actual de tableSummary, no el unpaidAmount calculado al cargar
-        return state.tableSummary?.data?.data?.remaining_amount || unpaidAmount;
+        return sinApartado(
+          state.tableSummary?.data?.data?.remaining_amount || unpaidAmount,
+        );
       case "user-items":
         return currentUserUnpaidAmount;
       case "equal-shares": {
-        const remaining = state.tableSummary?.data?.data?.remaining_amount ?? 0;
-        return parseFloat((remaining / equalPeopleCount).toFixed(2));
+        const remaining = sinApartado(
+          state.tableSummary?.data?.data?.remaining_amount ?? 0,
+        );
+        return equalShare(tableTotalPrice, equalPeopleCount, remaining);
       }
       case "choose-amount": {
         // El cliente escribe un monto en "espacio inflado" (lo que ve como
@@ -249,7 +269,7 @@ export default function TipSelectionPage() {
   const baseAmount = getPaymentAmount();
   const currentRemainingAmount =
     state.tableSummary?.data?.data?.remaining_amount || unpaidAmount;
-  const maxAllowedAmount = currentRemainingAmount;
+  const maxAllowedAmount = sinApartado(currentRemainingAmount);
 
   // Ítems reales que cubre este pago — la franja de comisión se calcula por
   // ítem, no por el total. Esto es solo un preview: el backend recalcula
@@ -583,7 +603,7 @@ export default function TipSelectionPage() {
       {paymentType === "equal-shares" ? (
         <EqualSplitView
           tableNumber={state.tableNumber}
-          remaining={displayUnpaidAmount}
+          remaining={displayTableTotalPrice}
           share={displaySubtotal}
           people={equalPeopleCount}
           onPeopleChange={(n) => setEqualPeople(String(n))}
@@ -737,27 +757,41 @@ export default function TipSelectionPage() {
                 {/* Seleccionar artículos específicos */}
                 {paymentType === "select-items" && (
                   <div className="mb-6 px-8 md:px-10 lg:px-12">
-                    {filteredUnpaidDishes.length > 0 && (
+                    {filteredDishes.length > 0 && (
                       <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-14 justify-end translate-y-4">
                         <span>{t("qtyLabel")}</span>
                         <span>{t("priceLabel")}</span>
                       </div>
                     )}
                     <div className="space-y-3">
-                      {filteredUnpaidDishes.map((dish) => {
+                      {filteredDishes.map((dish) => {
+                        const isPaid = dish.payment_status === "paid";
                         const isSelected = selectedItems.includes(
                           dish.dish_order_id,
                         );
+                        // No cabe en lo que falta junto con lo ya seleccionado
+                        const doesNotFit =
+                          paymentType === "select-items" &&
+                          !isPaid &&
+                          !isSelected &&
+                          baseAmount + (dish.total_price || 0) >
+                            maxAllowedAmount + 0.01;
+                        const isDisabled = isPaid || doesNotFit;
                         return (
                           <div
                             key={dish.dish_order_id}
-                            onClick={() =>
-                              toggleItemSelection(dish.dish_order_id)
+                            onClick={
+                              isDisabled
+                                ? undefined
+                                : () => toggleItemSelection(dish.dish_order_id)
                             }
-                            className={`py-3 md:py-4 lg:py-5 cursor-pointer transition-colors ${
-                              isSelected
-                                ? "bg-even-grass/10"
-                                : "hover:bg-tone-50"
+                            aria-disabled={isDisabled}
+                            className={`py-3 md:py-4 lg:py-5 transition-colors ${
+                              isDisabled
+                                ? "opacity-50 cursor-not-allowed"
+                                : isSelected
+                                  ? "bg-even-grass/10 cursor-pointer"
+                                  : "hover:bg-tone-50 cursor-pointer"
                             }`}
                           >
                             <div className="flex items-center gap-3 justify-between">
@@ -765,12 +799,14 @@ export default function TipSelectionPage() {
                                 <div className="shrink-0">
                                   <div
                                     className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 rounded-full border-2 flex items-center justify-center ${
-                                      isSelected
-                                        ? "border-even-grass bg-even-grass"
-                                        : "border-tone-300"
+                                      isPaid
+                                        ? "border-tone-400 bg-tone-400"
+                                        : isSelected
+                                          ? "border-even-grass bg-even-grass"
+                                          : "border-tone-300"
                                     }`}
                                   >
-                                    {isSelected && (
+                                    {(isSelected || isPaid) && (
                                       <svg
                                         className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 text-even-evergreen"
                                         fill="none"
@@ -811,6 +847,16 @@ export default function TipSelectionPage() {
                                   <h4 className="text-base md:text-lg lg:text-xl text-black capitalize">
                                     {dish.item}
                                   </h4>
+                                  {isPaid && (
+                                    <p className="text-xs md:text-sm text-tone-500">
+                                      {t("paidItemBadge")}
+                                    </p>
+                                  )}
+                                  {doesNotFit && (
+                                    <p className="text-xs md:text-sm text-tone-500">
+                                      {t("itemExceedsRemainingBadge")}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-right flex gap-10 md:gap-12 lg:gap-14">
@@ -1195,6 +1241,19 @@ export default function TipSelectionPage() {
                   )}
                 </div>
               </div>
+
+              {montoApartado > 0 && (
+                <div className="bg-linear-to-br from-danger-50 to-danger-100 px-4 py-2">
+                  <div className="flex items-center gap-3 px-8 md:px-10 lg:px-12">
+                    <X className="size-6 text-danger-500 shrink-0" />
+                    <p className="text-danger-700 font-medium text-base md:text-lg">
+                      {t("someoneIsPaying", {
+                        amount: montoApartado.toFixed(2),
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Alerta de mínimo de compra - select-items */}
               {isUnderMinimum && baseAmount > 0 && (

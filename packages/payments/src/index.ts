@@ -83,6 +83,13 @@ export {
   type TransactionRecordParams,
 } from "./transaction-record";
 export { computeMsiTotal } from "./msi";
+export {
+  equalShare,
+  readTableChargeBlock,
+  TABLE_PAYMENT_MINIMUM_AMOUNT,
+  withoutHeldAmount,
+  type TableChargeBlock,
+} from "./table-payment";
 export { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "./tip";
 export { CARD_EXPIRY_YEARS_AHEAD, getCardExpiryYears } from "./card-expiry";
 export {

@@ -27,3 +27,8 @@ export {
   type UseWalletPaymentsOptions,
   type WalletOrderPlan,
 } from "./useWalletPayments";
+export {
+  useWalletHold,
+  WALLET_HOLD_EXPIRY_MS,
+  type UseWalletHoldOptions,
+} from "./useWalletHold";

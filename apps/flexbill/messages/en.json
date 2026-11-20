@@ -301,14 +301,17 @@
     "consumptionLabel": "Order",
     "itemsLabel": "Your items",
     "tipLabelPrefix": "+ Tip",
-    "splitTitle": "Split what's left",
+    "splitTitle": "Split the bill",
     "yourShareTitle": "Your share",
     "ofAmount": "of ${amount}",
     "peopleUnit": "people",
     "fewerPeople": "One fewer person",
     "morePeople": "One more person",
     "includesTip": "includes ${amount} tip",
-    "continueCta": "Continue"
+    "continueCta": "Continue",
+    "paidItemBadge": "Paid",
+    "itemExceedsRemainingBadge": "More than what's left to pay",
+    "someoneIsPaying": "Someone else is paying ${amount} of this bill with Apple Pay or Google Pay."
   },
   "OrderAnimation": {
     "creatingOrder": "We're creating your order",
@@ -437,6 +440,7 @@
     "errorSelectCard": "Please select a payment card",
     "orderChangedTitle": "Your order changed",
     "orderChangedMessage": "Your bill changed before completing the payment. Check your total and try again.",
+    "viewUpdatedBillCta": "View updated bill",
     "retryTitle": "Try again",
     "paymentRejectedTitle": "Payment rejected",
     "googlePayErrorTitle": "We couldn't process Google Pay",
@@ -453,7 +457,12 @@
     "tryAgainCta": "Try again",
     "itemNameConsumption": "Order",
     "itemNameTip": "Tip",
-    "itemNameServiceFee": "Service fee"
+    "itemNameServiceFee": "Service fee",
+    "accountHeldTitle": "Someone else is paying",
+    "accountHeldMessage": "Another person is paying ${amount} of this bill. Check what's left and try again.",
+    "walletExpiredTitle": "Your time to pay ran out",
+    "walletExpiredMessage": "A few minutes passed without finishing the Apple Pay or Google Pay payment. Go back to your bill to see what's left and pay again.",
+    "walletExpiredButton": "Go to my bill"
   },
   "HomePage": {
     "heroTitle": "Welcome",

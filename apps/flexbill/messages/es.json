@@ -301,14 +301,17 @@
     "consumptionLabel": "Consumo",
     "itemsLabel": "Tus artículos",
     "tipLabelPrefix": "+ Propina",
-    "splitTitle": "Divide lo que falta",
+    "splitTitle": "Divide la cuenta",
     "yourShareTitle": "Tu parte",
     "ofAmount": "de ${amount}",
     "peopleUnit": "personas",
     "fewerPeople": "Una persona menos",
     "morePeople": "Una persona más",
     "includesTip": "incluye ${amount} propina",
-    "continueCta": "Continuar"
+    "continueCta": "Continuar",
+    "paidItemBadge": "Pagado",
+    "itemExceedsRemainingBadge": "Excede lo que falta por pagar",
+    "someoneIsPaying": "Alguien más está pagando ${amount} de esta cuenta con Apple Pay o Google Pay."
   },
   "OrderAnimation": {
     "creatingOrder": "Estamos creando tu pedido",
@@ -437,6 +440,7 @@
     "errorSelectCard": "Por favor selecciona una tarjeta de pago",
     "orderChangedTitle": "Tu pedido cambió",
     "orderChangedMessage": "Tu cuenta cambió antes de completar el pago. Revisa tu total e intenta de nuevo.",
+    "viewUpdatedBillCta": "Ver cuenta actualizada",
     "retryTitle": "Intenta de nuevo",
     "paymentRejectedTitle": "Pago rechazado",
     "googlePayErrorTitle": "No pudimos procesar con Google Pay",
@@ -453,7 +457,12 @@
     "tryAgainCta": "Intentar de nuevo",
     "itemNameConsumption": "Consumo",
     "itemNameTip": "Propina",
-    "itemNameServiceFee": "Cargo por servicio"
+    "itemNameServiceFee": "Cargo por servicio",
+    "accountHeldTitle": "Alguien más está pagando",
+    "accountHeldMessage": "Otra persona está pagando ${amount} de esta cuenta. Revisa cuánto falta e intenta de nuevo.",
+    "walletExpiredTitle": "Se acabó el tiempo para pagar",
+    "walletExpiredMessage": "Pasaron unos minutos sin completar el pago con Apple Pay o Google Pay. Regresa a tu cuenta para ver cuánto falta y pagar de nuevo.",
+    "walletExpiredButton": "Ir a mi cuenta"
   },
   "HomePage": {
     "heroTitle": "Bienvenido",

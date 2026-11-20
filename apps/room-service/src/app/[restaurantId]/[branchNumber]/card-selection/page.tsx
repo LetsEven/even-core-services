@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
+import { buildChargeRequest, classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useSavedCardCharge } from "@even/payments/react";
 import { useCart } from "@/context/CartContext";
 import { useRoomNavigation } from "@/hooks/useRoomNavigation";
@@ -1046,25 +1046,17 @@ export default function CardSelectionPage() {
           setShowAnimation(false);
           setVerifying(true);
         },
-        request: {
+        request: buildChargeRequest({
           paymentMethodId: selectedPaymentMethodId!,
           amount: totalAmount,
-          currency: "MXN",
           description: `Pago Mesa ${roomNumber} - ${customerName}`,
           orderId: `order-${Date.now()}`,
           roomNumber: roomNumber,
           restaurantId,
-          installments: selectedMSI || undefined,
+          installments: selectedMSI,
           baseAmount,
           tipAmount,
-          userDiscountId:
-            accountDiscount?.source === "personal"
-              ? accountDiscount.id
-              : undefined,
-          promoRedemptionId:
-            accountDiscount?.source === "promo"
-              ? accountDiscount.id
-              : undefined,
+          discount: accountDiscount,
           service: USER_DISCOUNT_SERVICE,
           items: selectedMSI
             ? undefined
@@ -1075,7 +1067,7 @@ export default function CardSelectionPage() {
                 extraPrice: i.extraPrice || 0,
                 cartItemId: i.cartItemId,
               })),
-        },
+        }),
       });
 
       if (outcome.status === "unconfirmed") {

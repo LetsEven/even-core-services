@@ -26,7 +26,12 @@ import {
   clearCachedWalletOrder,
 } from "@/app/utils/walletOrderCache";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError, computeMsiTotal } from "@even/payments";
+import {
+  buildChargeRequest,
+  classifyGooglePayError,
+  computeMsiTotal,
+  toTransactionRecord,
+} from "@even/payments";
 import { useSavedCardCharge } from "@even/payments/react";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 
@@ -76,23 +81,17 @@ export default function CardSelectionPage() {
   const baseAmount = parseFloat(searchParams.get("baseAmount") || "0");
   const tipAmount = parseFloat(searchParams.get("tipAmount") || "0");
   // La comisión se deriva de consumo + propina (el backend la recalcula igual).
+  const commissions = calculateCommissions(baseAmount, tipAmount);
   const {
     ivaTip,
     evenCommissionClient,
     ivaEvenClient,
     evenCommissionRestaurant,
     evenCommissionTotal,
-  } = calculateCommissions(baseAmount, tipAmount);
+  } = commissions;
   const selectedItemsParam = searchParams.get("selectedItems");
 
-  const evenClientCharge = evenCommissionClient + ivaEvenClient;
   const ivaEvenRestaurant = evenCommissionRestaurant * 0.16;
-  const evenRestaurantCharge = evenCommissionRestaurant + ivaEvenRestaurant;
-  const subtotalForCommission = baseAmount + tipAmount;
-  const evenRateApplied =
-    subtotalForCommission > 0
-      ? (evenCommissionTotal / subtotalForCommission) * 100
-      : 0;
 
   // Get name from profile or localStorage for guests
   const effectiveName =
@@ -758,26 +757,29 @@ export default function CardSelectionPage() {
             setShowPaymentAnimation(false);
             setVerifying(true);
           },
-          request: {
+          request: buildChargeRequest({
+            // TP no manda `service`: el backend lo deduce de id_tap_pay_order (audit R1).
+            service: undefined,
             paymentMethodId: selectedMethod.id,
             amount: totalAmountCharged,
-            currency: "MXN",
             description: `Even Tap & Pay - Mesa ${tableNumber || "N/A"}`,
             orderId: state.order?.order_id || `order-${Date.now()}`,
             tableNumber: tableNumber || undefined,
             restaurantId: restaurantParams?.restaurantId as string,
-            installments: selectedMSI || undefined,
+            installments: selectedMSI,
             baseAmount,
             tipAmount,
             // even-backend #333: identificadores para que el servidor
             // recalcule el monto contra tap_pay_orders en vez de cobrar el
             // que mandamos. Son opcionales en el backend: si no los
             // mandamos, cobra igual que antes.
-            id_tap_pay_order: state.order?.order_id,
-            payment_type: paymentType,
-            selected_item_ids:
-              paymentType === "select-items" ? selectedItems : undefined,
-          },
+            order: {
+              id_tap_pay_order: state.order?.order_id,
+              payment_type: paymentType,
+              selected_item_ids:
+                paymentType === "select-items" ? selectedItems : undefined,
+            },
+          }),
         });
 
         if (outcome.status === "unconfirmed") {
@@ -950,40 +952,28 @@ export default function CardSelectionPage() {
               ? null
               : selectedPaymentMethodId;
 
-          await paymentService.recordPaymentTransaction({
-            payment_method_id: transactionPaymentMethodId,
-            restaurant_id: parseInt(restaurantParams?.restaurantId!),
-            id_tap_pay_order: state.order?.order_id || null,
-            ecartpay_order_id: isApplePayProcessing
-              ? applePayPaymentId
-              : isGooglePayProcessing
-                ? googlePayPaymentId
-                : chargeEcartpayOrderId,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-            iva_tip: ivaTip,
-            even_commission_total: evenCommissionTotal,
-            even_commission_client: evenCommissionClient,
-            even_commission_restaurant: evenCommissionRestaurant,
-            iva_even_client: ivaEvenClient,
-            iva_even_restaurant: ivaEvenRestaurant,
-            even_client_charge: evenClientCharge,
-            even_restaurant_charge: evenRestaurantCharge,
-            even_rate_applied: evenRateApplied,
-            total_amount_charged: selectedMSI
-              ? displayTotal
-              : totalAmountCharged,
-            subtotal_for_commission: subtotalForCommission,
-            currency: "MXN",
-            transaction_by: displayName,
-            payment_source: isApplePayProcessing
-              ? "apple_pay"
-              : isGooglePayProcessing
-                ? "google_pay"
-                : isRealCardPayment
-                  ? "saved_card"
-                  : null,
-          });
+          await paymentService.recordPaymentTransaction(
+            toTransactionRecord({
+              breakdown: commissions,
+              chargedTotal: selectedMSI ? displayTotal : totalAmountCharged,
+              paymentMethodId: transactionPaymentMethodId,
+              restaurantId: parseInt(restaurantParams?.restaurantId!),
+              ecartpayOrderId: isApplePayProcessing
+                ? applePayPaymentId
+                : isGooglePayProcessing
+                  ? googlePayPaymentId
+                  : chargeEcartpayOrderId,
+              paymentSource: isApplePayProcessing
+                ? "apple_pay"
+                : isGooglePayProcessing
+                  ? "google_pay"
+                  : isRealCardPayment
+                    ? "saved_card"
+                    : null,
+              transactionBy: displayName,
+              order: { id_tap_pay_order: state.order?.order_id || null },
+            }),
+          );
         } catch (transactionError) {
           console.error("❌ Error in background operations:", transactionError);
         }

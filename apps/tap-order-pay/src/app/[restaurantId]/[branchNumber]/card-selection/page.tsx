@@ -7,7 +7,7 @@ import { useValidateAccess } from "@/hooks/useValidateAccess";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
+import { buildChargeRequest, classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useSavedCardCharge } from "@even/payments/react";
 import { isTopConfirmRetryable } from "@/utils/confirmRetry";
 import { useAuth } from "@/context/AuthContext";
@@ -1112,26 +1112,18 @@ export default function CardSelectionPage() {
           setShowAnimation(false);
           setVerifying(true);
         },
-        request: {
+        request: buildChargeRequest({
           paymentMethodId: selectedPaymentMethodId,
           amount: totalAmount,
-          currency: "MXN",
           description: `Pago Mesa ${tableNumber} - ${customerName}`,
           orderId: `order-${Date.now()}`,
           orderType: "tap-order-pay",
           tableNumber: tableNumber,
           restaurantId,
-          installments: selectedMSI || undefined,
+          installments: selectedMSI,
           baseAmount,
           tipAmount,
-          userDiscountId:
-            accountDiscount?.source === "personal"
-              ? accountDiscount.id
-              : undefined,
-          promoRedemptionId:
-            accountDiscount?.source === "promo"
-              ? accountDiscount.id
-              : undefined,
+          discount: accountDiscount,
           service: USER_DISCOUNT_SERVICE,
           items: selectedMSI
             ? undefined
@@ -1142,7 +1134,7 @@ export default function CardSelectionPage() {
                 extraPrice: (i.extraPrice || 0) * (i.quantity || 1),
                 cartItemId: i.cartItemId,
               })),
-        },
+        }),
       });
 
       if (outcome.status === "unconfirmed") {

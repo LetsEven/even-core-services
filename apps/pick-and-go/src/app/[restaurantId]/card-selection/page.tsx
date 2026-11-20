@@ -7,7 +7,7 @@ import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
+import { buildChargeRequest, classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useSavedCardCharge } from "@even/payments/react";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
@@ -1209,27 +1209,19 @@ export default function CardSelectionPage() {
           setShowAnimation(false);
           setVerifying(true);
         },
-        request: {
+        request: buildChargeRequest({
           paymentMethodId: selectedPaymentMethodId,
           // Para diferido, se manda el monto original — EcartPay aplica el
           // financiamiento internamente y devuelve el total inflado en la orden.
           amount: totalAmount,
-          currency: "MXN",
           description: `Pick & Go Order - ${customerName}`,
           orderId: `order-${Date.now()}`,
           tableNumber: "PICKUP",
           restaurantId,
-          installments: selectedMSI || undefined,
+          installments: selectedMSI,
           baseAmount,
           tipAmount,
-          userDiscountId:
-            accountDiscount?.source === "personal"
-              ? accountDiscount.id
-              : undefined,
-          promoRedemptionId:
-            accountDiscount?.source === "promo"
-              ? accountDiscount.id
-              : undefined,
+          discount: accountDiscount,
           service: USER_DISCOUNT_SERVICE,
           items: selectedMSI
             ? undefined
@@ -1240,7 +1232,7 @@ export default function CardSelectionPage() {
                 extraPrice: (i.extraPrice || 0) * (i.quantity || 1),
                 cartItemId: i.cartItemId,
               })),
-        },
+        }),
       });
 
       if (outcome.status === "unconfirmed") {

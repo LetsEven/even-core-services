@@ -63,6 +63,19 @@ export {
   type ItemCommissionRate,
   type ServicePayments,
 } from "./service-payments";
+export {
+  buildChargeRequest,
+  type ChargeDiscount,
+  type ChargeOrderRef,
+  type ChargeRequestContext,
+} from "./charge-request";
+export {
+  toTransactionRecord,
+  type TransactionCommissionFields,
+  type TransactionOrderRef,
+  type TransactionRecord,
+  type TransactionRecordParams,
+} from "./transaction-record";
 export { computeMsiTotal } from "./msi";
 export { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS, type TipRounding } from "./tip";
 export { CARD_EXPIRY_YEARS_AHEAD, getCardExpiryYears } from "./card-expiry";

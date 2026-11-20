@@ -1,4 +1,4 @@
-import { expect, expectFlowTransition, mockAuthApi, test } from "@even/e2e";
+import { expect, expectFlowTransition, expectNoUnexpectedScroll, mockAuthApi, test } from "@even/e2e";
 import { API_URL, cartWithClubSandwich, mockPickAndGoApi } from "./mocks";
 
 const ORDER_CONFIRM_URL = "/4/order-confirm?branch=1";
@@ -91,3 +91,41 @@ test.describe("transición de tarjeta del acceso (auth-selection)", () => {
     await expect(page).toHaveURL(/\/order-confirm\?/);
   });
 });
+
+/** Vistas sin contenido largo: ni la página ni la tarjeta deben mostrar scroll (la lista de artículos queda fuera a propósito). */
+for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }]) {
+  test.describe(`sin scrolls inesperados (${viewport.width}x${viewport.height})`, () => {
+    test.use({ viewport });
+
+    test("carrito, confirmación, pago, agregar tarjeta y acceso no tienen scroll", async ({ page }) => {
+      await mockPickAndGoApi(page, { cartItems: cartWithClubSandwich });
+      await mockAuthApi(page, { apiUrl: API_URL });
+      await page.goto("/4/cart?branch=1");
+      await expect(page.getByText("Club sándwich", { exact: false }).first()).toBeVisible();
+      await expectNoUnexpectedScroll(page, {}, "cart");
+
+      await page.goto("/4/order-confirm?branch=1");
+      await expect(page.getByRole("button", { name: /^Pagar \$/ })).toBeVisible();
+      await expectNoUnexpectedScroll(page, {}, "order-confirm");
+
+      await expectFlowTransition(page, () => page.getByRole("button", { name: /^Pagar \$/ }).click(), {
+        step: "card-selection",
+      });
+      await expect(page.getByText(/•••• 4242|\*\*\*\* 4242/)).toBeVisible();
+      await expectNoUnexpectedScroll(page, {}, "card-selection");
+
+      await expectFlowTransition(page, () => page.getByRole("button", { name: "Agregar método de pago" }).click(), {
+        step: "add-card",
+      });
+      await expect(page.getByPlaceholder("123")).toBeVisible();
+      await expectNoUnexpectedScroll(page, {}, "add-card");
+
+      await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "card-selection" });
+      await expectNoUnexpectedScroll(page, {}, "card-selection (vuelta)");
+
+      await page.goto("/4/auth-selection?branch=1");
+      await expect(page.getByPlaceholder("Número de teléfono")).toBeVisible();
+      await expectNoUnexpectedScroll(page, {}, "auth-selection");
+    });
+  });
+}

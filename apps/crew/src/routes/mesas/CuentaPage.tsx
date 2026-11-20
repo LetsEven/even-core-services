@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useAuth } from "../../lib/auth";
 import { ArrowLeft, Banknote, Plus, User } from "lucide-react";
@@ -33,6 +33,7 @@ import {
   useTicket,
   useWaiterAssignment,
 } from "../../features/cuenta/useCuenta";
+import { usePullToDismiss } from "../../features/cuenta/usePullToDismiss";
 import { isReprintEnabled, reprintComanda } from "../../services/printApi";
 import type { Dish, Order } from "../../types";
 import { formatFolio } from "../../utils/folio";
@@ -190,6 +191,16 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
     order.orderType === "tap_pay" ? null : getOrderProgress(order);
   const goBack = () => navigate("/mesas");
 
+  // Jalar hacia abajo estando hasta arriba cierra la cuenta (no con un modal abierto).
+  const cardRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  usePullToDismiss(
+    cardRef,
+    [cardRef, footerRef],
+    goBack,
+    !payOpen && !movementsOpen && !contactOpen && !extraOpen && !ticket.open,
+  );
+
   const handleReprint = async () => {
     setReprinting(true);
     setNotice(null);
@@ -256,7 +267,10 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
 
   return (
     <SheetScreen className="min-h-0 flex-1">
-      <SheetCard className="gap-5 pb-4 pt-6 text-even-evergreen">
+      <SheetCard
+        ref={cardRef}
+        className="gap-5 pb-4 pt-6 text-even-evergreen"
+      >
         {/* Encabezado */}
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -381,7 +395,7 @@ function Cuenta({ order, code }: { order: Order; code: string }) {
       </SheetCard>
 
       {/* Total siempre visible + acciones 50/50 */}
-      <SheetFooter className="flex flex-col gap-3 pt-3">
+      <SheetFooter ref={footerRef} className="flex flex-col gap-3 pt-3">
         {totals.hasAmounts && (
           <div className="flex items-baseline justify-between gap-3 text-even-evergreen">
             <span className="text-xs uppercase tracking-widest text-even-evergreen/60">

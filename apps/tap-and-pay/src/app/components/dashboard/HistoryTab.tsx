@@ -14,8 +14,7 @@ import {
   User,
 } from "lucide-react";
 import { getCardTypeIcon } from "@/app/utils/cardIcons";
-import { lockScroll, unlockScroll } from "@/app/utils/scrollLock";
-import { useModalBackClose } from "@/app/hooks/useModalBackClose";
+import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
 import { invoiceService } from "@/app/services/invoice.service";
 import { ticketService } from "@/app/services/ticket.service";
 import { requestWithAuth } from "@/app/services/request-helper";

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 
-const LanguageToggleButton = lazy(() => import("../UI/LanguageToggleButton"));
+const LanguageToggleButton = lazy(() => import("@even/i18n/language-toggle-button"));
 
 interface DashboardHeaderProps {
   onClose?: () => void;
@@ -28,7 +28,7 @@ export default function DashboardHeader({ onClose }: DashboardHeaderProps) {
   };
 
   return (
-    <header className="container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-1">
+    <header className="app-col px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-1">
       <div className="relative flex items-center justify-between z-1">
         {/* Back Button */}
         <div className="flex items-center z-10">

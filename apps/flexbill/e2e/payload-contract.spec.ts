@@ -32,7 +32,7 @@ async function pay(page: Page, url: string) {
   await page.goto(url);
   await expect(page.getByText("**** 4242")).toBeVisible();
   await page.getByText("**** 4242").click();
-  await page.getByRole("button", { name: "Pagar", exact: true }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
 }
 
 test("POST /payments y /payment-transactions: base y propina reales, sin service, con id_table_order", async ({ page }) => {
@@ -100,7 +100,7 @@ test("MSI: /payments manda el monto SIN financiamiento; el total financiado va a
   await expect(page.getByText("Total $433.73 MXN")).toBeVisible();
   await page.getByText(/x 6 meses/).click();
   await page.getByRole("button", { name: "Confirmar" }).click();
-  await page.getByRole("button", { name: "Pagar", exact: true }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
   await expect.poll(() => calls.length, { timeout: 30_000 }).toBe(1);
 
   const body = charges(api)[0].body as Record<string, unknown>;
@@ -187,7 +187,7 @@ test.describe("propina de FlexBill: no se redondea antes de calcular (igual que 
       `/${RESTAURANT_ID}/${BRANCH_NUMBER}/tip-selection?${TABLE_QUERY}&type=choose-amount&amount=20.9`,
     );
     await page.getByRole("button", { name: "15%", exact: true }).click();
-    await page.getByRole("button", { name: "Pagar", exact: true }).click();
+    await page.getByRole("button", { name: /^Pagar \$/ }).click();
     // El objetivo de propina es crudo (3.135) y FlexBill lo resuelve a centavos en resolveTipAmountForTargetDisplay
     // (3.135 -> 3.13): amount 24.03 (antes, con el objetivo a centavos, 3.14 y 24.04).
     await expect(page).toHaveURL(/card-selection\?type=choose-amount&amount=24\.03&baseAmount=20\.9&tipAmount=3\.13&/);

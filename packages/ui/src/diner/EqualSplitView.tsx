@@ -1,42 +1,16 @@
 "use client";
 
 import { Loader2, Minus, Plus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-
-const TIP_OPTIONS = [0, 10, 15, 20];
-const MIN_PEOPLE = 2;
-const MAX_PEOPLE = 50;
-// A partir de aquí el anillo se queda en este número de segmentos.
-const MAX_RING_SEGMENTS = 15;
-
-const RADIUS = 86;
-const STROKE = 22;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const TWEEN_MS = 320;
-
-// Interpola el número de personas para que el anillo se reparta de forma
-// continua (el segmento nuevo crece desde 0) en vez de empalmar arcos.
-function useTweened(target: number) {
-  const [value, setValue] = useState(target);
-  const current = useRef(target);
-  useEffect(() => {
-    const from = current.current;
-    if (from === target) return;
-    const start = performance.now();
-    let raf = 0;
-    const step = (now: number) => {
-      const k = Math.min((now - start) / TWEEN_MS, 1);
-      const eased = 1 - Math.pow(1 - k, 3);
-      current.current = from + (target - from) * eased;
-      setValue(current.current);
-      if (k < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [target]);
-  return value;
-}
+import {
+  RING_CIRCUMFERENCE,
+  RING_RADIUS,
+  RING_STROKE,
+  isValidTipInput,
+  useEqualSplit,
+  useSplitRing,
+  type RingSegment,
+} from "./useEqualSplit";
 
 type Props = {
   tableNumber: string | null | undefined;
@@ -58,32 +32,12 @@ type Props = {
   onContinue: () => void;
 };
 
-type Segment = { start: number; length: number };
-
-function ringSegments(p: number): {
-  slice: number;
-  yours: Segment;
-  rest: Segment[];
-} {
-  const slice = CIRCUMFERENCE / p;
-  const full = Math.floor(p);
-  const rest: Segment[] = [];
-  for (let i = 1; i < full; i++) rest.push({ start: i * slice, length: slice });
-  const partial = CIRCUMFERENCE - full * slice;
-  if (partial > 0.01) rest.push({ start: full * slice, length: partial });
-  return { slice, yours: { start: 0, length: slice }, rest };
-}
-
 function SplitRing({ people }: { people: number }) {
-  const { slice, yours, rest } = ringSegments(
-    useTweened(Math.min(people, MAX_RING_SEGMENTS)),
-  );
-  // Separación entre segmentos: se achica con muchos para que sigan visibles.
-  const gapFull = STROKE + Math.min(12, slice * 0.15);
+  const { slice, yours, rest, gapFull } = useSplitRing(people);
 
   // El segmento que entra o sale se dibuja más delgado en proporción, así
   // crece desde un punto sin encimarse.
-  const arc = (seg: Segment, color: string, key: string) => {
+  const arc = (seg: RingSegment, color: string, key: string) => {
     const k = Math.min(1, seg.length / slice);
     if (k <= 0.01) return null;
     const gap = gapFull * k;
@@ -93,12 +47,12 @@ function SplitRing({ people }: { people: number }) {
         key={key}
         cx="100"
         cy="100"
-        r={RADIUS}
+        r={RING_RADIUS}
         fill="none"
         stroke={color}
-        strokeWidth={STROKE * k}
+        strokeWidth={RING_STROKE * k}
         strokeLinecap="round"
-        strokeDasharray={`${visible} ${CIRCUMFERENCE - visible}`}
+        strokeDasharray={`${visible} ${RING_CIRCUMFERENCE - visible}`}
         strokeDashoffset={-(seg.start + gap / 2)}
       />
     );
@@ -133,6 +87,7 @@ export default function EqualSplitView({
 }: Props) {
   const t = useTranslations("TipSelectionPage");
   const tc = useTranslations("Common");
+  const split = useEqualSplit({ people, onPeopleChange });
   const display = { fontFamily: "var(--font-jakarta), system-ui, sans-serif" };
 
   const chipClass = (active: boolean) =>
@@ -183,8 +138,8 @@ export default function EqualSplitView({
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => onPeopleChange(Math.max(MIN_PEOPLE, people - 1))}
-            disabled={people <= MIN_PEOPLE}
+            onClick={split.decrement}
+            disabled={!split.canDecrement}
             aria-label={t("fewerPeople")}
             className="size-14 rounded-full bg-even-offwhite text-even-evergreen flex items-center justify-center transition-transform active:scale-90 disabled:text-stroke-soft disabled:active:scale-100 cursor-pointer disabled:cursor-not-allowed"
           >
@@ -203,8 +158,8 @@ export default function EqualSplitView({
           </div>
           <button
             type="button"
-            onClick={() => onPeopleChange(Math.min(MAX_PEOPLE, people + 1))}
-            disabled={people >= MAX_PEOPLE}
+            onClick={split.increment}
+            disabled={!split.canIncrement}
             aria-label={t("morePeople")}
             className="size-14 rounded-full bg-even-grass text-even-evergreen flex items-center justify-center transition-transform active:scale-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -217,7 +172,7 @@ export default function EqualSplitView({
             {t("tipLabel")}
           </span>
           <div className="grid grid-cols-5 gap-2 flex-1">
-            {TIP_OPTIONS.map((p) => (
+            {split.tipOptions.map((p) => (
               <button
                 key={p}
                 type="button"
@@ -248,7 +203,7 @@ export default function EqualSplitView({
               value={customTip}
               onChange={(e) => {
                 const v = e.target.value;
-                if (v === "" || /^\d*\.?\d*$/.test(v)) onCustomTipChange(v);
+                if (isValidTipInput(v)) onCustomTipChange(v);
               }}
               placeholder="0.00"
               autoFocus

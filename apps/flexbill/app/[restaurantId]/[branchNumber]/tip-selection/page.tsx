@@ -7,7 +7,7 @@ import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { getRestaurantData } from "@/app/utils/restaurantData";
 import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
-import EqualSplitView from "@/app/components/EqualSplitView";
+import { EqualSplitView } from "@even/ui/diner";
 import { CircleAlert, Loader2, X } from "lucide-react";
 import {
   calculateFlexBillItemCommission,

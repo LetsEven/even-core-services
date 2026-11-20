@@ -6,7 +6,7 @@ import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import MenuHeader from "@/app/components/headers/MenuHeader";
-import EqualSplitView from "@/app/components/EqualSplitView";
+import { EqualSplitView } from "@even/ui/diner";
 import { CircleAlert, X } from "lucide-react";
 import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";

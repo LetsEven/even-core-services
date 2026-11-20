@@ -3,6 +3,8 @@
  * `messages` (mismos namespaces en las cinco apps). Va en una entrada aparte para que `@even/ui`
  * siga sin depender de next-intl (crew y checkout-demo no lo usan).
  */
+export { default as EqualSplitView } from "./EqualSplitView";
+export { useEqualSplit, useSplitRing, ringSegments, isValidTipInput, type RingGeometry, type RingSegment } from "./useEqualSplit";
 export { default as HighDemandBanner } from "./HighDemandBanner";
 export { default as InvoiceModal } from "./InvoiceModal";
 export { default as ItemCustomizations } from "./ItemCustomizations";

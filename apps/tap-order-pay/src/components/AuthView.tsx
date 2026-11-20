@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
 import { authService } from "@/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
 import TermsCheckbox from "@/components/TermsCheckbox";
-import { useModalBackClose } from "@/hooks/useModalBackClose";
-import LanguageToggleButton from "@/components/UI/LanguageToggleButton";
+import { useModalBackClose } from "@even/ui";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 
 type Step = "phone" | "verify" | "profile";
 
@@ -251,7 +251,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
         <button
           onClick={() => handleBack()}
           disabled={step === "profile"}
-          className={`text-gray-400 hover:text-gray-700 rounded-full p-1 md:p-1.5 transition-colors ${
+          className={`text-tone-400 hover:text-tone-700 rounded-full p-1 md:p-1.5 transition-colors ${
             step === "profile"
               ? "opacity-30 cursor-not-allowed"
               : "cursor-pointer"
@@ -283,7 +283,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   ? t("verifyStepTitle")
                   : t("profileStepTitle")}
             </h1>
-            <p className="text-gray-500 mt-2 text-sm md:text-base">
+            <p className="text-tone-500 mt-2 text-sm md:text-base">
               {step === "phone" ? (
                 t("phoneStepSubtitle")
               ) : step === "verify" ? (
@@ -300,7 +300,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
 
           {/* Error */}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-400/50 rounded-lg text-red-600 text-sm">
+            <div className="mb-4 p-3 bg-danger-500/10 border border-danger-400/50 rounded-lg text-danger-600 text-sm">
               {error}
             </div>
           )}
@@ -314,7 +314,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                     <button
                       type="button"
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="h-12 w-[90px] px-3 text-gray-700 font-medium bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer flex items-center justify-between gap-1.5"
+                      className="h-12 w-[90px] px-3 text-tone-700 font-medium bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer flex items-center justify-between gap-1.5"
                       disabled={loading}
                     >
                       <div className="flex items-center gap-1.5">
@@ -327,10 +327,10 @@ export default function AuthView({ onClose }: AuthViewProps) {
                         />
                         <span className="text-sm">{countryCode}</span>
                       </div>
-                      <ChevronDown className="size-3 text-gray-500 shrink-0" />
+                      <ChevronDown className="size-3 text-tone-500 shrink-0" />
                     </button>
                     {isDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-tone-200 rounded-lg shadow-lg z-50 overflow-hidden">
                         {countries.map((country) => (
                           <button
                             key={country.code}
@@ -339,13 +339,13 @@ export default function AuthView({ onClose }: AuthViewProps) {
                               setCountryCode(country.code);
                               setIsDropdownOpen(false);
                             }}
-                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-100 transition-colors text-left"
+                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-tone-100 transition-colors text-left"
                           >
                             <Flag
                               code={country.flag}
                               style={{ width: 20, height: 15, borderRadius: 2 }}
                             />
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className="text-sm font-medium text-tone-700">
                               {country.code}
                             </span>
                           </button>
@@ -355,7 +355,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   </div>
 
                   <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                     <input
                       required
                       type="tel"
@@ -365,7 +365,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                         setPhoneNumber(value);
                         setPhoneNumberDisplay(formatPhoneInput(value));
                       }}
-                      className="h-12 w-full pl-10 pr-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                      className="h-12 w-full pl-10 pr-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                       placeholder={t("phonePlaceholder")}
                       disabled={loading}
                       maxLength={14}
@@ -393,7 +393,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="000000"
-                className="w-full px-3 py-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
+                className="w-full px-3 py-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
                 required
                 disabled={loading}
                 autoFocus
@@ -417,8 +417,8 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   disabled={countdown > 0 || loading || sendingCode}
                   className={`text-sm underline transition-colors ${
                     countdown > 0
-                      ? "text-gray-400 cursor-not-allowed"
-                      : "text-gray-600 hover:text-black cursor-pointer"
+                      ? "text-tone-400 cursor-not-allowed"
+                      : "text-tone-600 hover:text-black cursor-pointer"
                   }`}
                 >
                   {countdown > 0
@@ -430,7 +430,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                 <button
                   type="button"
                   onClick={() => handleBack()}
-                  className="text-sm text-gray-600 hover:text-black underline"
+                  className="text-sm text-tone-600 hover:text-black underline"
                 >
                   {t("changeNumber")}
                 </button>
@@ -443,13 +443,13 @@ export default function AuthView({ onClose }: AuthViewProps) {
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder={t("firstNamePlaceholder")}
-                    className="h-12 w-full pl-10 pr-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                    className="h-12 w-full pl-10 pr-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                     required
                     disabled={loading}
                   />
@@ -459,7 +459,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder={t("lastNamePlaceholder")}
-                  className="h-12 w-full px-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                  className="h-12 w-full px-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                   disabled={loading}
                 />
               </div>
@@ -473,7 +473,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   onChange={(e) =>
                     setAge(e.target.value === "" ? "" : Number(e.target.value))
                   }
-                  className="h-12 w-full px-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer"
+                  className="h-12 w-full px-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer"
                   disabled={loading}
                 >
                   <option value="" disabled>

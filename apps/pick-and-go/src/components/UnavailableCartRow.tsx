@@ -34,7 +34,7 @@ export default function UnavailableCartRow({
   return (
     <div className="py-3 md:py-4 lg:py-5 flex items-center gap-3 md:gap-4 lg:gap-5">
       {showImages && (
-        <div className="shrink-0 size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center opacity-50">
+        <div className="shrink-0 size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center opacity-50">
           {image ? (
             <img
               src={image}
@@ -54,7 +54,7 @@ export default function UnavailableCartRow({
         <h3 className="text-base md:text-lg lg:text-xl text-black/40 capitalize truncate">
           {quantity > 1 ? `${quantity} × ${name}` : name}
         </h3>
-        <p className="text-sm md:text-base text-red-600">
+        <p className="text-sm md:text-base text-danger-600">
           {t("unavailableBadge")}
         </p>
       </div>

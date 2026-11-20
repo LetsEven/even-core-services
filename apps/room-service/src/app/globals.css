@@ -1,94 +1,18 @@
 @import "tailwindcss";
-@source "../../../../packages/payments/src";
+@import "@even/ui/theme.css";
 
-:root {
-  --background: #fefeeb;
-  --foreground: #023828;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-dm-mono);
-  --font-mono: var(--font-dm-mono);
-  --font-display: var(--font-jakarta);
-
-  /* Even — paleta de marca */
-  --color-even-grass: #82e657;
-  --color-even-evergreen: #023828;
-  --color-even-shamrock: #299e66;
-  --color-even-aqua: #c3feff;
-  --color-even-offwhite: #fefeeb;
-  --color-even-ink: #141512;
-
-  /* grises de UI */
-  --color-surface: #f9f9f9;
-  --color-stroke: #8e8e8e;
-  --color-stroke-soft: #bfbfbf;
-  --color-muted: #6b7280;
-
-  --color-primary: #023828;
-  --color-accent: #82e657;
-  --color-success: #82e657;
-}
-
-/* Fondo Evergreen de marca */
-.brand-evergreen {
-  background-color: #023828;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family:
-    var(--font-dm-mono),
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-}
-
+/* Titulares en display (Jakarta), resto DM Mono: el tema compartido no lo trae */
 h1,
 h2 {
   font-family: var(--font-jakarta), system-ui, sans-serif;
   letter-spacing: -0.015em;
 }
 
-/* Ocultar scrollbar pero mantener funcionalidad de scroll */
-.scrollbar-hide {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+.brand-evergreen {
+  background-color: var(--color-even-evergreen);
 }
 
 /* Toast fade in/out animation */
-@keyframes fade-in-out {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  10% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  90% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-}
-
-.animate-fade-in-out {
-  animation: fade-in-out 3s ease-in-out forwards;
-}
 
 /* Fly to cart animation */
 .flying-to-cart {
@@ -114,28 +38,6 @@ h2 {
   animation: shake-cart 0.3s ease forwards;
 }
 
-@keyframes bounce-in {
-  0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-8px) scale(1.05);
-  }
-  75% {
-    transform: translateY(4px) scale(0.98);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-bounce-in {
-  animation: bounce-in 0.5s ease-out forwards;
-}
-
 /* OrderAnimation styles */
 @keyframes expand-circle {
   0% {
@@ -144,15 +46,6 @@ h2 {
   }
   100% {
     transform: scale(35);
-    opacity: 1;
-  }
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
     opacity: 1;
   }
 }
@@ -202,15 +95,11 @@ h2 {
 .green-circle-from-logo {
   width: 96px;
   height: 96px;
-  background: #82e657;
+  background: var(--color-even-grass);
   border-radius: 50%;
   transform-origin: center center;
   will-change: transform;
   animation: expand-green-from-logo 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-in;
 }
 
 .animate-simple-fade-in {
@@ -221,7 +110,7 @@ h2 {
   position: absolute;
   width: 96px;
   height: 96px;
-  border: 5px solid #e5e7eb;
+  border: 5px solid var(--color-line);
   border-radius: 50%;
   animation: pulse-ring-animation 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -235,17 +124,6 @@ h2 {
 }
 
 /* Payment success animations */
-@keyframes slide-up {
-  0% {
-    opacity: 0;
-    transform: translateY(100px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes logo-fade-in {
   0% {
     opacity: 0;
@@ -255,10 +133,6 @@ h2 {
     opacity: 1;
     transform: scale(1);
   }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .animate-logo-fade-in {
@@ -359,9 +233,9 @@ h2 {
 
 @layer components {
   .myradio {
-    @apply w-4 h-4 bg-gray-100 border border-gray-300 rounded-full cursor-pointer;
+    @apply w-4 h-4 bg-tone-100 border border-tone-300 rounded-full cursor-pointer;
     @apply focus:outline-none;
-    @apply checked:bg-[#82E657] checked:border-transparent;
+    @apply checked:bg-even-grass checked:border-transparent;
     @apply appearance-none relative;
   }
 
@@ -377,8 +251,8 @@ h2 {
     height: 20px;
     min-width: 20px;
     min-height: 20px;
-    background-color: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background-color: var(--color-field);
+    border: 1px solid var(--color-field-border);
     border-radius: 9999px !important;
     cursor: pointer;
     position: relative;
@@ -387,8 +261,8 @@ h2 {
   }
 
   .mycheckbox:checked {
-    background-color: #82E657;
-    border-color: #82E657;
+    background-color: var(--color-even-grass);
+    border-color: var(--color-even-grass);
   }
 
   .mycheckbox:checked::after {
@@ -398,7 +272,7 @@ h2 {
     top: 45%;
     width: 5px;
     height: 9px;
-    border: solid #023828;
+    border: solid var(--color-even-evergreen);
     border-width: 0 2.5px 2.5px 0;
     transform: translate(-50%, -50%) rotate(45deg);
   }
@@ -407,32 +281,6 @@ h2 {
     cursor: not-allowed;
     opacity: 0.5;
   }
-}
-
-@keyframes pulse-button {
-  0% {
-    box-shadow: 0 0 0 0 rgba(130, 230, 87, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(130, 230, 87, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(130, 230, 87, 0);
-  }
-}
-
-.animate-pulse-button {
-  animation: pulse-button 1.5s ease-out infinite;
-}
-
-/* Loader — giro del asterisco Even en pasos (recurso de marca del landing) */
-@keyframes asterisk-spin-steps {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.asterisk-spin {
-  animation: asterisk-spin-steps 1.8s steps(6, end) infinite;
 }
 
 /* Apple Pay button border radius and height */
@@ -477,10 +325,6 @@ h2 {
 .min-h-new {
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
-}
-
-.animate-pulse-button {
-  animation: pulse-button 1.5s ease-out infinite;
 }
 
 @keyframes pulse-button-pink {

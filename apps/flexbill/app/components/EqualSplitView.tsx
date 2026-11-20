@@ -139,7 +139,7 @@ export default function EqualSplitView({
     `py-1 md:py-1.5 lg:py-2 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
       active
         ? "bg-even-grass text-even-evergreen"
-        : "bg-surface hover:border-gray-400"
+        : "bg-surface hover:border-tone-400"
     }`;
 
   return (
@@ -252,18 +252,18 @@ export default function EqualSplitView({
               }}
               placeholder="0.00"
               autoFocus
-              className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-stroke/40 rounded-full focus:outline-none focus:ring focus:ring-gray-400 focus:border-transparent text-black text-center text-base bg-surface"
+              className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-stroke/40 rounded-full focus:outline-none focus:ring focus:ring-tone-400 focus:border-transparent text-black text-center text-base bg-surface"
             />
           </div>
         )}
 
         {isUnderMinimum && share > 0 && (
-          <p className="text-red-600 text-sm mt-3">
+          <p className="text-danger-600 text-sm mt-3">
             {t("underMinimumWarning")}
           </p>
         )}
 
-        <div className="border-t border-gray-200 mt-5 pt-5 flex items-center justify-between gap-4">
+        <div className="border-t border-tone-200 mt-5 pt-5 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span

@@ -1,9 +1,12 @@
 // Primitivas de UI compartidas por las apps de Even. El tema de Tailwind vive en "@even/ui/theme.css".
 export const PACKAGE_NAME = "@even/ui";
 
+export { brandColors } from "./lib/colors";
 export { cn } from "./lib/cn";
 export { lockScroll, unlockScroll } from "./lib/scroll-lock";
 export { useScrollLock } from "./lib/use-scroll-lock";
+export { useModalBackClose } from "./lib/use-modal-back-close";
+export { rememberMenuPosition, setMenuCategory, takeMenuPosition, type MenuPosition } from "./lib/menu-scroll-memory";
 
 export { Badge, type BadgeProps } from "./components/badge";
 export { Button, buttonClasses, type ButtonProps, type ButtonSize, type ButtonVariant } from "./components/button";
@@ -22,4 +25,12 @@ export {
 } from "./components/layout";
 export { FullScreenLoader, type FullScreenLoaderProps } from "./components/loader";
 export { Modal, type ModalProps } from "./components/modal";
+export {
+  PRIVACY_URL,
+  TERMS_URL,
+  TermsCheckbox,
+  termsLinks,
+  type TermsCheckboxProps,
+} from "./components/terms-checkbox";
+export { TermsUpdateToast, type TermsUpdateToastProps } from "./components/terms-update-toast";
 export { Spinner, type SpinnerProps } from "./components/spinner";

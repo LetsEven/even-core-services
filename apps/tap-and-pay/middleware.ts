@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { LOCALE_COOKIE, negotiateLocale } from "@/i18n/locale";
+import { LOCALE_COOKIE, negotiateLocale } from "@even/i18n/locale";
 import { getBackendOrigin } from "@even/api-client";
 
 export function middleware(request: NextRequest) {

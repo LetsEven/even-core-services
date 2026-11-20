@@ -4,7 +4,7 @@
 
 /* Fondo Evergreen de marca con asterisco watermark (llena el vacío, da aire) */
 .brand-evergreen {
-  background-color: #023828;
+  background-color: var(--color-even-evergreen);
 }
 
 /* Banner responsivo - coincide con admin-portal simulation */
@@ -19,7 +19,7 @@
     background-size: cover !important;
     background-position: center center !important; /* Centrado para mejor proporción con altura 230px */
     background-repeat: no-repeat !important;
-    background-color: #f8f9fa;
+    background-color: var(--color-panel);
   }
 }
 
@@ -63,28 +63,6 @@
   animation: shake-cart 0.3s ease forwards;
 }
 
-@keyframes bounce-in {
-  0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-8px) scale(1.05);
-  }
-  75% {
-    transform: translateY(4px) scale(0.98);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-bounce-in {
-  animation: bounce-in 0.5s ease-out forwards;
-}
-
 /* OrderAnimation styles */
 @keyframes expand-circle {
   0% {
@@ -93,15 +71,6 @@
   }
   100% {
     transform: scale(35);
-    opacity: 1;
-  }
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
     opacity: 1;
   }
 }
@@ -154,49 +123,22 @@
 .green-circle-from-logo {
   width: 96px;
   height: 96px;
-  background: #82e657;
+  background: var(--color-even-grass);
   border-radius: 50%;
   transform-origin: center center;
   will-change: transform;
   animation: expand-green-from-logo 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-in;
-}
-
 .animate-simple-fade-in {
   animation: simple-fade-in 0.4s ease-in forwards;
-}
-
-@keyframes fade-in-out {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  10% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  90% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-}
-
-.animate-fade-in-out {
-  animation: fade-in-out 3s ease-in-out forwards;
 }
 
 .pulse-ring {
   position: absolute;
   width: 96px;
   height: 96px;
-  border: 5px solid #e5e7eb;
+  border: 5px solid var(--color-line);
   border-radius: 50%;
   animation: pulse-ring-animation 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -210,17 +152,6 @@
 }
 
 /* Payment success animations */
-@keyframes slide-up {
-  0% {
-    opacity: 0;
-    transform: translateY(100px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes logo-fade-in {
   0% {
     opacity: 0;
@@ -230,10 +161,6 @@
     opacity: 1;
     transform: scale(1);
   }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .animate-logo-fade-in {
@@ -362,32 +289,6 @@
   backface-visibility: hidden;
 }
 
-@keyframes pulse-button {
-  0% {
-    box-shadow: 0 0 0 0 rgba(130, 230, 87, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(130, 230, 87, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(130, 230, 87, 0);
-  }
-}
-
-.animate-pulse-button {
-  animation: pulse-button 1.5s ease-out infinite;
-}
-
-/* Loader — giro del asterisco Even en pasos (recurso de marca del landing) */
-@keyframes asterisk-spin-steps {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.asterisk-spin {
-  animation: asterisk-spin-steps 1.8s steps(6, end) infinite;
-}
-
 /* Accesibilidad — respetar prefers-reduced-motion (best practice 2026) */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -430,9 +331,9 @@
 
 @layer components {
   .myradio {
-    @apply w-4 h-4 bg-gray-100 border border-gray-300 rounded-full cursor-pointer;
+    @apply w-4 h-4 bg-tone-100 border border-tone-300 rounded-full cursor-pointer;
     @apply focus:outline-none;
-    @apply checked:bg-[#82E657] checked:border-transparent;
+    @apply checked:bg-even-grass checked:border-transparent;
     @apply appearance-none relative;
   }
 
@@ -448,8 +349,8 @@
     height: 20px;
     min-width: 20px;
     min-height: 20px;
-    background-color: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background-color: var(--color-field);
+    border: 1px solid var(--color-field-border);
     border-radius: 9999px !important;
     cursor: pointer;
     position: relative;
@@ -458,8 +359,8 @@
   }
 
   .mycheckbox:checked {
-    background-color: #82E657;
-    border-color: #82E657;
+    background-color: var(--color-even-grass);
+    border-color: var(--color-even-grass);
   }
 
   .mycheckbox:checked::after {
@@ -469,7 +370,7 @@
     top: 45%;
     width: 5px;
     height: 9px;
-    border: solid #023828;
+    border: solid var(--color-even-evergreen);
     border-width: 0 2.5px 2.5px 0;
     transform: translate(-50%, -50%) rotate(45deg);
   }

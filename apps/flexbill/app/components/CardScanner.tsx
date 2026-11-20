@@ -127,7 +127,7 @@ export default function CardScanner({
               stopCamera();
               onClose();
             }}
-            className="text-white hover:text-gray-300 transition-colors cursor-pointer"
+            className="text-white hover:text-tone-300 transition-colors cursor-pointer"
           >
             <X className="size-6" />
           </button>
@@ -146,7 +146,7 @@ export default function CardScanner({
 
           {/* Animación cuando está capturando */}
           {isCapturing && (
-            <div className="absolute inset-0 border-4 border-green-500 rounded-lg animate-pulse" />
+            <div className="absolute inset-0 border-4 border-positive-500 rounded-lg animate-pulse" />
           )}
         </div>
       </div>
@@ -156,7 +156,7 @@ export default function CardScanner({
         <button
           onClick={handleCapture}
           disabled={isCapturing}
-          className="w-full bg-white text-black px-6 py-4 rounded-full transition-colors hover:bg-gray-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-white text-black px-6 py-4 rounded-full transition-colors hover:bg-tone-100 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Camera className="size-6" />
           <span className="font-medium">
@@ -169,12 +169,12 @@ export default function CardScanner({
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
           <div className="text-center px-6 max-w-md">
-            <div className="bg-red-500/90 text-white p-6 rounded-lg">
+            <div className="bg-danger-500/90 text-white p-6 rounded-lg">
               <p className="text-sm mb-4">{error}</p>
               <div className="flex gap-2 justify-center">
                 <button
                   onClick={() => setError(null)}
-                  className="bg-white text-black px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer font-medium"
+                  className="bg-white text-black px-6 py-2 rounded-lg hover:bg-tone-100 transition-colors cursor-pointer font-medium"
                 >
                   {t("retryCta")}
                 </button>

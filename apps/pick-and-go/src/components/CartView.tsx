@@ -141,7 +141,7 @@ export default function CartView() {
         <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
           {state.items.length === 0 ? (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="text-[#e0e0e0] text-xl md:text-2xl lg:text-3xl font-medium">
+              <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                 Pick & Go
               </h1>
               <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
@@ -150,7 +150,7 @@ export default function CartView() {
             </div>
           ) : (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
-              <h1 className="text-[#e0e0e0] text-xl md:text-2xl lg:text-3xl font-medium">
+              <h1 className="text-mist text-xl md:text-2xl lg:text-3xl font-medium">
                 Pick & Go
               </h1>
               <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
@@ -186,7 +186,7 @@ export default function CartView() {
                     <p className="text-black text-2xl md:text-3xl font-medium mb-2">
                       {t("cartEmptyTitle")}
                     </p>
-                    <p className="text-gray-500 text-base md:text-lg mb-6 md:mb-8">
+                    <p className="text-tone-500 text-base md:text-lg mb-6 md:mb-8">
                       {t("cartEmptySubtitle")}
                     </p>
                     <button
@@ -213,11 +213,11 @@ export default function CartView() {
                           className="py-3 md:py-4 lg:py-5 flex items-center gap-3 md:gap-4 lg:gap-5 animate-pulse"
                         >
                           {showImages && (
-                            <div className="shrink-0 size-16 md:size-20 lg:size-24 bg-gray-200 rounded-sm md:rounded-md" />
+                            <div className="shrink-0 size-16 md:size-20 lg:size-24 bg-tone-200 rounded-sm md:rounded-md" />
                           )}
                           <div className="flex-1 space-y-2">
-                            <div className="h-4 md:h-5 bg-gray-200 rounded w-2/3" />
-                            <div className="h-3 md:h-4 bg-gray-200 rounded w-1/3" />
+                            <div className="h-4 md:h-5 bg-tone-200 rounded w-2/3" />
+                            <div className="h-3 md:h-4 bg-tone-200 rounded w-1/3" />
                           </div>
                         </div>
                       ))}
@@ -258,7 +258,7 @@ export default function CartView() {
                               >
                                 {showImages && (
                                   <div className="flex-shrink-0">
-                                    <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                                    <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
                                       {item.images &&
                                       item.images.length > 0 &&
                                       item.images[0] ? (
@@ -392,7 +392,7 @@ export default function CartView() {
                             }, 200);
                           }}
                         />
-                        <p className="text-right text-sm text-gray-400 mt-1">
+                        <p className="text-right text-sm text-tone-400 mt-1">
                           {orderNotes.length}/80
                         </p>
                       </div>
@@ -412,7 +412,7 @@ export default function CartView() {
               >
                 <div className="w-full flex gap-3 md:gap-4 lg:gap-5 mt-6 md:mt-7 lg:mt-8 justify-between">
                   <div className="flex flex-col justify-center min-w-0">
-                    <span className="text-gray-600 text-sm md:text-base lg:text-lg whitespace-nowrap">
+                    <span className="text-tone-600 text-sm md:text-base lg:text-lg whitespace-nowrap">
                       {t("itemsCount", { count: state.totalItems })}
                     </span>
                     <div className="flex items-center justify-center w-fit text-2xl md:text-3xl lg:text-4xl font-medium text-black text-center">
@@ -442,7 +442,7 @@ export default function CartView() {
                   </button>
                 </div>
                 {isPromoOnlyCart && (
-                  <p className="text-right text-xs md:text-sm text-red-600 mt-2">
+                  <p className="text-right text-xs md:text-sm text-danger-600 mt-2">
                     {t("promoOnlyWarning")}
                   </p>
                 )}

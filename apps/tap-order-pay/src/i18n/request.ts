@@ -1,3 +1,4 @@
+import { loadSharedMessages, mergeMessages } from "@even/i18n";
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 import {
@@ -5,7 +6,7 @@ import {
   LOCALE_COOKIE,
   isLocale,
   negotiateLocale,
-} from "./locale";
+} from "@even/i18n/locale";
 
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();
@@ -21,6 +22,9 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    messages: mergeMessages(
+      await loadSharedMessages(locale),
+      (await import(`../../messages/${locale}.json`)).default,
+    ),
   };
 });

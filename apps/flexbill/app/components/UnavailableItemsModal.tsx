@@ -83,7 +83,7 @@ export default function UnavailableItemsModal({
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-black text-center">
             {t("title")}
           </h2>
-          <p className="text-gray-600 text-base md:text-lg text-center mt-2 md:mt-3">
+          <p className="text-tone-600 text-base md:text-lg text-center mt-2 md:mt-3">
             {t("subtitle", { count: items.length })}
           </p>
 
@@ -94,7 +94,7 @@ export default function UnavailableItemsModal({
                 className="flex items-center gap-3 md:gap-4 py-3"
               >
                 {showImages && (
-                  <div className="shrink-0 size-12 md:size-14 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center">
+                  <div className="shrink-0 size-12 md:size-14 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center">
                     {item.image ? (
                       <img
                         src={item.image}
@@ -124,7 +124,7 @@ export default function UnavailableItemsModal({
           <button
             onClick={handleRemove}
             disabled={removing}
-            className="w-full mt-6 md:mt-8 flex items-center justify-center gap-2 bg-black hover:bg-stone-950 text-white text-base md:text-lg lg:text-xl py-3 md:py-4 rounded-full transition-opacity disabled:opacity-50"
+            className="w-full mt-6 md:mt-8 flex items-center justify-center gap-2 bg-black hover:bg-warm-950 text-white text-base md:text-lg lg:text-xl py-3 md:py-4 rounded-full transition-opacity disabled:opacity-50"
           >
             {removing && <Loader2 className="size-5 animate-spin" />}
             {t("remove", { count: items.length })}

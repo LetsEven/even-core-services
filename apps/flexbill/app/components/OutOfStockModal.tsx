@@ -47,7 +47,7 @@ export default function OutOfStockModal({
           </div>
 
           <div className="space-y-4 md:space-y-5 lg:space-y-6">
-            <p className="text-gray-600 text-base md:text-lg lg:text-xl text-center">
+            <p className="text-tone-600 text-base md:text-lg lg:text-xl text-center">
               {itemName ? (
                 <>
                   <span className="font-medium text-black capitalize">
@@ -68,7 +68,7 @@ export default function OutOfStockModal({
 
           <button
             onClick={onClose}
-            className="w-full mt-6 md:mt-8 lg:mt-10 bg-black hover:bg-stone-950 text-white text-base md:text-lg lg:text-xl py-3 md:py-4 lg:py-5 rounded-full transition-colors"
+            className="w-full mt-6 md:mt-8 lg:mt-10 bg-black hover:bg-warm-950 text-white text-base md:text-lg lg:text-xl py-3 md:py-4 lg:py-5 rounded-full transition-colors"
           >
             {tc("understood")}
           </button>

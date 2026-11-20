@@ -286,7 +286,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
 
                       {/* Image */}
                       <div className="shrink-0 relative">
-                        <div className="size-16 md:size-20 rounded-sm overflow-hidden bg-gray-300">
+                        <div className="size-16 md:size-20 rounded-sm overflow-hidden bg-tone-300">
                           {menuItem?.image_url ||
                           (item.images?.length > 0 && item.images[0]) ? (
                             <img
@@ -304,7 +304,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                         </div>
                         {isUnavailable && (
                           <div className="absolute bottom-0.5 left-0.5">
-                            <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
+                            <span className="bg-danger-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
                               {t("unavailableBadge")}
                             </span>
                           </div>

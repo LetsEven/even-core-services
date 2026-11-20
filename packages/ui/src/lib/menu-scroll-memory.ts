@@ -1,7 +1,7 @@
 // Posición del menú al abrir un platillo, para restaurarla al volver (back o agregar al carrito).
 // Vive en memoria del módulo: sobrevive navegaciones del cliente, no recargas.
 
-type MenuPosition = {
+export type MenuPosition = {
   key: string;
   category: string;
   itemId: string;

@@ -279,7 +279,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                       {/* Image */}
                       {showImages && (
                         <div className="shrink-0 relative">
-                          <div className="size-16 md:size-20 rounded-sm overflow-hidden bg-gray-300 flex items-center justify-center">
+                          <div className="size-16 md:size-20 rounded-sm overflow-hidden bg-tone-300 flex items-center justify-center">
                             {item.images?.length > 0 && item.images[0] ? (
                               <img
                                 src={item.images[0]}
@@ -296,7 +296,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                           </div>
                           {itemIsOutOfStock && (
                             <div className="absolute bottom-0.5 left-0.5">
-                              <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
+                              <span className="bg-danger-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
                                 {tc("outOfStockBadge")}
                               </span>
                             </div>
@@ -310,7 +310,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                           {item.item}
                         </h3>
                         {!showImages && itemIsOutOfStock && (
-                          <span className="inline-block bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
+                          <span className="inline-block bg-danger-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
                             {tc("outOfStockBadge")}
                           </span>
                         )}

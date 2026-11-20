@@ -29,58 +29,10 @@
     "heroSubtitle": "Please tap your card or scan the QR code on your table to get started",
     "heroFootnote": "You'll find the card at your table. Each card has a unique code to access the digital menu."
   },
-  "InvoiceModal": {
-    "stepInfoTitle": "Billing",
-    "stepFormTitle": "Billing details",
-    "previewTitle": "Preview",
-    "stepDoneTitle": "Invoice issued",
-    "billingDeadlineTitle": "Billing deadline",
-    "billingDeadlineMessage": "You can only invoice this purchase within the current month. The deadline to request your invoice is <strong>{date}</strong>.",
-    "loadingSavedData": "Loading saved data...",
-    "razonSocialLabel": "Business Name",
-    "regimenFiscalLabel": "Tax Regime",
-    "codigoPostalLabel": "ZIP Code",
-    "usoCfdiLabel": "CFDI Use",
-    "emailLabelOptional": "Email (optional)",
-    "errorRfcRequired": "RFC is required.",
-    "errorRazonSocialRequired": "Business Name is required.",
-    "errorRegimenFiscalRequired": "Tax Regime is required.",
-    "errorCodigoPostalRequired": "ZIP Code is required.",
-    "errorUsoCfdiRequired": "CFDI Use is required.",
-    "errorPreview": "Error generating the preview.",
-    "errorCreate": "Error issuing the invoice.",
-    "errorDownload": "Error downloading the PDF.",
-    "errorSendEmail": "Error sending the email.",
-    "previewDisclaimer": "Unstamped preview. Check that the details are correct before issuing.",
-    "openPreview": "Open preview",
-    "invoiceIssuedSuccess": "Your invoice was issued successfully",
-    "downloadPdf": "Download PDF",
-    "sendByEmail": "Send by email",
-    "sent": "Sent",
-    "send": "Send",
-    "continueCta": "Continue",
-    "issueInvoiceCta": "Issue invoice"
-  },
   "UserPage": {
     "title": "Enter your name to continue",
     "nameLabel": "Your name",
     "namePlaceholder": "Name"
-  },
-  "AddCardPage": {
-    "title": "Add your card to continue",
-    "subtitle": "Your card will be saved securely for future payments",
-    "fullNameLabel": "Full Name",
-    "cardNumberLabel": "Card number",
-    "expiryLabel": "Expiration date",
-    "saveCta": "Save",
-    "savingCta": "Saving...",
-    "errorFullNameRequired": "Enter your full name",
-    "errorCardNumberRequired": "Enter the card number",
-    "errorCvvRequired": "Enter the CVV",
-    "duplicateCard": "A card ending in {digits} already exists",
-    "errorInvalidExpiry": "Invalid expiration date",
-    "errorAddCardGeneric": "Couldn't add the card. Please try again.",
-    "errorAddCardNetwork": "Couldn't add the card. Check your connection and try again."
   },
   "CardScanner": {
     "title": "Scan Card",
@@ -293,12 +245,5 @@
     "paidLabel": "Paid:",
     "totalLabel": "Total:",
     "tableFullyPaid": "Bill fully paid!"
-  },
-  "Terms": {
-    "checkbox": "I have read and accept the <terms>Terms and Conditions</terms> and the <privacy>Privacy Notice</privacy>.",
-    "updateTitle": "We updated our terms",
-    "updateBody": "We updated our Terms and Conditions and Privacy Notice.",
-    "updateCta": "Got it",
-    "errorSave": "We couldn't save your acceptance. Please try again."
   }
 }

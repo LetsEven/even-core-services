@@ -9,7 +9,7 @@ import { useRoomNavigation } from "../hooks/useRoomNavigation";
 import { useRestaurant } from "../context/RestaurantContext";
 import RestaurantClosedModal from "./RestaurantClosedModal";
 import OutOfStockModal from "./OutOfStockModal";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 export interface ReorderItem {
   item: string;

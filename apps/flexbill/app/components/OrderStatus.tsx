@@ -8,7 +8,7 @@ import { useTable } from "../context/TableContext";
 import { useTableNavigation } from "../hooks/useTableNavigation";
 import { getRestaurantData } from "../utils/restaurantData";
 import MenuHeaderBackOrder from "./headers/MenuHeaderBackOrder";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import { ReceiptPaper, ReceiptRow, ReceiptRule } from "@even/ui";
 import { FlowStepCard } from "@even/ui/diner";

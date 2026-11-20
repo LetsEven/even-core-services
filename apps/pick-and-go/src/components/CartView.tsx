@@ -14,14 +14,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useBranch } from "@/context/BranchContext";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useAgentStatus } from "@/hooks/useAgentStatus";
-import POSBlockedModal from "./POSBlockedModal";
-import ItemCustomizations from "./ItemCustomizations";
+import {
+  POSBlockedModal,
+  ItemCustomizations,
+  UnavailableItemsModal,
+  toUnavailableModalItems,
+  UnavailableCartRow,
+} from "@even/ui/diner";
 import { getBackendOrigin } from "@even/api-client";
 import RestaurantClosedModal from "./RestaurantClosedModal";
-import UnavailableItemsModal, {
-  toUnavailableModalItems,
-} from "./UnavailableItemsModal";
-import UnavailableCartRow from "./UnavailableCartRow";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
 import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 

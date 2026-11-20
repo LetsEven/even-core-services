@@ -15,16 +15,14 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useRestaurant } from "@/app/context/RestaurantContext";
 import { useGuest } from "@/app/context/GuestContext";
 import { useAgentStatus } from "@/app/hooks/useAgentStatus";
-import POSBlockedModal from "@/app/components/POSBlockedModal";
+import { POSBlockedModal, ItemCustomizations, UnavailableCartRow } from "@even/ui/diner";
 import { authService } from "@/app/services/auth.service";
 import { getItemDisplayPrice } from "@/app/utils/commissionCalculator";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
 import { getBackendOrigin } from "@even/api-client";
 import RestaurantClosedModal from "@/app/components/RestaurantClosedModal";
 import UnavailableItemsModal, {
   toUnavailableModalItems,
 } from "@/app/components/UnavailableItemsModal";
-import UnavailableCartRow from "@/app/components/UnavailableCartRow";
 import { useCartAvailability } from "@/app/hooks/useCartAvailability";
 
 // Perfil completo = tiene nombre Y fecha de nacimiento. Sin esto,

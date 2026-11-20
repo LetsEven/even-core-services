@@ -15,7 +15,7 @@ import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import { useAgentStatus } from "@/app/hooks/useAgentStatus";
 import { useRestaurant } from "@/app/context/RestaurantContext";
-import POSBlockedModal from "@/app/components/POSBlockedModal";
+import { POSBlockedModal } from "@even/ui/diner";
 
 export default function PaymentOptionsPage() {
   const t = useTranslations("PaymentOptionsPage");

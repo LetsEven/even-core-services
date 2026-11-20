@@ -11,7 +11,7 @@ import { useRestaurant } from "../../context/RestaurantContext";
 import { useIsOffSchedule } from "../../hooks/useCartAvailability";
 import RestaurantClosedModal from "../RestaurantClosedModal";
 import OutOfStockModal from "../OutOfStockModal";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 interface ReorderModalProps {
   isOpen: boolean;

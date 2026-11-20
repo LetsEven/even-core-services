@@ -46,3 +46,4 @@ export {
   isProfileComplete,
   unwrapProfile,
 } from "./auth/phone";
+export { useServiceNavigation, type ServiceNavigationOptions } from "./useServiceNavigation";

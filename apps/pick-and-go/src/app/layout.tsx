@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { dmMono, jakarta } from "@even/next-config/fonts";
+import { buildRootMetadata } from "@even/next-config/metadata";
 import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -18,36 +19,16 @@ import TermsUpdateToast from "@/components/TermsUpdateToast";
 import EnvBadge from "@/components/EnvBadge";
 import EcartPaySdk from "@/components/EcartPaySdk";
 
-const dmMono = DM_Mono({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  variable: "--font-dm-mono",
-  display: "swap",
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-jakarta",
-  display: "swap",
-});
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("RootLayout");
   const title = t("title");
   const description = t("description");
-  return {
-    metadataBase: new URL("https://pg.letseven.io"),
+  return buildRootMetadata({
+    metadataBase: "https://pg.letseven.io",
+    siteName: "Even Pick & Go",
     title,
     description,
-    openGraph: {
-      type: "website",
-      siteName: "Even Pick & Go",
-      url: "/",
-      title,
-      description,
-    },
-  };
+  });
 }
 
 export default async function RootLayout({

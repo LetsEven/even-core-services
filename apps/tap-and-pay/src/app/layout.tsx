@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { dmMono, jakarta } from "@even/next-config/fonts";
+import { buildRootMetadata, evenAsteriskIcons } from "@even/next-config/metadata";
 import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -13,48 +14,17 @@ import { GuestProvider } from "./context/GuestContext";
 import { SocketProvider } from "./context/SocketContext";
 import Script from "next/script";
 
-const dmMono = DM_Mono({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  variable: "--font-dm-mono",
-  display: "swap",
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-jakarta",
-  display: "swap",
-});
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("RootLayout");
   const title = t("title");
   const description = t("description");
-  return {
-    metadataBase: new URL("https://tp.letseven.io"),
+  return buildRootMetadata({
+    metadataBase: "https://tp.letseven.io",
+    siteName: "Even Tap & Pay",
     title,
     description,
-    openGraph: {
-      type: "website",
-      siteName: "Even Tap & Pay",
-      url: "/",
-      title,
-      description,
-    },
-    icons: {
-      icon: [
-        {
-          url: "/even/even-asterisk-evergreen.svg",
-          media: "(prefers-color-scheme: light)",
-        },
-        {
-          url: "/even/even-asterisk-grass.svg",
-          media: "(prefers-color-scheme: dark)",
-        },
-      ],
-    },
-  };
+    icons: evenAsteriskIcons,
+  });
 }
 
 export default async function RootLayout({

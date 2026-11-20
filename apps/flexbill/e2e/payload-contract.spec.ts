@@ -180,7 +180,7 @@ test.describe("máquina de estados de la tarjeta guardada", () => {
   });
 });
 
-test.describe("propina de FlexBill: se redondea a centavos antes de calcular", () => {
+test.describe("propina de FlexBill: no se redondea antes de calcular (igual que el backend)", () => {
   test("15% sobre $20.90 -> tipAmount de la URL", async ({ page }) => {
     await mockFlexBillApi(page);
     await page.goto(
@@ -188,7 +188,8 @@ test.describe("propina de FlexBill: se redondea a centavos antes de calcular", (
     );
     await page.getByRole("button", { name: "15%", exact: true }).click();
     await page.getByRole("button", { name: "Pagar", exact: true }).click();
-    // Propina redondeada a centavos antes de calcular (3.135 -> 3.14); TP/PG/RS no la redondean.
-    await expect(page).toHaveURL(/card-selection\?type=choose-amount&amount=24\.04&baseAmount=20\.9&tipAmount=3\.14&/);
+    // El objetivo de propina es crudo (3.135) y FlexBill lo resuelve a centavos en resolveTipAmountForTargetDisplay
+    // (3.135 -> 3.13): amount 24.03 (antes, con el objetivo a centavos, 3.14 y 24.04).
+    await expect(page).toHaveURL(/card-selection\?type=choose-amount&amount=24\.03&baseAmount=20\.9&tipAmount=3\.13&/);
   });
 });

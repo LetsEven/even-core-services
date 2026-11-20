@@ -12,10 +12,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useGuest } from "@/app/context/GuestContext";
 import MenuHeader from "@/app/components/headers/MenuHeader";
 import OrderAnimation from "@/app/components/UI/OrderAnimation";
-import {
-  isDefinitiveWalletRejection,
-  paymentService,
-} from "@/app/services/payment.service";
+import { paymentService } from "@/app/services/payment.service";
 import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/app/utils/cardIcons";
 import { useMsiConfig } from "@/app/hooks/useMsiConfig";
@@ -23,22 +20,14 @@ import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import {
   clearStoredPaymentIntent,
 } from "@/app/utils/paymentIdempotency";
-import {
-  getOrCreateWalletOrderId,
-  clearCachedWalletOrder,
-} from "@/app/utils/walletOrderCache";
 import { useTranslations } from "next-intl";
 import {
   buildChargeRequest,
-  classifyGooglePayError,
   computeMsiTotal,
   toTransactionRecord,
 } from "@even/payments";
-import { useSavedCardCharge } from "@even/payments/react";
+import { useSavedCardCharge, useWalletPayments } from "@even/payments/react";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
-
-// Mismos estados que el backend acepta como pagado en confirmOrder.
-const PAID_ECART_STATUSES = ["paid", "completed", "succeeded", "approved"];
 
 export default function CardSelectionPage() {
   const t = useTranslations("CardSelectionPage");
@@ -148,54 +137,6 @@ export default function CardSelectionPage() {
     null,
   );
 
-  // Apple Pay
-  const [applePayReady, setApplePayReady] = useState(false);
-  const [applePayUnavailable, setApplePayUnavailable] = useState(false);
-  // La orden de wallet fue rechazada de forma definitiva: se ocultan Apple y
-  // Google Pay y se pide pagar con tarjeta guardada.
-  const [walletOrderRejected, setWalletOrderRejected] = useState(false);
-  const [isApplePayProcessing, setIsApplePayProcessing] = useState(false);
-  const [applePayPaymentId, setApplePayPaymentId] = useState<string | null>(
-    null,
-  );
-  const applePayListenersRef = useRef(false);
-  // Refleja applePayReady sin closures obsoletos dentro de los listeners del
-  // SDK (se registran una sola vez con `.on(...)`).
-  const applePayReadyRef = useRef(false);
-
-  // Google Pay
-  const [googlePayReady, setGooglePayReady] = useState(false);
-  const [googlePayUnavailable, setGooglePayUnavailable] = useState<boolean>(
-    () => {
-      if (typeof window === "undefined") return false;
-      const ua = navigator.userAgent;
-      return (
-        /iPhone|iPad|iPod/.test(ua) ||
-        (ua.includes("Macintosh") &&
-          navigator.vendor === "Apple Computer, Inc.")
-      );
-    },
-  );
-  const [isGooglePayProcessing, setIsGooglePayProcessing] = useState(false);
-  const [googlePayPaymentId, setGooglePayPaymentId] = useState<string | null>(
-    null,
-  );
-  const googlePayListenersRef = useRef(false);
-  // Refleja googlePayReady sin closures obsoletos dentro de los listeners
-  // del SDK (se registran una sola vez con `.on(...)`).
-  const googlePayReadyRef = useRef(false);
-  const googlePaySucceededRef = useRef(false);
-  const googlePay3dsObserverRef = useRef<MutationObserver | null>(null);
-  const googlePay3dsPollRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
-  const stopGooglePay3dsWatch = () => {
-    googlePay3dsObserverRef.current?.disconnect();
-    googlePay3dsObserverRef.current = null;
-    if (googlePay3dsPollRef.current) clearInterval(googlePay3dsPollRef.current);
-    googlePay3dsPollRef.current = null;
-  };
-  useEffect(() => stopGooglePay3dsWatch, []);
 
   // Establecer restaurantId y branchNumber desde los path params
   useEffect(() => {
@@ -291,379 +232,68 @@ export default function CardSelectionPage() {
     setIsLoadingInitial(false);
   }, [allPaymentMethods.length]);
 
-  // Cargar SDK de Apple Pay
-  useEffect(() => {
-    const ApplePaySession = (window as any).ApplePaySession;
-    if (!ApplePaySession || !ApplePaySession.canMakePayments?.()) {
-      setApplePayUnavailable(true);
-      return;
-    }
-    const src = "https://pay.ecart.com/sdk/pay.js";
-    if (!document.querySelector(`script[src="${src}"]`)) {
-      const script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-  }, []);
-
-  // Cargar SDK de Google Pay
-  useEffect(() => {
-    if (googlePayUnavailable) return;
-    const src = "https://pay.ecart.com/sdk/pay.js";
-    if (!document.querySelector(`script[src="${src}"]`)) {
-      const script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-  }, [googlePayUnavailable]);
-
-  const getApplePaySDK = () =>
-    new Promise<any>((resolve) => {
-      if ((window as any).Pay?.ApplePay)
-        return resolve((window as any).Pay.ApplePay);
-      // Timeout de seguridad: si el SDK no carga (p.ej. el script da 404),
-      // resolvemos null en vez de esperar para siempre — así el botón cae a
-      // "no disponible" en lugar de quedarse cargando eternamente.
-      const start = Date.now();
-      const interval = setInterval(() => {
-        if ((window as any).Pay?.ApplePay) {
-          clearInterval(interval);
-          resolve((window as any).Pay.ApplePay);
-        } else if (Date.now() - start > 8000) {
-          clearInterval(interval);
-          resolve(null);
-        }
-      }, 100);
+  // Apple Pay y Google Pay (SDK de EcartPay): la lógica vive en @even/payments/react.
+  const showWalletPaymentAnimation = (paymentId: string) => {
+    setConfirmedPaymentId(null);
+    setPendingPaymentData({
+      paymentId,
+      amount: totalAmountCharged,
+      paymentType,
     });
-
-  const getGooglePaySDK = () =>
-    new Promise<any>((resolve) => {
-      if ((window as any).Pay?.GooglePay)
-        return resolve((window as any).Pay.GooglePay);
-      // Timeout de seguridad: ver getApplePaySDK.
-      const start = Date.now();
-      const interval = setInterval(() => {
-        if ((window as any).Pay?.GooglePay) {
-          clearInterval(interval);
-          resolve((window as any).Pay.GooglePay);
-        } else if (Date.now() - start > 8000) {
-          clearInterval(interval);
-          resolve(null);
-        }
-      }, 100);
-    });
-
-  // Inicializar Apple Pay SDK
-  useEffect(() => {
-    if (
-      isLoadingInitial ||
-      totalAmountCharged <= 0 ||
-      typeof window === "undefined"
-    )
-      return;
-    if (applePayListenersRef.current) return;
-    applePayListenersRef.current = true;
-
-    (async () => {
-      try {
-        let rejection: any = null;
-        const appleOrderId = await getOrCreateWalletOrderId(
-          "apple",
-          {
-            items: [],
-            tipAmount,
-            discountId: null,
-            total: totalAmountCharged,
-          },
-          async () => {
-            const orderResult = await paymentService.createApplePayOrder({
-              amount: totalAmountCharged,
-              currency: "MXN",
-              restaurantId: restaurantParams?.restaurantId as string,
-              baseAmount,
-              tipAmount,
-              // even-backend #333: identificadores para que el servidor recalcule
-              // el monto contra tap_pay_orders en vez de cobrar el que mandamos.
-              // Son opcionales en el backend: si no los mandamos, cobra igual que
-              // antes. Ver docs/03-mapa-montos-server-side.md en even-backend.
-              id_tap_pay_order: state.order?.order_id,
-              payment_type: paymentType,
-              selected_item_ids:
-                paymentType === "select-items" ? selectedItems : undefined,
-            });
-
-            const id =
-              (orderResult as any).orderId ?? orderResult.data?.orderId;
-            if (!orderResult.success || !id) {
-              rejection = orderResult;
-              return null;
-            }
-            return id;
-          },
-        );
-
-        if (!appleOrderId) {
-          // Un 4xx con código semántico es un rechazo definitivo (400
-          // baseAmount <= 0, 422 payment_rejected, ...): reintentar con los
-          // mismos datos fallaría igual, así que se cae a tarjeta guardada. Un
-          // 5xx pasajero no oculta la wallet.
-          if (rejection && isDefinitiveWalletRejection(rejection)) {
-            setApplePayUnavailable(true);
-            setWalletOrderRejected(true);
-          }
-          applePayListenersRef.current = false;
-          return;
-        }
-
-        const sdkAlreadyLoaded = !!(window as any).Pay?.ApplePay;
-        const applePaySDK = await getApplePaySDK();
-        if (!applePaySDK) {
-          setApplePayUnavailable(true);
-          applePayListenersRef.current = false;
-          return;
-        }
-
-        applePaySDK.on("ready", () =>
-          setTimeout(() => {
-            applePayReadyRef.current = true;
-            setApplePayReady(true);
-          }, 2800),
-        );
-        applePaySDK.on("unavailable", () => setApplePayUnavailable(true));
-        applePaySDK.on("cancel", () => setIsApplePayProcessing(false));
-        applePaySDK.on("error", () => {
-          // Este evento también dispara en la inicialización del SDK (no
-          // solo en un intento real de pago), así que no siempre implica que
-          // Apple Pay dejó de estar disponible. Si el botón ya se había
-          // mostrado (init exitoso), esto es un error de un intento de pago
-          // real —p.ej. tarjeta rechazada por fondos insuficientes— y el
-          // usuario debe poder reintentar, así que no lo ocultamos. Solo lo
-          // ocultamos si el error ocurre antes de que el botón llegara a
-          // estar listo.
-          setIsApplePayProcessing(false);
-          if (!applePayReadyRef.current) {
-            setApplePayUnavailable(true);
-          }
-        });
-        applePaySDK.on("success", (event: any) => {
-          clearCachedWalletOrder("apple");
-          const walletPaymentId = event?.detail?.id || appleOrderId;
-          setApplePayPaymentId(walletPaymentId);
-          setIsApplePayProcessing(true);
-          setConfirmedPaymentId(null);
-          setPendingPaymentData({
-            paymentId: walletPaymentId,
-            amount: totalAmountCharged,
-            paymentType,
-          });
-          setShowPaymentAnimation(true);
-        });
-
-        applePaySDK.render({
-          container: "#apple-pay-container",
-          orderId: appleOrderId,
-          amount: totalAmountCharged,
-          currency: "MXN",
-          countryCode: "MX",
-          label: "Even",
-          buttonStyle: "black",
-          buttonType: "pay",
-          borderRadius: "8px",
-          supportedNetworks: ["visa", "masterCard"],
-        });
-
-        if (sdkAlreadyLoaded)
-          setTimeout(() => {
-            applePayReadyRef.current = true;
-            setApplePayReady(true);
-          }, 2800);
-      } catch {
-        applePayListenersRef.current = false;
-      }
-    })();
-  }, [isLoadingInitial, totalAmountCharged]);
-
-  // Inicializar Google Pay SDK
-  useEffect(() => {
-    if (
-      isLoadingInitial ||
-      totalAmountCharged <= 0 ||
-      typeof window === "undefined"
-    )
-      return;
-    if (googlePayUnavailable) return;
-    if (googlePayListenersRef.current) return;
-    googlePayListenersRef.current = true;
-
-    (async () => {
-      try {
-        let rejection: any = null;
-        const googleOrderId = await getOrCreateWalletOrderId(
-          "google",
-          {
-            items: [],
-            tipAmount,
-            discountId: null,
-            total: totalAmountCharged,
-          },
-          async () => {
-            const orderResult = await paymentService.createGooglePayOrder({
-              amount: totalAmountCharged,
-              currency: "MXN",
-              restaurantId: restaurantParams?.restaurantId as string,
-              baseAmount,
-              tipAmount,
-              // even-backend #333: identificadores para que el servidor recalcule
-              // el monto contra tap_pay_orders en vez de cobrar el que mandamos.
-              // Son opcionales en el backend: si no los mandamos, cobra igual que
-              // antes. Ver docs/03-mapa-montos-server-side.md en even-backend.
-              id_tap_pay_order: state.order?.order_id,
-              payment_type: paymentType,
-              selected_item_ids:
-                paymentType === "select-items" ? selectedItems : undefined,
-            });
-
-            const id =
-              (orderResult as any).orderId ?? orderResult.data?.orderId;
-            if (!orderResult.success || !id) {
-              rejection = orderResult;
-              return null;
-            }
-            return id;
-          },
-        );
-
-        if (!googleOrderId) {
-          // Un 4xx con código semántico es un rechazo definitivo (400
-          // baseAmount <= 0, 422 payment_rejected, ...): reintentar con los
-          // mismos datos fallaría igual, así que se cae a tarjeta guardada. Un
-          // 5xx pasajero no oculta la wallet.
-          if (rejection && isDefinitiveWalletRejection(rejection)) {
-            setGooglePayUnavailable(true);
-            setWalletOrderRejected(true);
-          }
-          googlePayListenersRef.current = false;
-          return;
-        }
-
-        const sdkAlreadyLoaded = !!(window as any).Pay?.GooglePay;
-        const googlePaySDK = await getGooglePaySDK();
-        if (!googlePaySDK) {
-          setGooglePayUnavailable(true);
-          googlePayListenersRef.current = false;
-          return;
-        }
-
-        googlePaySDK.on("ready", () =>
-          setTimeout(() => {
-            googlePayReadyRef.current = true;
-            setGooglePayReady(true);
-          }, 2800),
-        );
-        googlePaySDK.on("unavailable", () => setGooglePayUnavailable(true));
-        googlePaySDK.on("cancel", () => setIsGooglePayProcessing(false));
-        googlePaySDK.on("error", () => {
-          // Este evento también dispara en la inicialización del SDK (no
-          // solo en un intento real de pago), así que no siempre implica que
-          // Google Pay dejó de estar disponible. Si el botón ya se había
-          // mostrado (init exitoso), esto es un error de un intento de pago
-          // real —p.ej. tarjeta rechazada por fondos insuficientes— y el
-          // usuario debe poder reintentar, así que no lo ocultamos. Solo lo
-          // ocultamos si el error ocurre antes de que el botón llegara a
-          // estar listo.
-          setIsGooglePayProcessing(false);
-          stopGooglePay3dsWatch();
-          if (classifyGooglePayError(googlePayReadyRef.current) === "payment") {
-            // Intento real de pago fallido: avisar al usuario (antes quedaba
-            // sin feedback) y dejarlo reintentar o pagar con tarjeta guardada.
-            setCanRetryCharge(true);
-            setErrorTitle(t("googlePayErrorTitle"));
-            setErrorMessage(t("googlePayErrorMessage"));
-          } else {
-            setGooglePayUnavailable(true);
-          }
-        });
-        const handleGooglePaySuccess = (walletPaymentId: string) => {
-          if (googlePaySucceededRef.current) return;
-          googlePaySucceededRef.current = true;
-          stopGooglePay3dsWatch();
-          clearCachedWalletOrder("google");
-          setGooglePayPaymentId(walletPaymentId);
-          setIsGooglePayProcessing(true);
-          setConfirmedPaymentId(null);
-          setPendingPaymentData({
-            paymentId: walletPaymentId,
-            amount: totalAmountCharged,
-            paymentType,
-          });
-          setShowPaymentAnimation(true);
-        };
-
-        googlePaySDK.on("success", (event: any) =>
-          handleGooglePaySuccess(event?.detail?.activity_id || googleOrderId),
-        );
-
-        // El SDK abre cualquier redirect_url de process-payment en un overlay
-        // y solo emite "success" si el iframe manda postMessage; la página de
-        // recibo de EcartPay no lo manda, así que confirmamos por polling.
-        const isOrderPaid = async () => {
-          const status =
-            await paymentService.getEcartOrderStatus(googleOrderId);
-          return !!status && PAID_ECART_STATUSES.includes(status);
-        };
-        const finishFromOverlay = () => {
-          document.getElementById("ecartpay-3ds-overlay")?.remove();
-          handleGooglePaySuccess(googleOrderId);
-        };
-        const startPolling = async (overlay: HTMLElement) => {
-          if (googlePay3dsPollRef.current) return;
-          const startedAt = Date.now();
-          googlePay3dsPollRef.current = setInterval(async () => {
-            if (Date.now() - startedAt > 5 * 60 * 1000) {
-              stopGooglePay3dsWatch();
-              return;
-            }
-            if (await isOrderPaid()) finishFromOverlay();
-          }, 3000);
-          // Oculto mientras se revisa: si ya está pagada es el recibo y no se
-          // muestra; si no, es un reto 3DS real y se deja visible.
-          overlay.style.visibility = "hidden";
-          if (await isOrderPaid()) finishFromOverlay();
-          else overlay.style.visibility = "";
-        };
-        googlePay3dsObserverRef.current?.disconnect();
-        googlePay3dsObserverRef.current = new MutationObserver(() => {
-          const overlay = document.getElementById("ecartpay-3ds-overlay");
-          if (overlay) startPolling(overlay);
-        });
-        googlePay3dsObserverRef.current.observe(document.body, {
-          childList: true,
-        });
-
-        googlePaySDK.render({
-          container: "#google-pay-container",
-          orderId: googleOrderId,
-          amount: totalAmountCharged,
-          currency: "MXN",
-          countryCode: "MX",
-          allowedCardNetworks: ["VISA", "MASTERCARD", "AMEX"],
-          allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
-          buttonColor: "black",
-          buttonType: "pay",
-        });
-
-        if (sdkAlreadyLoaded)
-          setTimeout(() => {
-            googlePayReadyRef.current = true;
-            setGooglePayReady(true);
-          }, 2800);
-      } catch {
-        googlePayListenersRef.current = false;
-      }
-    })();
-  }, [isLoadingInitial, totalAmountCharged, googlePayUnavailable]);
+    setShowPaymentAnimation(true);
+  };
+  const {
+    applePayReady,
+    applePayUnavailable,
+    walletOrderRejected,
+    isApplePayProcessing,
+    setIsApplePayProcessing,
+    applePayPaymentId,
+    googlePayReady,
+    googlePayUnavailable,
+    isGooglePayProcessing,
+    setIsGooglePayProcessing,
+    googlePayPaymentId,
+  } = useWalletPayments({
+    paymentService,
+    canCreateOrders: !isLoadingInitial && totalAmountCharged > 0,
+    orderKey: [isLoadingInitial, totalAmountCharged].join("|"),
+    amount: totalAmountCharged,
+    prepareOrder: () => ({
+      fingerprint: {
+        items: [],
+        tipAmount,
+        discountId: null,
+        total: totalAmountCharged,
+      },
+      request: {
+        amount: totalAmountCharged,
+        currency: "MXN",
+        restaurantId: restaurantParams?.restaurantId as string,
+        baseAmount,
+        tipAmount,
+        // even-backend #333: identificadores para que el servidor recalcule
+        // el monto contra tap_pay_orders en vez de cobrar el que mandamos.
+        // Son opcionales en el backend: si no los mandamos, cobra igual que
+        // antes. Ver docs/03-mapa-montos-server-side.md en even-backend.
+        id_tap_pay_order: state.order?.order_id,
+        payment_type: paymentType,
+        selected_item_ids:
+          paymentType === "select-items" ? selectedItems : undefined,
+      },
+    }),
+    apple: { detection: "once", label: "Even" },
+    google: { paymentId: "activity_id" },
+    onApplePaySuccess: ({ paymentId }) => showWalletPaymentAnimation(paymentId),
+    onGooglePaySuccess: ({ paymentId }) => showWalletPaymentAnimation(paymentId),
+    onGooglePayPaymentError: () => {
+      // Intento real de pago fallido: avisar al usuario y dejarlo reintentar o
+      // pagar con tarjeta guardada.
+      setCanRetryCharge(true);
+      setErrorTitle(t("googlePayErrorTitle"));
+      setErrorMessage(t("googlePayErrorMessage"));
+    },
+  });
 
   // Calcular el total a mostrar según la opción MSI seleccionada
   const getDisplayTotal = () => {

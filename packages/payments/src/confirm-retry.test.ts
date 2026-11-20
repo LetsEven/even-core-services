@@ -1,11 +1,12 @@
-// Caracterización (Fase 4.0) de pollConfirm y chargeSavedCard tal como se usan
-// hoy en las apps. El predicado de reintento por defecto del core es el de
-// Pick & Go y Room Service (solo `confirm_in_progress`); Tap Order & Pay usa un
-// superconjunto inline en su card-selection. Ver audit R2 y R6.
+// Caracterización de pollConfirm y chargeSavedCard. Desde el cambio intencional
+// de la Fase 4b, el predicado de reintento por defecto del core es el que usaba
+// Tap Order & Pay (isConfirmRetryable) y lo comparten Pick & Go, Room Service y
+// Tap Order & Pay; antes PG/RS solo reintentaban `confirm_in_progress`.
+// Ver audit R2 y R6.
 import { describe, expect, it, vi } from "vitest";
 import { chargeSavedCard, type ChargeSavedCardParams } from "./charge";
 import { createPaymentIntentStore, type FingerprintInput } from "./idempotency";
-import { isConfirmInProgress, pollConfirm, waitForChargedIntent, type ConfirmResponse } from "./polling";
+import { isConfirmInProgress, isConfirmRetryable, pollConfirm, waitForChargedIntent, type ConfirmResponse } from "./polling";
 import { fakeClock, memoryStorage } from "./test/helpers";
 
 interface ConfirmResult {
@@ -15,33 +16,21 @@ interface ConfirmResult {
   status?: number;
 }
 
-// Copia literal del predicado inline de apps/tap-order-pay/.../card-selection:
-// red caída (status undefined), 429, 5xx, confirm_in_progress y confirm_conflict.
-function topIsTransient(r: ConfirmResult): boolean {
-  return (
-    r.code === "confirm_in_progress" ||
-    r.code === "confirm_conflict" ||
-    r.status === undefined ||
-    r.status === 429 ||
-    r.status >= 500
-  );
-}
-
-const CASES: Array<{ name: string; result: ConfirmResult; pgRs: boolean; top: boolean }> = [
-  { name: "409 confirm_in_progress", result: { success: false, code: "confirm_in_progress", status: 409 }, pgRs: true, top: true },
-  { name: "409 confirm_conflict", result: { success: false, code: "confirm_conflict", status: 409 }, pgRs: false, top: true },
-  { name: "red caída (sin status)", result: { success: false }, pgRs: false, top: true },
-  { name: "429", result: { success: false, status: 429 }, pgRs: false, top: true },
-  { name: "500", result: { success: false, status: 500 }, pgRs: false, top: true },
-  { name: "503", result: { success: false, status: 503 }, pgRs: false, top: true },
-  { name: "402 payment_required", result: { success: false, code: "payment_required", status: 402 }, pgRs: false, top: false },
-  { name: "404 order_not_found", result: { success: false, code: "order_not_found", status: 404 }, pgRs: false, top: false },
-  { name: "409 payment_amount_mismatch", result: { success: false, code: "payment_amount_mismatch", status: 409 }, pgRs: false, top: false },
-  { name: "400", result: { success: false, status: 400 }, pgRs: false, top: false },
+const CASES: Array<{ name: string; result: ConfirmResult; retry: boolean; strict: boolean }> = [
+  { name: "409 confirm_in_progress", result: { success: false, code: "confirm_in_progress", status: 409 }, retry: true, strict: true },
+  { name: "409 confirm_conflict", result: { success: false, code: "confirm_conflict", status: 409 }, retry: true, strict: false },
+  { name: "red caída (sin status)", result: { success: false }, retry: true, strict: false },
+  { name: "429", result: { success: false, status: 429 }, retry: true, strict: false },
+  { name: "500", result: { success: false, status: 500 }, retry: true, strict: false },
+  { name: "503", result: { success: false, status: 503 }, retry: true, strict: false },
+  { name: "402 payment_required", result: { success: false, code: "payment_required", status: 402 }, retry: false, strict: false },
+  { name: "404 order_not_found", result: { success: false, code: "order_not_found", status: 404 }, retry: false, strict: false },
+  { name: "409 payment_amount_mismatch", result: { success: false, code: "payment_amount_mismatch", status: 409 }, retry: false, strict: false },
+  { name: "400", result: { success: false, status: 400 }, retry: false, strict: false },
 ];
 
-describe("pollConfirm: predicado de reintento por defecto (Pick & Go y Room Service)", () => {
-  it.each(CASES)("$name: reintenta = $pgRs", async ({ result, pgRs }) => {
+describe("pollConfirm: predicado de reintento por defecto (todas las apps)", () => {
+  it.each(CASES)("$name: reintenta = $retry", async ({ result, retry }) => {
     const confirm = vi
       .fn<() => Promise<ConfirmResult>>()
       .mockResolvedValueOnce(result)
@@ -49,14 +38,14 @@ describe("pollConfirm: predicado de reintento por defecto (Pick & Go y Room Serv
 
     const outcome = await pollConfirm(confirm, fakeClock());
 
-    expect(confirm).toHaveBeenCalledTimes(pgRs ? 2 : 1);
-    expect(outcome.success).toBe(pgRs);
+    expect(confirm).toHaveBeenCalledTimes(retry ? 2 : 1);
+    expect(outcome.success).toBe(retry);
   });
 
-  it("el éxito exige data.order (success sin orden no cuenta y es terminal)", async () => {
+  it("el éxito exige data.order: un success sin orden ni status se trata como fallo transitorio (igual que TOP)", async () => {
     const confirm = vi.fn().mockResolvedValue({ success: true, data: {} });
     expect(await pollConfirm(confirm, fakeClock())).toEqual({ success: false });
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm).toHaveBeenCalledTimes(20);
   });
 
   it("el intervalo por defecto es 3 s y el timeout 60 s", async () => {
@@ -68,9 +57,13 @@ describe("pollConfirm: predicado de reintento por defecto (Pick & Go y Room Serv
   });
 });
 
-describe("referencia: predicado inline de Tap Order & Pay", () => {
-  it.each(CASES)("$name: reintenta = $top", ({ result, top }) => {
-    expect(topIsTransient(result)).toBe(top);
+describe("isConfirmRetryable", () => {
+  it.each(CASES)("$name: reintenta = $retry", ({ result, retry }) => {
+    expect(isConfirmRetryable(result)).toBe(retry);
+  });
+
+  it("499 no es transitorio", () => {
+    expect(isConfirmRetryable({ status: 499 })).toBe(false);
   });
 });
 
@@ -187,20 +180,17 @@ describe("reglas de idempotencia (audit R6) de chargeSavedCard", () => {
   });
 });
 
-describe("pollConfirm con isConfirmRetryable inyectado (Tap Order & Pay)", () => {
-  it.each(CASES)("$name: reintenta = $top", async ({ result, top }) => {
+describe("pollConfirm con un predicado inyectado", () => {
+  it("el predicado de la app reemplaza al de por defecto", async () => {
     const confirm = vi
       .fn<() => Promise<ConfirmResponse<unknown>>>()
-      .mockResolvedValueOnce(result)
-      .mockResolvedValue({ success: true, data: { order: { id: "o1" } } });
-
-    const outcome = await pollConfirm(confirm, { ...fakeClock(), isConfirmRetryable: topIsTransient });
-
-    expect(confirm).toHaveBeenCalledTimes(top ? 2 : 1);
-    expect(outcome.success).toBe(top);
+      .mockResolvedValue({ success: false, status: 503 });
+    const outcome = await pollConfirm(confirm, { ...fakeClock(), isConfirmRetryable: () => false });
+    expect(outcome.success).toBe(false);
+    expect(confirm).toHaveBeenCalledOnce();
   });
 
-  it("el predicado por defecto sigue siendo solo confirm_in_progress", () => {
-    for (const c of CASES) expect(isConfirmInProgress(c.result)).toBe(c.pgRs);
+  it("isConfirmInProgress (estricto) solo reintenta confirm_in_progress", () => {
+    for (const c of CASES) expect(isConfirmInProgress(c.result)).toBe(c.strict);
   });
 });

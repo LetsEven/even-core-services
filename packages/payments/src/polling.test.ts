@@ -26,7 +26,7 @@ describe("pollConfirm", () => {
     expect(await pollConfirm(confirm, fakeClock())).toEqual({ success: true, order: { id: "o1" } });
   });
 
-  it("reintenta solo con confirm_in_progress", async () => {
+  it("reintenta con confirm_in_progress", async () => {
     const confirm = vi
       .fn()
       .mockResolvedValueOnce({ success: false, code: "confirm_in_progress" })
@@ -35,8 +35,8 @@ describe("pollConfirm", () => {
     expect(confirm).toHaveBeenCalledTimes(2);
   });
 
-  it("otro error es terminal sin reintentar", async () => {
-    const confirm = vi.fn().mockResolvedValue({ success: false, code: "order_not_found" });
+  it("un 4xx que no es transitorio es terminal sin reintentar", async () => {
+    const confirm = vi.fn().mockResolvedValue({ success: false, code: "order_not_found", status: 404 });
     expect(await pollConfirm(confirm, fakeClock())).toEqual({ success: false });
     expect(confirm).toHaveBeenCalledOnce();
   });

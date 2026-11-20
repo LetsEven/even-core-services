@@ -6,7 +6,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./opengraph": "./src/opengraph.tsx"
+    "./opengraph": "./src/opengraph.tsx",
+    "./fonts": "./src/fonts.ts",
+    "./metadata": "./src/metadata.ts"
   },
   "scripts": {
     "lint": "eslint .",

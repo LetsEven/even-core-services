@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { dmMono, jakarta } from "@even/next-config/fonts";
+import { buildRootMetadata } from "@even/next-config/metadata";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
@@ -16,38 +17,16 @@ import { PepperProvider } from "./context/PepperContext";
 import Script from "next/script";
 import { headers } from "next/headers";
 
-// DM Mono — voz funcional de Even (UI, body, labels, datos)
-const dmMono = DM_Mono({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  variable: "--font-dm-mono",
-  display: "swap",
-});
-
-// Plus Jakarta Sans — display (sustituto provisional de Noka para headlines)
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-jakarta",
-  display: "swap",
-});
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("RootLayout");
   const title = t("title");
   const description = t("description");
-  return {
-    metadataBase: new URL("https://fb.letseven.io"),
+  return buildRootMetadata({
+    metadataBase: "https://fb.letseven.io",
+    siteName: "Even Flex Bill",
     title,
     description,
-    openGraph: {
-      type: "website",
-      siteName: "Even Flex Bill",
-      url: "/",
-      title,
-      description,
-    },
-  };
+  });
 }
 
 export const viewport: Viewport = {

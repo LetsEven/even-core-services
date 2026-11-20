@@ -604,10 +604,10 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-80 justify-center px-6 md:px-8 lg:px-10 flex-1">
+          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-96 justify-center px-6 md:px-8 lg:px-10 py-8 md:py-10 lg:py-12 flex-1">
             {/* Action Buttons */}
             <div
-              className="space-y-3 md:space-y-4 lg:space-y-5"
+              className="space-y-4 md:space-y-5 lg:space-y-6"
               style={{
                 paddingBottom: "max(0rem, env(safe-area-inset-bottom))",
               }}

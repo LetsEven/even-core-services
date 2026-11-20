@@ -37,8 +37,9 @@ import {
   clearStoredPaymentIntent,
 } from "@/utils/paymentIdempotency";
 
-// Google Pay deshabilitado temporalmente — cambiar a false para reactivarlo.
-const GOOGLE_PAY_DISABLED = false;
+// Google Pay deshabilitado temporalmente por problemas reportados (13-nov) —
+// cambiar a false para reactivarlo.
+const GOOGLE_PAY_DISABLED = true;
 // Apple Pay deshabilitado temporalmente — cambiar a false para reactivarlo.
 const APPLE_PAY_DISABLED = false;
 

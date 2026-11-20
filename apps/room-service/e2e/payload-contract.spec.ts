@@ -272,15 +272,15 @@ test.describe("máquina de estados de la tarjeta guardada", () => {
 });
 
 test.describe("propina de Room Service: no se redondea antes de calcular", () => {
-  // $33.50 de consumo: 15 % = 5.025 (sin redondear; TOP lo redondea a 5.02).
-  const cart = [{ id: "ci_e2e_2", menu_item_id: 101, name: "Club sándwich", price: 33.5, quantity: 1 }];
-  for (const [pct, tip] of [["10%", "3.35"], ["15%", "5.03"], ["20%", "6.70"]] as const) {
-    test(`${pct} -> tipAmount=${tip}`, async ({ page }) => {
-      await mockRoomServiceApi(page, { cartItems: cart });
-      await page.goto("/4/1/order-confirm?room=40");
-      await page.getByRole("button", { name: pct, exact: true }).click();
-      await page.getByRole("button", { name: "Continuar" }).click();
-      await expect(page).toHaveURL(new RegExp(`tipAmount=${tip.replace(".", "\\.")}&`));
-    });
-  }
+  // $20.90 de consumo, 15 %: propina cruda 3.135. El total mostrado depende de si la propina se redondea
+  // antes de calcular la comisión (PG/RS/TP no; TOP/FB sí).
+  const cart = [{ id: "ci_e2e_2", menu_item_id: 101, name: "Club sándwich", price: 20.9, quantity: 1 }];
+  test("15% -> total y tipAmount de la URL", async ({ page }) => {
+    await mockRoomServiceApi(page, { cartItems: cart });
+    await page.goto("/4/1/order-confirm?room=40");
+    await page.getByRole("button", { name: "15%", exact: true }).click();
+    await expect(page.locator("body")).toContainText("$24.59");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(page).toHaveURL(/card-selection\?tipAmount=3.13&/);
+  });
 });

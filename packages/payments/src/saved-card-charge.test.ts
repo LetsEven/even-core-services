@@ -67,4 +67,9 @@ describe("createSavedCardCharge", () => {
     expect(await c.confirm(() => ({ n: 1 }))).toEqual({ success: false });
     expect(confirm).toHaveBeenCalledOnce();
   });
+
+  it("confirm sin la opción `confirm` falla claro (apps que solo cobran)", () => {
+    const { c } = setup({ confirm: undefined });
+    expect(() => c.confirm(() => ({ n: 1 }))).toThrow(/confirm/);
+  });
 });

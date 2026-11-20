@@ -7,8 +7,11 @@ export interface SavedCardChargeOptions<TOrder, TBody = unknown> {
   paymentService: Pick<PaymentService, "processPayment" | "getPaymentIntentStatus">;
   /** Por defecto, el store de sesión compartido (`paymentIntentStore`). */
   store?: PaymentIntentStore;
-  /** /confirm de la app (tap orders, room orders, pick & go...). */
-  confirm: (body: TBody) => Promise<ConfirmResponse<TOrder>>;
+  /**
+   * /confirm de la app (tap orders, room orders, pick & go...). Opcional: las
+   * apps que registran el pago por otro camino (Tap & Pay) solo usan `charge`.
+   */
+  confirm?: (body: TBody) => Promise<ConfirmResponse<TOrder>>;
   /** Predicado de reintento de /confirm propio de la app (por defecto, solo `confirm_in_progress`). */
   isConfirmRetryable?: PollConfirmOptions<TOrder>["isConfirmRetryable"];
   /** Forma del id de la orden en el 2xx de /payments (por defecto, `payment.id`). */
@@ -52,7 +55,9 @@ export function createSavedCardCharge<TOrder, TBody = unknown>(
     },
     confirm(buildBody) {
       const o = getOptions();
-      return pollConfirm(() => o.confirm(buildBody()), { ...o.poll, isConfirmRetryable: o.isConfirmRetryable });
+      const confirm = o.confirm;
+      if (!confirm) throw new Error("useSavedCardCharge: falta la opción `confirm`");
+      return pollConfirm(() => confirm(buildBody()), { ...o.poll, isConfirmRetryable: o.isConfirmRetryable });
     },
   };
 }

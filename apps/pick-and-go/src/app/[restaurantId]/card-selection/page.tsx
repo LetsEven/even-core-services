@@ -8,6 +8,7 @@ import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
+import { useSavedCardCharge } from "@even/payments/react";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { useGuest, useIsGuest } from "@/context/GuestContext";
@@ -36,9 +37,7 @@ import { useMsiConfig } from "@/hooks/useMsiConfig";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
 import {
-  ensurePaymentIntent,
   clearStoredPaymentIntent,
-  updateStoredPaymentIntent,
 } from "@/utils/paymentIdempotency";
 import {
   getOrCreateWalletOrderId,
@@ -52,13 +51,14 @@ const APPLE_PAY_DISABLED = false;
 // Mismos estados que el backend acepta como pagado en confirmOrder.
 const PAID_ECART_STATUSES = ["paid", "completed", "succeeded", "approved"];
 
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 60000;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function CardSelectionPage() {
   const t = useTranslations("CardSelectionPage");
   const tc = useTranslations("Common");
+  const { charge: chargeCard, confirm: pollConfirm } = useSavedCardCharge({
+    paymentService,
+    confirm: (body: any) => pickAndGoService.confirmOrder(body),
+  });
   const params = useParams();
   const searchParams = useSearchParams();
   const { setRestaurantId, restaurant } = useRestaurant();
@@ -1096,57 +1096,6 @@ export default function CardSelectionPage() {
       );
     };
 
-    // Reintenta /confirm hasta que resuelva o se agote el tiempo — cubre
-    // tanto el 409 confirm_in_progress inmediato como el caso en que
-    // OrderAnimation ya se cerró por su propio timeout visual mientras esto
-    // seguía esperando (la promesa sigue viva, solo cambió la pantalla).
-    const pollConfirm = async (
-      buildBody: () => any,
-    ): Promise<{ success: true; order: any } | { success: false }> => {
-      const deadline = Date.now() + POLL_TIMEOUT_MS;
-      let firstAttempt = true;
-
-      while (firstAttempt || Date.now() < deadline) {
-        firstAttempt = false;
-        const confirmResult = await pickAndGoService.confirmOrder(buildBody());
-
-        if (confirmResult.success && confirmResult.data?.order) {
-          return { success: true, order: confirmResult.data.order };
-        }
-        if (confirmResult.code !== "confirm_in_progress") {
-          return { success: false };
-        }
-        await sleep(POLL_INTERVAL_MS);
-      }
-
-      return { success: false };
-    };
-
-    // Consulta GET /payments/intents/:key hasta que el cobro quede
-    // 'charged'/'confirmed' (devuelve su ecartpay_order_id), 'unknown'
-    // (null — terminal), o se agote el tiempo (null).
-    const waitForChargedIntent = async (
-      intentKey: string,
-    ): Promise<string | null> => {
-      const deadline = Date.now() + POLL_TIMEOUT_MS;
-      while (Date.now() < deadline) {
-        const statusRes =
-          await paymentService.getPaymentIntentStatus(intentKey);
-        if (statusRes.success) {
-          if (statusRes.status === "unknown") return null;
-          if (
-            (statusRes.status === "charged" ||
-              statusRes.status === "confirmed") &&
-            statusRes.ecartpay_order_id
-          ) {
-            return statusRes.ecartpay_order_id;
-          }
-        }
-        await sleep(POLL_INTERVAL_MS);
-      }
-      return null;
-    };
-
     setIsProcessing(true);
     // Una vez que la orden se confirma, el botón de pagar
     // NUNCA debe volver a habilitarse, así la navegación a payment-success
@@ -1243,22 +1192,24 @@ export default function CardSelectionPage() {
       // Después de un 2xx de /payments, esta app NUNCA
       // vuelve a llamar /payments con otra clave para el mismo carrito. La
       // clave y el fingerprint solo se regeneran si el carrito cambió.
-      const intent = await ensurePaymentIntent({
-        items: items.map((i) => ({
-          menuItemId: i.id,
-          quantity: i.quantity || 1,
-          extraPrice: i.extraPrice || 0,
-          customFields: i.customFields || null,
-        })),
-        tipAmount,
-        discountId: accountDiscount?.id ?? null,
-        total: selectedMSI ? displayTotal : totalAmount,
-      });
-
-      let ecartpayOrderId = intent.ecartpayOrderId;
-
-      if (!ecartpayOrderId) {
-        const paymentResult = await paymentService.processPayment({
+      const outcome = await chargeCard({
+        fingerprintInput: {
+          items: items.map((i) => ({
+            menuItemId: i.id,
+            quantity: i.quantity || 1,
+            extraPrice: i.extraPrice || 0,
+            customFields: i.customFields || null,
+          })),
+          tipAmount,
+          discountId: accountDiscount?.id ?? null,
+          total: selectedMSI ? displayTotal : totalAmount,
+        },
+        // payment_in_progress: se espera a que resuelva el cobro con ese intentKey.
+        onVerifying: () => {
+          setShowAnimation(false);
+          setVerifying(true);
+        },
+        request: {
           paymentMethodId: selectedPaymentMethodId,
           // Para diferido, se manda el monto original — EcartPay aplica el
           // financiamiento internamente y devuelve el total inflado en la orden.
@@ -1289,99 +1240,51 @@ export default function CardSelectionPage() {
                 extraPrice: (i.extraPrice || 0) * (i.quantity || 1),
                 cartItemId: i.cartItemId,
               })),
-          intentKey: intent.intentKey,
-          fingerprint: intent.fingerprint,
-        });
+        },
+      });
 
-        if (!paymentResult.success) {
-          const code =
-            paymentResult.code ??
-            (typeof paymentResult.error === "object"
-              ? paymentResult.error?.code
-              : undefined);
+      if (outcome.status === "unconfirmed") {
+        // payment_unknown / charge_unconfirmed / polling agotado: sin certeza
+        // de que no se cobró — nunca se ofrece recobrar.
+        showTerminalConfirmError();
+        return;
+      }
 
-          if (code === "intent_mismatch") {
-            // El carrito cambió respecto al intento guardado — nunca se
-            // cobró con estos datos. Se regenera la clave (es, para
-            // efectos de idempotencia, un pedido distinto) y se deja
-            // reintentar con el total actualizado.
-            clearStoredPaymentIntent();
+      if (outcome.status === "retryable") {
+        switch (outcome.reason) {
+          case "intent_mismatch":
+            // El carrito cambió respecto al intento guardado — nunca se cobró
+            // con estos datos (el core ya descartó el intento).
             setShowAnimation(false);
             setCanRetryCharge(true);
             setErrorTitle("Tu pedido cambió");
-            setErrorMessage(
-              "Tu carrito cambió antes de completar el pago. Revisa tu total e intenta de nuevo.",
-            );
+            setErrorMessage("Tu carrito cambió antes de completar el pago. Revisa tu total e intenta de nuevo.");
             return;
-          }
-
-          if (code === "idempotency_unavailable") {
+          case "idempotency_unavailable":
             // 503 — no hubo cobro, sí es seguro reintentar en unos segundos.
             setShowAnimation(false);
             setCanRetryCharge(true);
             setErrorTitle("Intenta de nuevo");
-            setErrorMessage(
-              "No pudimos verificar tu pago. Intenta de nuevo en unos segundos.",
-            );
+            setErrorMessage("No pudimos verificar tu pago. Intenta de nuevo en unos segundos.");
             return;
-          }
-
-          if (code === "payment_in_progress") {
-            // Ya hay un cobro con esta clave en curso ahora mismo (mismo
-            // intentKey, reintento cruzado) — nunca se vuelve a llamar
-            // /payments. Se espera a que resuelva.
-            setShowAnimation(false);
-            setVerifying(true);
-            const resolvedId = await waitForChargedIntent(intent.intentKey);
-            if (!resolvedId) {
-              showTerminalConfirmError();
-              return;
-            }
-            updateStoredPaymentIntent({ ecartpayOrderId: resolvedId });
-            ecartpayOrderId = resolvedId;
-          } else if (code === "payment_rejected") {
-            // Rechazo definitivo (422): no se cobró y repetir con la misma
-            // tarjeta fallaría igual. Se descarta el intento guardado para
-            // que otra tarjeta no reciba el replay del rechazo.
-            clearStoredPaymentIntent();
+          case "payment_rejected":
+            // Rechazo definitivo (422): no se cobró (el core ya descartó el
+            // intento para que otra tarjeta no reciba el replay del rechazo).
             setShowAnimation(false);
             setCanRetryCharge(true);
             setErrorTitle(t("paymentRejectedTitle"));
-            setErrorMessage(
-              (typeof paymentResult.error === "object"
-                ? paymentResult.error?.message
-                : undefined) || t("paymentRejectedMessage"),
-            );
+            setErrorMessage(outcome.message || t("paymentRejectedMessage"));
             return;
-          } else if (
-            code === "payment_unknown" ||
-            code === "charge_unconfirmed"
-          ) {
-            // Sin certeza de que no se cobró — nunca se ofrece recobrar.
-            showTerminalConfirmError();
-            return;
-          } else {
-            // card_declined / validation_error / etc. — certeza de que NO
-            // se cobró, se puede reintentar con otra tarjeta tal cual.
-            throw new Error(
-              (typeof paymentResult.error === "object"
-                ? paymentResult.error?.message
-                : undefined) || t("processingError"),
-            );
-          }
-        } else {
-          // Éxito directo o replay de un intento anterior — misma forma de
-          // respuesta en ambos casos, no hace falta distinguirlos aquí.
-          ecartpayOrderId = (paymentResult as any).payment?.id ?? null;
-          if (ecartpayOrderId) {
-            updateStoredPaymentIntent({ ecartpayOrderId });
-          }
+          case "missing_order_id":
+            throw new Error(t("errorConfirmOrder"));
+          default:
+            // card_declined / validation_error / etc. — certeza de que NO se
+            // cobró, se puede reintentar con otra tarjeta tal cual.
+            throw new Error(outcome.message || t("processingError"));
         }
       }
 
-      if (!ecartpayOrderId) {
-        throw new Error(t("errorConfirmOrder"));
-      }
+      const ecartpayOrderId = outcome.ecartpayOrderId;
 
       const selectedPM = paymentMethods.find(
         (pm) => pm.id === selectedPaymentMethodId,

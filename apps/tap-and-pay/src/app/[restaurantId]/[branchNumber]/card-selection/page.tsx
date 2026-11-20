@@ -19,9 +19,7 @@ import { getCardTypeIcon } from "@/app/utils/cardIcons";
 import { useMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import {
-  ensurePaymentIntent,
   clearStoredPaymentIntent,
-  updateStoredPaymentIntent,
 } from "@/app/utils/paymentIdempotency";
 import {
   getOrCreateWalletOrderId,
@@ -29,17 +27,20 @@ import {
 } from "@/app/utils/walletOrderCache";
 import { useTranslations } from "next-intl";
 import { classifyGooglePayError, computeMsiTotal } from "@even/payments";
+import { useSavedCardCharge } from "@even/payments/react";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 60000;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Mismos estados que el backend acepta como pagado en confirmOrder.
 const PAID_ECART_STATUSES = ["paid", "completed", "succeeded", "approved"];
 
 export default function CardSelectionPage() {
   const t = useTranslations("CardSelectionPage");
   const tc = useTranslations("Common");
+  const { charge: chargeCard } = useSavedCardCharge({
+    paymentService,
+    // Tap & Pay también acepta el id en order.id (un id vacío cuenta como ausente).
+    extractOrderId: (r) => r.payment?.id || (r as any).order?.id,
+  });
   const { state, setTableNumber, loadTableData } = useTable();
   const { navigateWithTable, tableNumber } = useTableNavigation();
   const searchParams = useSearchParams();
@@ -745,17 +746,19 @@ export default function CardSelectionPage() {
         // NUNCA vuelve a llamar /payments con otra clave para el mismo
         // carrito. La clave y el fingerprint solo se regeneran si el
         // carrito (monto/propina) cambió.
-        const intent = await ensurePaymentIntent({
-          items: [],
-          tipAmount,
-          discountId: null,
-          total: totalAmountCharged,
-        });
-
-        chargeEcartpayOrderId = intent.ecartpayOrderId;
-
-        if (!chargeEcartpayOrderId) {
-          const chargeResult = await paymentService.processPayment({
+        const outcome = await chargeCard({
+          fingerprintInput: {
+            items: [],
+            tipAmount,
+            discountId: null,
+            total: totalAmountCharged,
+          },
+          // payment_in_progress: se espera a que resuelva el cobro con ese intentKey.
+          onVerifying: () => {
+            setShowPaymentAnimation(false);
+            setVerifying(true);
+          },
+          request: {
             paymentMethodId: selectedMethod.id,
             amount: totalAmountCharged,
             currency: "MXN",
@@ -774,71 +777,42 @@ export default function CardSelectionPage() {
             payment_type: paymentType,
             selected_item_ids:
               paymentType === "select-items" ? selectedItems : undefined,
-            intentKey: intent.intentKey,
-            fingerprint: intent.fingerprint,
-          });
+          },
+        });
 
-          if (!chargeResult.success) {
-            const code =
-              chargeResult.code ??
-              (typeof chargeResult.error === "object"
-                ? chargeResult.error?.code
-                : undefined);
+        if (outcome.status === "unconfirmed") {
+          // Sin certeza de que no se cobró — nunca se ofrece recobrar.
+          setShowPaymentAnimation(false);
+          setVerifying(false);
+          setCanRetryCharge(false);
+          setErrorTitle(t("confirmFailedTitle"));
+          setErrorMessage(
+            outcome.reason === "in_progress_timeout"
+              ? t("confirmFailedMessageAfterTimeout")
+              : t("confirmFailedMessageUnknown"),
+          );
+          return;
+        }
 
-            if (code === "intent_mismatch") {
-              clearStoredPaymentIntent();
+        if (outcome.status === "retryable") {
+          switch (outcome.reason) {
+            case "intent_mismatch":
+              // El carrito cambió: nunca se cobró con estos datos (el core
+              // ya descartó el intento).
               setShowPaymentAnimation(false);
               setCanRetryCharge(true);
               setErrorTitle(t("orderChangedTitle"));
               setErrorMessage(t("orderChangedMessage"));
               return;
-            }
-
-            if (code === "idempotency_unavailable") {
+            case "idempotency_unavailable":
               setShowPaymentAnimation(false);
               setCanRetryCharge(true);
               setErrorTitle(t("retryTitle"));
               setErrorMessage(t("retryShortMessage"));
               return;
-            }
-
-            if (code === "payment_in_progress") {
-              setShowPaymentAnimation(false);
-              setVerifying(true);
-              const deadline = Date.now() + POLL_TIMEOUT_MS;
-              let resolvedId: string | null = null;
-              while (Date.now() < deadline && !resolvedId) {
-                const statusRes = await paymentService.getPaymentIntentStatus(
-                  intent.intentKey,
-                );
-                if (statusRes.success) {
-                  if (statusRes.status === "unknown") break;
-                  if (
-                    (statusRes.status === "charged" ||
-                      statusRes.status === "confirmed") &&
-                    statusRes.ecartpay_order_id
-                  ) {
-                    resolvedId = statusRes.ecartpay_order_id;
-                    break;
-                  }
-                }
-                await sleep(POLL_INTERVAL_MS);
-              }
-
-              if (!resolvedId) {
-                setVerifying(false);
-                setCanRetryCharge(false);
-                setErrorTitle(t("confirmFailedTitle"));
-                setErrorMessage(t("confirmFailedMessageAfterTimeout"));
-                return;
-              }
-              updateStoredPaymentIntent({ ecartpayOrderId: resolvedId });
-              chargeEcartpayOrderId = resolvedId;
-            } else if (code === "payment_rejected") {
-              // Rechazo definitivo (422): no se cobró y repetir con la misma
-              // tarjeta fallaría igual. Se descarta el intento guardado para
-              // que otra tarjeta no reciba el replay del rechazo.
-              clearStoredPaymentIntent();
+            case "payment_rejected":
+              // Rechazo definitivo (422): no se cobró (el core ya descartó el
+              // intento para que otra tarjeta no reciba el replay del rechazo).
               setShowPaymentAnimation(false);
               // Sin esto el botón se queda en "Procesando..." y no se puede
               // reintentar con otra tarjeta.
@@ -847,37 +821,16 @@ export default function CardSelectionPage() {
               setConfirmedPaymentId(null);
               setCanRetryCharge(true);
               setErrorTitle(t("paymentRejectedTitle"));
-              setErrorMessage(
-                chargeResult.error?.message || t("paymentRejectedMessage"),
-              );
+              setErrorMessage(outcome.message || t("paymentRejectedMessage"));
               return;
-            } else if (
-              code === "payment_unknown" ||
-              code === "charge_unconfirmed"
-            ) {
-              setShowPaymentAnimation(false);
-              setVerifying(false);
-              setCanRetryCharge(false);
-              setErrorTitle(t("confirmFailedTitle"));
-              setErrorMessage(t("confirmFailedMessageUnknown"));
-              return;
-            } else {
-              throw new Error(
-                chargeResult.error?.message || t("errorCardChargeFailed"),
-              );
-            }
-          } else {
-            const chargedPayment = (chargeResult as any).payment;
-            const chargedOrder = (chargeResult as any).order;
-            chargeEcartpayOrderId =
-              chargedPayment?.id || chargedOrder?.id || null;
+            case "missing_order_id":
+              throw new Error(t("errorProviderNotConfirmed"));
+            default:
+              throw new Error(outcome.message || t("errorCardChargeFailed"));
           }
         }
 
-        if (!chargeEcartpayOrderId) {
-          throw new Error(t("errorProviderNotConfirmed"));
-        }
-        updateStoredPaymentIntent({ ecartpayOrderId: chargeEcartpayOrderId });
+        chargeEcartpayOrderId = outcome.ecartpayOrderId;
         chargeSucceeded = true;
       }
 

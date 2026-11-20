@@ -54,6 +54,8 @@ export function createPlaywrightConfig({ port, env, overrides }: EvenPlaywrightO
         // La app debe leerlo en `distDir` de su next.config para no pisar `.next`.
         NEXT_DIST_DIR: ".next-e2e",
         NEXT_TELEMETRY_DISABLED: "1",
+        // Apple Pay solo se inicia en HTTPS; los e2e corren en http://localhost con un SDK de mentira.
+        NEXT_PUBLIC_WALLET_ALLOW_INSECURE: "1",
         ...env,
       },
     },

@@ -40,13 +40,28 @@ export default function PaymentSuccessPage() {
   // al guest de vuelta al menú de esta mesa. Recargamos acá en vez de
   // confiar en que card-selection ya haya terminado su refresh en background
   // para cuando se monta esta pantalla.
+  // `acceptEmpty`: si este pago cerró la cuenta, el backend responde sin
+  // órdenes y eso es lo correcto; sin la opción se descartaba como "carrera"
+  // y el menú seguía mostrando la cuenta pagada como pendiente.
   const hasLoadedTableDataRef = useRef(false);
   useEffect(() => {
     if (state.tableNumber && !hasLoadedTableDataRef.current) {
       hasLoadedTableDataRef.current = true;
-      loadTableData();
+      loadTableData({ acceptEmpty: true });
     }
   }, [state.tableNumber, loadTableData]);
+
+  // Al salir (botón, gesto de regreso, etc.) se vuelve a pedir el estado: el
+  // cierre de la cuenta puede llegar al backend después de montar esta pantalla.
+  const loadTableDataRef = useRef(loadTableData);
+  loadTableDataRef.current = loadTableData;
+  useEffect(() => {
+    return () => {
+      if (hasLoadedTableDataRef.current) {
+        loadTableDataRef.current({ acceptEmpty: true }).catch(() => {});
+      }
+    };
+  }, []);
   const isTableClosed = state.tableSummary?.data?.data?.status === "paid";
   const restaurantData = getRestaurantData();
   const isGuest = useIsGuest();

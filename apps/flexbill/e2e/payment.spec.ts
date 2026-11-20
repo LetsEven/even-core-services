@@ -1,6 +1,6 @@
 import { PAYMENT_INTENT_STORAGE_KEY } from "@even/payments";
 import { expect, test } from "@even/e2e";
-import { CARD_SELECTION_URL, TABLE_ORDER_ID, mockFlexBillApi } from "./mocks";
+import { API_URL, CARD_SELECTION_URL, TABLE_ORDER_ID, mockFlexBillApi } from "./mocks";
 
 const rejected = (error: string) => ({ status: 422, body: { success: false, code: "payment_rejected", error } });
 
@@ -81,4 +81,26 @@ test("un error pasajero de la orden de wallet no la oculta", async ({ page }) =>
   await expect(page.getByText("**** 4242")).toBeVisible();
   await expect(page.locator("#apple-pay-container")).toHaveCount(1);
   await expect(page.getByText("Apple Pay y Google Pay no están disponibles")).toHaveCount(0);
+});
+
+test("al pagar toda la cuenta y volver al menú ya no queda una cuenta pendiente", async ({ page }) => {
+  await mockFlexBillApi(page);
+  await page.goto(CARD_SELECTION_URL);
+  await expect(page.getByText("**** 4242")).toBeVisible();
+
+  // La pantalla de éxito consulta si ya hay factura de la transacción.
+  await page.route(`${API_URL}/invoices/transaction/**`, (route) => route.fulfill({ json: { success: true, data: null } }));
+  // Pagar toda la cuenta cierra la mesa: el backend ya no tiene órdenes que devolver.
+  await page.route(new RegExp(`^${API_URL}/restaurants/\\d+/branches/\\d+/tables/[^/]+/orders$`), (route) =>
+    route.fulfill({ json: { success: true, data: [] } }),
+  );
+
+  await page.getByText("**** 4242").click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
+  await expect(page).toHaveURL(/\/payment-success\?/);
+
+  await page.getByRole("button", { name: "Ir al menú" }).click();
+  await expect(page).toHaveURL(/\/menu\?/);
+  await expect(page.getByRole("button", { name: /Abrir menú/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Cuenta pendiente/ })).toHaveCount(0);
 });

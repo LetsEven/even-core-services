@@ -324,6 +324,10 @@ function tableReducer(state: TableState, action: TableAction): TableState {
   }
 }
 
+interface LoadOptions {
+  acceptEmpty?: boolean;
+}
+
 // Nuevo contexto de la mesa
 const TableContext = createContext<{
   state: TableState;
@@ -336,9 +340,10 @@ const TableContext = createContext<{
     orderNotes?: string | null,
   ) => Promise<void>;
   // Nuevas funciones para el sistema de platillos
-  loadTableData: () => Promise<void>;
+  /** `acceptEmpty`: una lista vacía es legítima (p. ej. tras cerrarse la cuenta); no se descarta como carrera. */
+  loadTableData: (opts?: LoadOptions) => Promise<void>;
   loadTableSummary: () => Promise<void>;
-  loadDishOrders: () => Promise<void>;
+  loadDishOrders: (opts?: LoadOptions) => Promise<void>;
   loadActiveUsers: () => Promise<void>;
   // Trae la selección de "Dividir cuenta" vigente de la mesa desde el
   // backend — no se pide automáticamente en loadTableData, se llama
@@ -400,7 +405,7 @@ export function TableProvider({ children }: { children: ReactNode }) {
   }, [state.tableNumber, restaurantId, branchNumber]);
 
   // Cargar órdenes de platillos
-  const loadDishOrders = useCallback(async () => {
+  const loadDishOrders = useCallback(async (opts?: LoadOptions) => {
     if (!state.tableNumber || !restaurantId || !branchNumber) return;
 
     try {
@@ -419,7 +424,15 @@ export function TableProvider({ children }: { children: ReactNode }) {
         // pantalla; el siguiente refresh (socket o poll) trae el estado ya
         // consistente. Solo aplica cuando había platillos antes: una mesa
         // que de verdad empieza vacía sigue funcionando igual.
-        if (dishOrders.length === 0 && state.dishOrders.length > 0) {
+        // Quien sabe que la mesa pudo cerrarse (al terminar de pagar la
+        // cuenta el backend la deja sin órdenes) pasa `acceptEmpty`; si no,
+        // los platillos viejos se quedaban en pantalla como cuenta pendiente
+        // hasta recargar la página.
+        if (
+          !opts?.acceptEmpty &&
+          dishOrders.length === 0 &&
+          state.dishOrders.length > 0
+        ) {
           console.warn(
             "⚠️ loadDishOrders: respuesta vacía con dishOrders previos no vacíos, ignorando (probable race transitoria)",
           );
@@ -484,7 +497,7 @@ export function TableProvider({ children }: { children: ReactNode }) {
   }, [state.tableNumber, restaurantId, branchNumber]);
 
   // Cargar todos los datos de la mesa
-  const loadTableData = useCallback(async () => {
+  const loadTableData = useCallback(async (opts?: LoadOptions) => {
     if (!state.tableNumber) return;
 
     dispatch({ type: "SET_LOADING", payload: true });
@@ -492,7 +505,7 @@ export function TableProvider({ children }: { children: ReactNode }) {
     try {
       await Promise.all([
         loadTableSummary(),
-        loadDishOrders(),
+        loadDishOrders(opts),
         loadActiveUsers(),
       ]);
     } catch (error) {

@@ -105,6 +105,14 @@ export async function mockPaymentsApi(page: Page, options: PaymentsApiOptions = 
     if (path === "/payments/history" && method === "GET") {
       return { success: true, data: [] };
     }
+    // Tarjeta de lealtad en el pago exitoso: sin programa activo, el botón no aparece.
+    if (path === "/loyalty/wallet/disponibilidad" && method === "GET") {
+      return { success: true, data: { puede: false, motivo: "sin_programa" } };
+    }
+    // Apartado de Apple/Google Pay que se suelta al salir de la pantalla de cobro.
+    if (path === "/payments/wallet-hold/release" && method === "POST") {
+      return { success: true };
+    }
     return undefined;
   };
 

@@ -12,7 +12,7 @@ export interface SavedCardChargeOptions<TOrder, TBody = unknown> {
    * apps que registran el pago por otro camino (Tap & Pay) solo usan `charge`.
    */
   confirm?: (body: TBody) => Promise<ConfirmResponse<TOrder>>;
-  /** Predicado de reintento de /confirm propio de la app (por defecto, solo `confirm_in_progress`). */
+  /** Predicado de reintento de /confirm (por defecto, `isConfirmRetryable`: igual para todas las apps). */
   isConfirmRetryable?: PollConfirmOptions<TOrder>["isConfirmRetryable"];
   /** Forma del id de la orden en el 2xx de /payments (por defecto, `payment.id`). */
   extractOrderId?: ChargeSavedCardParams["extractOrderId"];

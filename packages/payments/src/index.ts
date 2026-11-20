@@ -16,6 +16,7 @@ export {
 } from "./idempotency";
 export {
   isConfirmInProgress,
+  isConfirmRetryable,
   POLL_INTERVAL_MS,
   POLL_TIMEOUT_MS,
   pollConfirm,

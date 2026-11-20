@@ -61,34 +61,50 @@ export interface ConfirmResponse<TOrder> {
 }
 
 /**
- * Predicado de reintento por defecto de pollConfirm: solo el 409
- * `confirm_in_progress`. Es el de Pick & Go y Room Service.
+ * Solo el 409 `confirm_in_progress`. Estricto; ya no es el predicado por
+ * defecto (ver `isConfirmRetryable`), queda para apps que lo pidan.
  */
 export function isConfirmInProgress(result: { code?: string }): boolean {
   return result.code === "confirm_in_progress";
 }
 
+/**
+ * Predicado de reintento por defecto de pollConfirm. El cobro ya se hizo, así
+ * que un /confirm que no resolvió se reintenta si fue `confirm_in_progress`,
+ * `confirm_conflict`, una red caída (sin status), 429 o 5xx. Los /confirm de
+ * Pick & Go, Room Service y Tap Order & Pay son idempotentes por
+ * `ecartpay_order_id`, así que reintentar es seguro. Cualquier otro 4xx es
+ * terminal.
+ */
+export function isConfirmRetryable(result: { code?: string; status?: number }): boolean {
+  return (
+    result.code === "confirm_in_progress" ||
+    result.code === "confirm_conflict" ||
+    result.status === undefined ||
+    result.status === 429 ||
+    result.status >= 500
+  );
+}
+
 export interface PollConfirmOptions<TOrder> extends PollOptions {
   /**
-   * Decide si un /confirm que no resolvió se reintenta. Cada app inyecta el
-   * suyo (Tap Order & Pay reintenta además confirm_conflict, red, 429 y 5xx).
-   * Por defecto, `isConfirmInProgress`.
+   * Decide si un /confirm que no resolvió se reintenta. Por defecto,
+   * `isConfirmRetryable`, igual para todas las apps.
    */
   isConfirmRetryable?: (result: ConfirmResponse<TOrder>) => boolean;
 }
 
 /**
  * Reintenta /confirm (de cada app: tap orders, room orders...) hasta que
- * resuelva o se agote el tiempo. Por defecto solo reintenta con 409
- * `confirm_in_progress` (ver `isConfirmRetryable`); cualquier otro fallo es
- * terminal. Siempre hace al menos un intento.
+ * resuelva o se agote el tiempo. Reintenta los fallos transitorios
+ * (ver `isConfirmRetryable`); cualquier otro fallo es terminal. Siempre hace al menos un intento.
  */
 export async function pollConfirm<TOrder>(
   confirm: () => Promise<ConfirmResponse<TOrder>>,
   options?: PollConfirmOptions<TOrder>,
 ): Promise<{ success: true; order: TOrder } | { success: false }> {
   const { intervalMs, timeoutMs, sleep, now } = resolveOptions(options);
-  const isRetryable = options?.isConfirmRetryable ?? isConfirmInProgress;
+  const isRetryable = options?.isConfirmRetryable ?? isConfirmRetryable;
   const deadline = now() + timeoutMs;
   let firstAttempt = true;
 

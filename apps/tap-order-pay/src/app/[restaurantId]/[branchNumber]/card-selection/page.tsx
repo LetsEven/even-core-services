@@ -9,7 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { buildChargeRequest, classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useSavedCardCharge } from "@even/payments/react";
-import { isTopConfirmRetryable } from "@/utils/confirmRetry";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
@@ -52,7 +51,6 @@ export default function CardSelectionPage() {
   const { charge: chargeCard, confirm: pollConfirm } = useSavedCardCharge({
     paymentService,
     confirm: (body: any) => tapOrderService.confirmOrder(body),
-    isConfirmRetryable: isTopConfirmRetryable,
   });
   const {
     validationError,

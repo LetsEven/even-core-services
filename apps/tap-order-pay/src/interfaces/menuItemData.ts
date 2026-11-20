@@ -63,4 +63,6 @@ export interface MenuItemData {
   // usuario actual — viaja al agregar al carrito para que el backend lo
   // valide y lo aplique (ver add_to_cart). null/undefined = ninguno.
   userDiscountId?: string | null;
+  // Línea con descuento personal: máximo de piezas (null = sin tope)
+  discountMaxQuantity?: number | null;
 }

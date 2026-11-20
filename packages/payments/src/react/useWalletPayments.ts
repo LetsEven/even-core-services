@@ -86,6 +86,11 @@ export interface UseWalletPaymentsOptions {
   amount: number;
   /** Arma fingerprint y cuerpo de la orden con el estado actual de la pantalla. */
   prepareOrder: (provider: WalletProvider) => WalletOrderPlan;
+  /**
+   * El backend no creó la orden (p. ej. `order_changed` o `cuenta_apartada`).
+   * Recibe la respuesta tal cual para que la app decida qué mostrar.
+   */
+  onOrderRejected?: (provider: WalletProvider, rejection: unknown) => void;
   /** Se llama justo después de obtener (o recuperar de caché) el id de la orden. */
   onOrderCreated?: (provider: WalletProvider, orderId: string) => void;
   /** El SDK autorizó el pago. El hook ya limpió la caché y marcó "procesando". */
@@ -322,6 +327,7 @@ export function useWalletPayments(options: UseWalletPaymentsOptions) {
 
         if (!appleOrderId) {
           console.warn("⚠️ [AP-ORDER] No se pudo crear la orden:", rejection);
+          if (rejection) o.onOrderRejected?.("apple", rejection);
           // Un 4xx con código semántico es un rechazo definitivo (400
           // baseAmount <= 0, 422 payment_rejected, ...): reintentar con los
           // mismos datos fallaría igual, así que se cae a tarjeta guardada. Un
@@ -421,6 +427,7 @@ export function useWalletPayments(options: UseWalletPaymentsOptions) {
 
         if (!googleOrderId) {
           console.warn("⚠️ [GP-ORDER] No se pudo crear la orden:", rejection);
+          if (rejection) o.onOrderRejected?.("google", rejection);
           if (rejection && isDefinitiveWalletRejection(rejection as Parameters<typeof isDefinitiveWalletRejection>[0])) {
             setGooglePayUnavailable(true);
             setWalletOrderRejected(true);

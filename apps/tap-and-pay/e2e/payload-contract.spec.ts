@@ -69,6 +69,8 @@ test("POST /payments, pay-amount y /payment-transactions: base y propina reales,
     tipAmount: 36,
     id_tap_pay_order: ORDER_ID,
     payment_type: "full-bill",
+    // Nombre del recibo que el backend registra al confirmar el cobro.
+    payerName: "Invitado",
   });
   const payAmount = calls.find((c) => c.path === `/tap-pay/orders/${ORDER_ID}/pay-amount`);
   expect(payAmount?.body).toEqual({
@@ -140,6 +142,8 @@ test("MSI: /payments manda el monto SIN financiamiento; el total financiado va a
     tipAmount: 36,
     id_tap_pay_order: ORDER_ID,
     payment_type: "full-bill",
+    // Nombre del recibo que el backend registra al confirmar el cobro.
+    payerName: "Invitado",
   });
   const record = calls.find((c) => c.path === "/payment-transactions");
   expect(record?.body.total_amount_charged).toBeCloseTo(396 / (1 - 0.075 * 1.16), 10);
@@ -147,7 +151,7 @@ test("MSI: /payments manda el monto SIN financiamiento; el total financiado va a
   expect(record?.body.tip_amount).toBe(36);
 });
 
-test("las órdenes de Apple y Google Pay no mandan `service` ni precio inflado", async ({ page }) => {
+test("la orden de Apple Pay no manda `service` ni precio inflado (Google Pay apagado)", async ({ page }) => {
   const walletBodies: Record<string, Array<Record<string, unknown>>> = { apple: [], google: [] };
   page.on("request", (r) => {
     const m = r.url().match(/\/payments\/(apple|google)-pay\/order$/);
@@ -156,7 +160,9 @@ test("las órdenes de Apple y Google Pay no mandan `service` ni precio inflado",
   await mockTapAndPayApi(page);
   await page.goto(URL_WITH_TIP);
   await expect(page.getByText("**** 4242")).toBeVisible();
-  await expect.poll(() => walletBodies.apple.length > 0 && walletBodies.google.length > 0).toBe(true);
+  await expect.poll(() => walletBodies.apple.length > 0).toBe(true);
+  // Google Pay está deshabilitado temporalmente en Tap & Pay: no se pide su orden.
+  expect(walletBodies.google).toHaveLength(0);
 
   // Hoy TP NO manda `service` en las órdenes de wallet; base y propina reales, sin items.
   for (const body of [...walletBodies.apple, ...walletBodies.google]) {

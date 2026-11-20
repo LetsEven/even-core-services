@@ -79,7 +79,10 @@ export default function PaymentSuccessPage() {
             localStorage.removeItem("even-payment-intent");
             localStorage.removeItem("even-completed-payment");
 
-            authService.clearAllSessionData();
+            // Solo invitados: con token hay cuenta y borrarla obligaba a re-login en el siguiente pedido.
+            if (!authService.getAccessToken()) {
+              authService.clearAllSessionData();
+            }
             if (isGuest && guestId) {
               try {
                 await fetch("/api/payments/cleanup-guest", {

@@ -38,6 +38,8 @@ import {
 import { useRoomNavigation } from "../../hooks/useRoomNavigation";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
+import { AddLoyaltyCardButton } from "@even/ui/diner";
+import { walletCardService } from "@/services/walletCard.service";
 import { hasRecentPayment } from "../modals/PaymentTicketModals";
 import Loader from "../UI/Loader";
 import { useAuth } from "@/context/AuthContext";
@@ -691,6 +693,12 @@ export default function MenuView({ roomNumber }: MenuViewProps) {
             </div>
             {hasRecentPayment(paidOrderId.current) && (
               <div className="shrink-0 flex flex-col gap-2 border-t border-white/20 px-6 py-4 md:px-8 lg:px-10">
+                {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene programa activo. Va con Ticket
+                    y Facturar porque el comensal ya se identificó al pagar: la tarjeta nace ligada a su cuenta. */}
+                <AddLoyaltyCardButton
+                  restaurantId={restaurantId}
+                  walletCardService={walletCardService}
+                />
                 <button
                   onClick={() => setShowTicket(true)}
                   className="w-full rounded-2xl border border-white/30 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 md:text-base"

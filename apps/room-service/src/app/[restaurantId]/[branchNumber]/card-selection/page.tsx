@@ -903,7 +903,7 @@ export default function CardSelectionPage() {
                 )}
 
                 {/* Alerta de mínimo */}
-                {isUnderMinimum && totalAmount > 0 && (
+                {isUnderMinimum && cartState.items.length > 0 && (
                   <div className="bg-danger-50 px-6 py-3 -mx-8 rounded-lg mb-4">
                     <div className="flex justify-center items-center gap-3">
                       <X className="size-6 text-danger-500 shrink-0" />

@@ -98,10 +98,12 @@ export function createApiClient(config: ApiClientConfig): Requester {
         const rawError = data?.error;
         const normalizedError =
           rawError && typeof rawError === "object"
-            ? { code: data?.code, ...rawError }
+            ? { code: data?.code, details: data?.details, ...rawError }
             : {
                 message: rawError ?? data?.message ?? "API request failed",
                 code: data?.code,
+                // Datos del rechazo (p. ej. cuenta_apartada trae apartado_por_otros)
+                details: data?.details,
               };
 
         return {

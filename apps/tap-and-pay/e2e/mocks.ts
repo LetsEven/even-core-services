@@ -88,6 +88,8 @@ export async function mockTapAndPayApi(
     ["POST", /^\/tap-pay\/orders\/[^/]+\/active-users$/, { success: true, data: {} }],
     ["GET", /^\/tap-pay\/orders\/[^/]+\/split-status$/, { success: true, data: { is_split_active: false } }],
     ["GET", /^\/tap-pay\/orders\/[^/]+\/items$/, { success: true, data: order?.items ?? [] }],
+    // Al cargar la cuenta se traen del POS los platillos nuevos (sin POS integrado, no hay nada que agregar).
+    ["POST", /^\/tap-pay\/orders\/[^/]+\/sync-from-pos$/, { success: true, data: {} }],
     ["POST", /^\/payments\/(apple|google)-pay\/order$/, wallet],
     // Sin POS integrado: la mesa no trae cuenta desde el POS y el estado lo refleja.
     [

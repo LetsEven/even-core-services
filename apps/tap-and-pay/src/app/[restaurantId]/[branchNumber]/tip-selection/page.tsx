@@ -13,7 +13,13 @@ import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { prefetchMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useTranslations } from "next-intl";
-import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
+import {
+  computeTipAmount,
+  equalShare,
+  TABLE_PAYMENT_MINIMUM_AMOUNT as MINIMUM_AMOUNT,
+  TIP_PRESETS,
+  withoutHeldAmount,
+} from "@even/payments";
 
 export default function TipSelectionPage() {
   const t = useTranslations("TipSelectionPage");
@@ -171,16 +177,21 @@ export default function TipSelectionPage() {
   // paid_amount de la orden incluye pagos por todos los métodos
   const paidAmount = state.order?.paid_amount || 0;
 
+  // Lo que otro comensal está pagando con Apple/Google Pay no se puede pagar
+  const montoApartado = state.order?.monto_apartado || 0;
+
   // remaining_amount de la orden es lo que falta por pagar
-  const unpaidAmount =
-    state.order?.remaining_amount || tableTotalPrice - paidAmount;
+  const unpaidAmount = withoutHeldAmount(
+    state.order?.remaining_amount || tableTotalPrice - paidAmount,
+    montoApartado,
+  );
 
   const getPaymentAmount = () => {
     switch (paymentType) {
       case "full-bill":
         return unpaidAmount;
       case "equal-shares":
-        return parseFloat((unpaidAmount / equalPeopleCount).toFixed(2));
+        return equalShare(tableTotalPrice, equalPeopleCount, unpaidAmount);
       case "choose-amount":
         return customPaymentAmount ? parseFloat(customPaymentAmount) : 0;
       case "select-items":
@@ -199,6 +210,9 @@ export default function TipSelectionPage() {
 
   const baseAmount = getPaymentAmount();
   const maxAllowedAmount = unpaidAmount;
+  // Tras pagos por monto o a partes iguales, un platillo puede costar más de lo que falta
+  const exceedsRemaining =
+    paymentType === "select-items" && baseAmount - unpaidAmount > 0.005;
 
   const tipAmount = useMemo(() => {
     if (customTip && parseFloat(customTip) > 0) {
@@ -380,25 +394,40 @@ export default function TipSelectionPage() {
                 {/* Seleccionar artículos específicos */}
                 {paymentType === "select-items" && (
                   <div className="flex min-h-0 flex-col px-8 md:px-10 lg:px-12">
-                    {unpaidDishes.length > 0 && (
+                    {dishes.length > 0 && (
                       <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-14 justify-end flex-none">
                         <span>{tc("qtyLabel")}</span>
                         <span>{tc("priceLabel")}</span>
                       </div>
                     )}
                     <div data-select-items-list className="min-h-0 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain">
-                      {unpaidDishes.map((dish) => {
+                      {dishes.map((dish) => {
+                        // Los pagados quedan en su lugar, marcados y sin poder elegirse
+                        const isPaid = dish.payment_status === "paid";
                         const isSelected = selectedItems.includes(dish.id);
                         const dishTotal =
                           (dish.price + dish.extra_price) * dish.quantity;
+                        // No cabe en lo que falta junto con lo ya seleccionado
+                        const doesNotFit =
+                          !isPaid &&
+                          !isSelected &&
+                          baseAmount + dishTotal - unpaidAmount > 0.005;
+                        const isDisabled = isPaid || doesNotFit;
                         return (
                           <div
                             key={dish.id}
-                            onClick={() => toggleItemSelection(dish.id)}
-                            className={`py-3 md:py-4 lg:py-5 cursor-pointer transition-colors ${
-                              isSelected
-                                ? "bg-even-grass/10"
-                                : "hover:bg-tone-50"
+                            onClick={
+                              isDisabled
+                                ? undefined
+                                : () => toggleItemSelection(dish.id)
+                            }
+                            aria-disabled={isDisabled}
+                            className={`py-3 md:py-4 lg:py-5 transition-colors ${
+                              isDisabled
+                                ? "opacity-50 cursor-not-allowed"
+                                : isSelected
+                                  ? "bg-even-grass/10 cursor-pointer"
+                                  : "hover:bg-tone-50 cursor-pointer"
                             }`}
                           >
                             <div className="flex items-center gap-3 justify-between">
@@ -406,12 +435,14 @@ export default function TipSelectionPage() {
                                 <div className="shrink-0">
                                   <div
                                     className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 rounded-full border-2 flex items-center justify-center ${
-                                      isSelected
-                                        ? "border-hue-teal-500 bg-even-grass"
-                                        : "border-tone-300"
+                                      isPaid
+                                        ? "border-tone-400 bg-tone-400"
+                                        : isSelected
+                                          ? "border-hue-teal-500 bg-even-grass"
+                                          : "border-tone-300"
                                     }`}
                                   >
-                                    {isSelected && (
+                                    {(isSelected || isPaid) && (
                                       <svg
                                         className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 text-white"
                                         fill="none"
@@ -444,6 +475,16 @@ export default function TipSelectionPage() {
                                   <h4 className="text-base md:text-lg lg:text-xl text-black capitalize">
                                     {dish.item}
                                   </h4>
+                                  {isPaid && (
+                                    <p className="text-xs md:text-sm text-tone-500">
+                                      {t("paidItemBadge")}
+                                    </p>
+                                  )}
+                                  {doesNotFit && (
+                                    <p className="text-xs md:text-sm text-tone-500">
+                                      {t("itemExceedsRemainingBadge")}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-right flex gap-10 md:gap-12 lg:gap-14">
@@ -459,12 +500,12 @@ export default function TipSelectionPage() {
                         );
                       })}
                     </div>
-                    {unpaidDishes.length === 0 && (
+                    {dishes.length === 0 && (
                       <p className="text-sm md:text-base lg:text-lg text-tone-500 mt-2 text-center">
                         {t("noPendingItems")}
                       </p>
                     )}
-                    {unpaidDishes.length > 0 && selectedItems.length === 0 && (
+                    {dishes.length > 0 && selectedItems.length === 0 && (
                       <p className="text-sm md:text-base lg:text-lg text-tone-500 mt-2 text-center">
                         {t("selectItemToContinue")}
                       </p>
@@ -534,7 +575,23 @@ export default function TipSelectionPage() {
                   }}
                   onCustomChange={handleCustomTipChange}
                 />
-                {isUnderMinimum && baseAmount > 0 && (
+                {montoApartado > 0 && (
+                  <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
+                    <X className="size-6 shrink-0 text-danger-500" />
+                    <p className="text-base font-medium text-danger-700 md:text-lg">
+                      {t("someoneIsPaying", { amount: montoApartado.toFixed(2) })}
+                    </p>
+                  </div>
+                )}
+                {exceedsRemaining && (
+                  <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
+                    <X className="size-6 shrink-0 text-danger-500" />
+                    <p className="text-base font-medium text-danger-700 md:text-lg">
+                      {t("selectionExceedsRemaining", { amount: unpaidAmount.toFixed(2) })}
+                    </p>
+                  </div>
+                )}
+                {!exceedsRemaining && isUnderMinimum && baseAmount > 0 && (
                   <div className="mt-4 flex items-center gap-3 rounded-lg bg-danger-50 px-4 py-2">
                     <X className="size-6 shrink-0 text-danger-500" />
                     <p className="text-base font-medium text-danger-700 md:text-lg">{t("underMinimumWarning")}</p>
@@ -543,7 +600,7 @@ export default function TipSelectionPage() {
                 <div className="mt-6">
                   <PayButton
                     onClick={handleContinueToCardSelection}
-                    disabled={baseAmount <= 0 || selectedItems.length === 0 || isUnderMinimum}
+                    disabled={baseAmount <= 0 || selectedItems.length === 0 || exceedsRemaining || isUnderMinimum}
                   >
                     {tc("payCtaAmount", { amount: formatMoney(paymentAmount) })}
                   </PayButton>

@@ -27,7 +27,7 @@ import {
 } from "@/interfaces/menuItemData";
 import { reviewsApi, Review, ReviewStats } from "@/services/reviews.service";
 import { useAuth } from "@/context/AuthContext";
-import { usePersonalItemDiscounts } from "@/hooks/usePersonalItemDiscounts";
+import { usePersonalItemDiscounts, conCarrito } from "@/hooks/usePersonalItemDiscounts";
 
 // Pure helpers — defined outside component to avoid recreation on every render
 
@@ -323,9 +323,22 @@ export default function DishDetailPage() {
   // Descuento personal de este producto para el usuario actual.
   // Si el producto también tiene descuento de admin-portal, gana el %
   // mayor entre los dos — nunca se suman.
-  const personalDiscount = dishData
-    ? personalDiscounts.get(dishData.dish.id)
+  const lineaEditada = editCartItemId
+    ? cartState.items.find((ci) => ci.cartItemId === editCartItemId)
     : undefined;
+  // Editando: el descuento es el de esa línea (su pieza ya está apartada, el menú la ve en 0);
+  // una línea sin descuento se edita a precio normal
+  const personalDiscount = !dishData
+    ? undefined
+    : lineaEditada
+      ? lineaEditada.userDiscountId
+        ? {
+            id: lineaEditada.userDiscountId,
+            percentage: lineaEditada.promoDiscountPercentage ?? 0,
+            piezas: lineaEditada.discountMaxQuantity ?? null,
+          }
+        : undefined
+      : conCarrito(personalDiscounts.get(dishData.dish.id), cartState.items);
   const effectiveDiscount = dishData
     ? Math.max(dishData.dish.discount || 0, personalDiscount?.percentage || 0)
     : 0;
@@ -363,6 +376,22 @@ export default function DishDetailPage() {
     return basePrice + extraPrice;
   }, [dishData, customFieldSelections, effectiveDiscount]);
 
+  // El descuento personal cubre una pieza por uso: las demás van a precio normal
+  const piezasConDescuento =
+    personalDiscount &&
+    personalDiscount.percentage > (dishData?.dish.discount || 0) &&
+    personalDiscount.piezas != null
+      ? Math.min(dishQuantity, personalDiscount.piezas)
+      : dishQuantity;
+  const precioNormalUnidad = dishData
+    ? totalPrice -
+      dishData.dish.price * (1 - effectiveDiscount / 100) +
+      dishData.dish.price * (1 - (dishData.dish.discount || 0) / 100)
+    : 0;
+  const importeTotal =
+    totalPrice * piezasConDescuento +
+    precioNormalUnidad * (dishQuantity - piezasConDescuento);
+
 
   // Validación de campos obligatorios — memoizada
   const isFormValid = useMemo(() => {
@@ -382,6 +411,13 @@ export default function DishDetailPage() {
   const editingItem = editCartItemId
     ? cartState.items.find((ci) => ci.cartItemId === editCartItemId)
     : undefined;
+
+  // Editando una línea con descuento: no pasa de su tope
+  const topeEdicion =
+    editingItem?.userDiscountId && editingItem.discountMaxQuantity != null
+      ? editingItem.discountMaxQuantity
+      : null;
+
   const isEditMode = !!editCartItemId;
 
   const returnToCart = useCallback(() => {
@@ -1322,7 +1358,12 @@ export default function DishDetailPage() {
                   ? setShowRemoveConfirm(true)
                   : setDishQuantity((q) => Math.max(1, q - 1))
               }
-              onPlus={() => setDishQuantity((q) => q + 1)}
+              onPlus={() =>
+                setDishQuantity((q) =>
+                  topeEdicion != null && q >= topeEdicion ? q : q + 1,
+                )
+              }
+              plusDisabled={topeEdicion != null && dishQuantity >= topeEdicion}
               onSubmit={isEditMode ? handleUpdateAndReturn : handleAddToCartAndReturn}
               disabled={!isFormValid}
               muted={!!dishData?.isOutOfStock}
@@ -1330,7 +1371,7 @@ export default function DishDetailPage() {
                 dishData?.isOutOfStock
                   ? t("outOfStockCta")
                   : t(isEditMode ? "updateCartCta" : "addToCartCta", {
-                      amount: (totalPrice * dishQuantity).toFixed(2),
+                      amount: importeTotal.toFixed(2),
                     })
               }
             />

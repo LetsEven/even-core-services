@@ -16,7 +16,8 @@
   },
   "CartView": {
     "generalCommentsPlaceholder": "Comentarios generales para el restaurante...",
-    "promoOnlyWarning": "Agrega otro producto para continuar"
+    "promoOnlyWarning": "Agrega otro producto para continuar",
+    "minimumWarning": "El mínimo de compra es de ${amount}"
   },
   "CartPage": {
     "pageTitle": "Mi Carrito | Room Service"

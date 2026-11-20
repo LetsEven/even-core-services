@@ -39,8 +39,9 @@ import {
   clearStoredPaymentIntent,
 } from "@/utils/paymentIdempotency";
 
-// Google Pay deshabilitado temporalmente — cambiar a false para reactivarlo.
-const GOOGLE_PAY_DISABLED = false;
+// Google Pay deshabilitado temporalmente por problemas reportados (13-nov) —
+// cambiar a false para reactivarlo.
+const GOOGLE_PAY_DISABLED = true;
 // Apple Pay deshabilitado temporalmente — cambiar a false para reactivarlo.
 const APPLE_PAY_DISABLED = false;
 
@@ -1332,7 +1333,9 @@ export default function CardSelectionPage() {
         <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 short:py-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <PayButton
             onClick={handleInitiatePayment}
-            disabled={isProcessing || !selectedPaymentMethodId}
+            disabled={
+              isProcessing || !selectedPaymentMethodId || isUnderMinimum
+            }
           >
             {isProcessing ? (
               <div className="flex items-center justify-center gap-2">
@@ -1341,6 +1344,8 @@ export default function CardSelectionPage() {
               </div>
             ) : !selectedPaymentMethodId ? (
               t("selectCardCta")
+            ) : isUnderMinimum ? (
+              t("minimumNotReachedCta")
             ) : (
               tc("payCtaAmount", { amount: formatMoney(displayTotal) })
             )}

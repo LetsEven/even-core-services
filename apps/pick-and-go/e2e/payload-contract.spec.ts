@@ -175,7 +175,7 @@ test("MSI: /payments manda el monto SIN financiamiento, sin items y con installm
   expect(intent?.amount).toBeCloseTo(405.19 / (1 - 0.075 * 1.16), 10);
 });
 
-test("las órdenes de Apple y Google Pay se arman sin precio inflado ni comisión en base/propina", async ({ page }) => {
+test("la orden de Apple Pay se arma sin precio inflado ni comisión en base/propina (Google Pay apagado)", async ({ page }) => {
   const walletBodies: Record<string, unknown[]> = { apple: [], google: [] };
   page.on("request", (r) => {
     const m = r.url().match(/\/payments\/(apple|google)-pay\/order$/);
@@ -184,7 +184,7 @@ test("las órdenes de Apple y Google Pay se arman sin precio inflado ni comisió
   await mockPickAndGoApi(page, { cartItems: cartWithClubSandwich });
   await page.goto(`${CARD_SELECTION_URL}&tipAmount=0`);
   await expect(page.getByText("•••• 4242")).toBeVisible();
-  await expect.poll(() => walletBodies.apple.length > 0 && walletBodies.google.length > 0).toBe(true);
+  await expect.poll(() => walletBodies.apple.length > 0).toBe(true);
 
   const expected = {
     amount: 368.35,
@@ -196,7 +196,8 @@ test("las órdenes de Apple y Google Pay se arman sin precio inflado ni comisió
   };
   // Hoy RS NO manda `service` ni `id_*` en las órdenes de wallet (el backend cae a 2/2 = su tarifa).
   await expect.poll(() => walletBodies.apple.some((b) => canon(b) === canon(expected))).toBe(true);
-  await expect.poll(() => walletBodies.google.some((b) => canon(b) === canon(expected))).toBe(true);
+  // Google Pay está deshabilitado temporalmente en Pick & Go: no se pide su orden.
+  expect(walletBodies.google).toHaveLength(0);
 });
 
 test.describe("reintentos de /confirm de Pick & Go: transitorios (conflict, red, 429, 5xx), igual que el core", () => {

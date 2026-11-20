@@ -4,18 +4,18 @@ import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { Restaurant } from "@/app/types/restaurant";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { useTranslations } from "next-intl";
 
-const LanguageToggleButton = lazy(() => import("@even/i18n/language-toggle-button"));
-
 interface MenuHeaderProps {
   restaurant?: Restaurant;
   tableNumber?: string;
   showBackButton?: boolean;
+  // Contenido del lado izquierdo cuando no hay botón de regresar.
+  leftSlot?: ReactNode;
 }
 
 interface UserImageData {
@@ -29,6 +29,7 @@ export default function MenuHeader({
   restaurant,
   tableNumber,
   showBackButton = true,
+  leftSlot,
 }: MenuHeaderProps) {
   const t = useTranslations("MenuHeader");
   const { state } = useTable();
@@ -165,7 +166,7 @@ export default function MenuHeader({
               <ChevronLeft className="text-primary size-5 md:size-6 lg:size-7" />
             </div>
           ) : (
-            <div className="size-10 md:size-12 lg:size-14" />
+            (leftSlot ?? <div className="size-10 md:size-12 lg:size-14" />)
           )}
         </div>
 
@@ -174,12 +175,8 @@ export default function MenuHeader({
           <img src="/even/even-asterisk-grass.svg" alt="Even" />
         </div>
 
-        {/* Idioma + Participantes */}
+        {/* Participantes (el idioma vive en el modal de cuenta) */}
         <div className="flex items-center gap-2 md:gap-3 z-10">
-          <Suspense fallback={null}>
-            <LanguageToggleButton />
-          </Suspense>
-
           {isLoading ? (
             <div className="flex items-center space-x-1">
               <div className="size-10 md:size-12 lg:size-14 bg-tone-300 animate-pulse rounded-full border border-white shadow-sm"></div>

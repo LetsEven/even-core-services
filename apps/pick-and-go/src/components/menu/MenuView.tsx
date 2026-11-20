@@ -324,9 +324,16 @@ export default function MenuView() {
       return;
     }
     const outOfStockIds = new Set<number>();
+    // Precio actual del menú (con su descuento), no el que se pagó en el pedido anterior
+    const preciosMenu = new Map<number, number>();
     for (const section of menu ?? []) {
       for (const it of section.items ?? []) {
         if (it.is_out_of_stock) outOfStockIds.add(it.id);
+        const base = Number(it.price);
+        preciosMenu.set(
+          it.id,
+          it.discount > 0 ? base * (1 - it.discount / 100) : base,
+        );
       }
     }
     const available = items.filter(
@@ -343,7 +350,7 @@ export default function MenuView() {
           id: it.menu_item_id!,
           name: it.item,
           description: "",
-          price: it.price,
+          price: preciosMenu.get(it.menu_item_id!) ?? it.price,
           images: it.images,
           features: [],
           discount: 0,

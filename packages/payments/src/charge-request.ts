@@ -43,6 +43,8 @@ export interface ChargeRequestContext {
   items?: CartItemForPayment[];
   discount?: ChargeDiscount | null;
   order?: ChargeOrderRef;
+  /** Tap & Pay: nombre del recibo que el backend registra al confirmar el cobro. */
+  payerName?: string;
   /** Por defecto "MXN". */
   currency?: string;
 }
@@ -71,5 +73,6 @@ export function buildChargeRequest(ctx: ChargeRequestContext): Omit<ProcessPayme
     service: ctx.service,
     items: ctx.items,
     ...ctx.order,
+    ...(ctx.payerName !== undefined ? { payerName: ctx.payerName } : {}),
   };
 }

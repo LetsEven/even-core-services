@@ -30,6 +30,10 @@ export interface UserDiscount {
   discount_type: "item" | "order";
   menu_item_id: number | null;
   discount_percentage: number;
+  // Solo tipo 'item': piezas con descuento que le quedan (null = ilimitado)
+  piezas_restantes?: number | null;
+  // Igual pero sin restar el carrito: la app resta el suyo al instante
+  usos_libres?: number | null;
   starts_at: string;
   ends_at: string | null;
   status: "assigned" | "claimed";

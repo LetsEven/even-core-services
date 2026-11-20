@@ -9,7 +9,8 @@ import { useTranslations } from "next-intl";
 import {
   buildChargeRequest,
   computeMsiTotal,
-  MINIMUM_AMOUNT,
+  readTableChargeBlock,
+  TABLE_PAYMENT_MINIMUM_AMOUNT as MINIMUM_AMOUNT,
   toTransactionRecord,
 } from "@even/payments";
 import { useSearchParams } from "next/navigation";
@@ -25,7 +26,11 @@ import MenuHeaderBack from "@/app/components/headers/MenuHeaderBack";
 import { apiService } from "@/app/utils/api";
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
-import { extractPaymentMethods, useWalletPayments } from "@even/payments/react";
+import {
+  extractPaymentMethods,
+  useWalletHold,
+  useWalletPayments,
+} from "@even/payments/react";
 import {
   paymentService,
   type FlexBillBreakdown,
@@ -239,6 +244,53 @@ export default function CardSelectionPage() {
   // certeza de lo contrario) — el modal de error no debe ofrecer un botón
   // que dispare un segundo cobro.
   const [canRetryCharge, setCanRetryCharge] = useState(true);
+  // La cuenta cambió en el POS: los montos de esta pantalla ya no valen
+  const [cuentaCambio, setCuentaCambio] = useState(false);
+
+  // El backend rechaza el cargo si la cuenta cambió en el POS o si otro
+  // comensal tiene apartada parte de la cuenta con Apple/Google Pay
+  const avisarSiCuentaCambio = (result: unknown) => {
+    const block = readTableChargeBlock(result);
+    if (!block) return;
+    setCuentaCambio(true);
+    if (block.kind === "cuenta_apartada") {
+      setErrorTitle(t("accountHeldTitle"));
+      setErrorMessage(
+        t("accountHeldMessage", { amount: block.heldByOthers.toFixed(2) }),
+      );
+      return;
+    }
+    setErrorTitle(t("orderChangedTitle"));
+    setErrorMessage(t("orderChangedMessage"));
+  };
+
+  // Apartado de wallet: vence a los ~3 min (y obliga a regresar a la cuenta) y
+  // se suelta al salir de la pantalla sin pagar
+  const cuentaDeMesaId = Array.isArray(state.dishOrders)
+    ? (state.dishOrders[0]?.table_order_id ?? null)
+    : null;
+  const walletHold = useWalletHold({
+    accountId: cuentaDeMesaId,
+    release: (id) => paymentService.releaseWalletHold({ id_table_order: id }),
+    onExpired: () => {
+      setCuentaCambio(true);
+      setErrorTitle(t("walletExpiredTitle"));
+      setErrorMessage(t("walletExpiredMessage"));
+    },
+  });
+  const walletVencido = walletHold.expired;
+
+  // Regresa a la cuenta ya recargada para elegir de nuevo con los montos nuevos
+  const verCuentaActualizada = async () => {
+    setErrorMessage(null);
+    setErrorTitle(t("processingError"));
+    setCuentaCambio(false);
+    try {
+      await loadTableData();
+    } finally {
+      navigateWithTable("/order", true);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -720,17 +772,21 @@ export default function CardSelectionPage() {
         },
       };
     },
-    onOrderCreated: (provider, orderId) =>
+    onOrderRejected: (_provider, rejection) => avisarSiCuentaCambio(rejection),
+    onOrderCreated: (provider, orderId) => {
+      walletHold.markHeld();
       savePendingWalletPayment(
         orderId,
         provider === "apple" ? "apple_pay" : "google_pay",
         baseAmount,
         paymentType,
-      ),
+      );
+    },
     // Google Pay está apagado en FlexBill; FlexBill pide la orden aunque esté
     // marcado como no disponible (R7).
     google: { disabled: GOOGLE_PAY_DISABLED, createOrderWhenUnavailable: true },
     onApplePaySuccess: async ({ orderId }) => {
+      walletHold.markPaid();
       const mockPaymentId = `apple-pay-${Date.now()}`;
       setPaymentStatus("processing");
       await handlePaymentSuccess(
@@ -743,6 +799,7 @@ export default function CardSelectionPage() {
       setPaymentStatus("success");
     },
     onGooglePaySuccess: async ({ orderId, paymentId }) => {
+      walletHold.markPaid();
       setPaymentStatus("processing");
       await handlePaymentSuccess(
         paymentId,
@@ -999,6 +1056,17 @@ export default function CardSelectionPage() {
             (typeof paymentResult.error === "object"
               ? paymentResult.error?.code
               : undefined);
+
+          // order_changed: el backend trajo del POS platillos nuevos antes del cargo
+          if (code === "order_changed") {
+            clearStoredPaymentIntent();
+            setCanRetryCharge(false);
+            setCuentaCambio(true);
+            setErrorTitle(t("orderChangedTitle"));
+            setErrorMessage(t("orderChangedMessage"));
+            setPaymentStatus(null);
+            return;
+          }
 
           if (code === "intent_mismatch") {
             // El carrito cambió respecto al intento guardado — nunca se
@@ -1469,6 +1537,7 @@ export default function CardSelectionPage() {
 
                     {/* Apple Pay Button */}
                     {!applePayUnavailable &&
+                      !walletVencido &&
                       !isLoadingAgentStatus &&
                       !isPOSBlocked && (
                         <div className="relative w-full h-[48px]">
@@ -1496,6 +1565,7 @@ export default function CardSelectionPage() {
 
                     {/* Google Pay Button */}
                     {!googlePayUnavailable &&
+                      !walletVencido &&
                       !isLoadingAgentStatus &&
                       !isPOSBlocked && (
                         <div className="relative w-full h-[48px]">
@@ -1755,6 +1825,8 @@ export default function CardSelectionPage() {
         <div
           className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/50"
           onClick={() => {
+            if (walletVencido) return;
+            if (cuentaCambio) return void verCuentaActualizada();
             // false cuando ya hay certeza de que se cobró (o no hay
             // certeza de que no se cobró), este botón
             // no debe existir — dispararía un segundo cargo. Solo se
@@ -1794,6 +1866,7 @@ export default function CardSelectionPage() {
                   cobro anterior no se concretó. */}
               <button
                 onClick={() => {
+                  if (cuentaCambio) return void verCuentaActualizada();
                   // cerrar el modal no cambia si es seguro
                   // recobrar — eso ya lo decidió el código que lo abrió.
                   setErrorMessage(null);
@@ -1801,7 +1874,13 @@ export default function CardSelectionPage() {
                 }}
                 className="w-full bg-even-grass text-even-evergreen py-3 rounded-full text-base"
               >
-                {canRetryCharge ? t("tryAgainCta") : tc("understood")}
+                {walletVencido
+                  ? t("walletExpiredButton")
+                  : cuentaCambio
+                    ? t("viewUpdatedBillCta")
+                    : canRetryCharge
+                      ? t("tryAgainCta")
+                      : tc("understood")}
               </button>
             </div>
           </div>

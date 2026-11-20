@@ -9,6 +9,7 @@ export {
   type ClaimedOrderDiscountDeps,
 } from "./useClaimedOrderDiscount";
 export {
+  conCarrito,
   createUsePersonalItemDiscounts,
   type PersonalItemDiscount,
   type PersonalItemDiscountsDeps,

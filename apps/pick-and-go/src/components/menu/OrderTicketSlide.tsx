@@ -19,6 +19,8 @@ import { ticketService } from "@/services/ticket.service";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import ItemCustomizations from "@/components/ItemCustomizations";
 import InvoiceModal from "@/components/modals/InvoiceModal";
+import { AddLoyaltyCardButton } from "@even/ui/diner";
+import { walletCardService } from "@/services/walletCard.service";
 
 type ActiveOrderData = NonNullable<ActiveOrderResponse["data"]>;
 
@@ -242,6 +244,11 @@ export default function OrderTicketSlide({
             {existingInvoiceId ? t("viewInvoiceCta") : tc("invoiceCta")}
           </button>
         )}
+        {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene programa activo. */}
+        <AddLoyaltyCardButton
+          restaurantId={restaurantId}
+          walletCardService={walletCardService}
+        />
         <button
           type="button"
           onClick={handleDownload}

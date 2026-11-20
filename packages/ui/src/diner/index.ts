@@ -3,6 +3,7 @@
  * `messages` (mismos namespaces en las cinco apps). Va en una entrada aparte para que `@even/ui`
  * siga sin depender de next-intl (crew y checkout-demo no lo usan).
  */
+export { default as AddLoyaltyCardButton } from "./AddLoyaltyCardButton";
 export { default as EqualSplitView, useEqualSplitScreen } from "./EqualSplitView";
 export { useEqualSplit, useSplitRing, ringSegments, isValidTipInput, type RingGeometry, type RingSegment } from "./useEqualSplit";
 export { default as HighDemandBanner } from "./HighDemandBanner";

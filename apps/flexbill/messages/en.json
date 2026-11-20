@@ -141,14 +141,17 @@
     "consumptionLabel": "Order",
     "itemsLabel": "Your items",
     "tipLabelPrefix": "+ Tip",
-    "splitTitle": "Split what's left",
+    "splitTitle": "Split the bill",
     "yourShareTitle": "Your share",
     "ofAmount": "of ${amount}",
     "peopleUnit": "people",
     "fewerPeople": "One fewer person",
     "morePeople": "One more person",
     "includesTip": "includes ${amount} tip",
-    "continueCta": "Continue"
+    "continueCta": "Continue",
+    "paidItemBadge": "Paid",
+    "itemExceedsRemainingBadge": "More than what's left to pay",
+    "someoneIsPaying": "Someone else is paying ${amount} of this bill with Apple Pay or Google Pay."
   },
   "PaymentSuccessPage": {
     "paidStamp": "PAID",
@@ -207,7 +210,13 @@
     "itemNameServiceFee": "Service fee",
     "paymentResultProcessing": "Processing your payment",
     "paymentResultSuccess": "Payment complete!",
-    "paymentResultFailed": "We couldn't complete the payment"
+    "paymentResultFailed": "We couldn't complete the payment",
+    "viewUpdatedBillCta": "View updated bill",
+    "accountHeldTitle": "Someone else is paying",
+    "accountHeldMessage": "Another person is paying ${amount} of this bill. Check what's left and try again.",
+    "walletExpiredTitle": "Your time to pay ran out",
+    "walletExpiredMessage": "A few minutes passed without finishing the Apple Pay or Google Pay payment. Go back to your bill to see what's left and pay again.",
+    "walletExpiredButton": "Go to my bill"
   },
   "HomePage": {
     "heroTitle": "Welcome",

@@ -10,6 +10,8 @@ export type DishBottomBarProps = {
   minusIsTrash?: boolean;
   onMinus?: () => void;
   onPlus?: () => void;
+  /** "+" apagado (p. ej. editando una línea con descuento que ya llegó a su tope). */
+  plusDisabled?: boolean;
   onSubmit?: () => void;
   disabled?: boolean;
   /** Botón principal apagado (agotado o formulario incompleto). */
@@ -33,6 +35,7 @@ export function DishBottomBar({
   minusIsTrash = false,
   onMinus,
   onPlus,
+  plusDisabled = false,
   onSubmit,
   disabled = false,
   muted = false,
@@ -57,7 +60,11 @@ export function DishBottomBar({
         <span className="w-8 text-center text-base md:text-lg font-medium text-black select-none">
           {loading ? <span className="mx-auto block h-5 w-4 animate-pulse rounded bg-tone-200" /> : quantity}
         </span>
-        <button type="button" onClick={onPlus} disabled={loading} aria-label={labels?.increment} className={stepButton}>
+        <button type="button" onClick={onPlus}
+          disabled={loading || plusDisabled}
+          aria-label={labels?.increment}
+          className={`${stepButton} disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100`}
+        >
           +
         </button>
       </div>

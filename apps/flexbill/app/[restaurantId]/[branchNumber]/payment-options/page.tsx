@@ -141,6 +141,11 @@ export default function PaymentOptionsPage() {
     state.tableSummary?.data?.data?.remaining_amount ||
     unpaidDishes.reduce((sum, dish) => sum + (dish.total_price || 0), 0);
 
+  // Sin ningún platillo que quepa en lo que falta no se ofrece pagar por platillos
+  const someDishFits = unpaidDishes.some(
+    (dish) => (dish.total_price || 0) - unpaidAmount <= 0.01,
+  );
+
   // Versiones para mostrar en pantalla (comisión ya incrustada) — nunca se
   // usan para armar los montos que se mandan a tip-selection, solo para que
   // el resumen de esta pantalla cuadre con lo que se ve después.
@@ -373,7 +378,7 @@ export default function PaymentOptionsPage() {
                 )}
 
                 {/* Opción 2: Seleccionar platillos específicos (TODOS los items disponibles) */}
-                {unpaidDishes.length > 0 && (
+                {unpaidDishes.length > 0 && someDishFits && (
                   <button
                     onClick={handleSelectItems}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"

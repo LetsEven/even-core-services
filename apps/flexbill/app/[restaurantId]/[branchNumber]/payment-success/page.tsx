@@ -12,6 +12,8 @@ import { apiService } from "@/app/utils/api";
 import { X, LogIn, UserCircle2 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import InvoiceModal from "@/app/components/modals/InvoiceModal";
+import { AddLoyaltyCardButton } from "@even/ui/diner";
+import { walletCardService } from "@/app/services/walletCard.service";
 import { invoiceService } from "@/app/services/invoice.service";
 import { ticketService } from "@/app/services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
@@ -24,7 +26,7 @@ export default function PaymentSuccessPage() {
   // skipSessionCheck: al pagar se revoca la sesión de mesa de inmediato (por
   // diseño), y esta pantalla solo muestra el ticket ya pagado — no necesita
   // poder ordenar. Ver even-backend/src/controllers/shared/restaurantController.js.
-  const { validationError } = useValidateAccess({
+  const { validationError, restaurantId } = useValidateAccess({
     skipSessionCheck: true,
   });
   const { restaurant } = useRestaurant();
@@ -395,6 +397,11 @@ export default function PaymentSuccessPage() {
         >
           {t("goToMenuCta")}
         </button>
+        {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene programa activo */}
+        <AddLoyaltyCardButton
+          restaurantId={parseInt(restaurantId, 10)}
+          walletCardService={walletCardService}
+        />
       </div>
 
       <InvoiceModal

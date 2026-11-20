@@ -15,7 +15,7 @@ import { MenuProductCard, MenuQuickAddModal, rememberMenuPosition, startDishFlig
 import { useRef, useState, useEffect, useMemo, memo } from "react";
 import OutOfStockModal from "@/app/components/OutOfStockModal";
 import { getItemDisplayPrice } from "@/app/utils/commissionCalculator";
-import { usePersonalItemDiscounts } from "@/app/hooks/usePersonalItemDiscounts";
+import { usePersonalItemDiscounts, conCarrito } from "@/app/hooks/usePersonalItemDiscounts";
 
 interface MenuItemProps {
   item: MenuItemDB | MenuItemData;
@@ -58,7 +58,10 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
   const { isOpen, restaurant, restaurantId } = useRestaurant();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
   const personalDiscounts = usePersonalItemDiscounts(restaurantId);
-  const personalDiscount = personalDiscounts.get(adaptedItem.id);
+  const personalDiscount = conCarrito(
+    personalDiscounts.get(adaptedItem.id),
+    state.items,
+  );
   // Si el producto también tiene descuento de admin-portal, gana
   // el % mayor entre los dos — nunca se suman.
   const effectiveDiscount = Math.max(

@@ -138,14 +138,17 @@
     "consumptionLabel": "Consumo",
     "itemsLabel": "Tus artículos",
     "tipLabelPrefix": "+ Propina",
-    "splitTitle": "Divide lo que falta",
+    "splitTitle": "Divide la cuenta",
     "yourShareTitle": "Tu parte",
     "ofAmount": "de ${amount}",
     "peopleUnit": "personas",
     "fewerPeople": "Una persona menos",
     "morePeople": "Una persona más",
     "includesTip": "incluye ${amount} propina",
-    "continueCta": "Continuar"
+    "continueCta": "Continuar",
+    "paidItemBadge": "Pagado",
+    "itemExceedsRemainingBadge": "Excede lo que falta por pagar",
+    "someoneIsPaying": "Alguien más está pagando ${amount} de esta cuenta con Apple Pay o Google Pay."
   },
   "PaymentSuccessPage": {
     "paidStamp": "PAGADO",
@@ -201,7 +204,13 @@
     "itemNameServiceFee": "Cargo por servicio",
     "paymentResultProcessing": "Procesando tu pago",
     "paymentResultSuccess": "¡Pago realizado!",
-    "paymentResultFailed": "No se pudo completar el pago"
+    "paymentResultFailed": "No se pudo completar el pago",
+    "viewUpdatedBillCta": "Ver cuenta actualizada",
+    "accountHeldTitle": "Alguien más está pagando",
+    "accountHeldMessage": "Otra persona está pagando ${amount} de esta cuenta. Revisa cuánto falta e intenta de nuevo.",
+    "walletExpiredTitle": "Se acabó el tiempo para pagar",
+    "walletExpiredMessage": "Pasaron unos minutos sin completar el pago con Apple Pay o Google Pay. Regresa a tu cuenta para ver cuánto falta y pagar de nuevo.",
+    "walletExpiredButton": "Ir a mi cuenta"
   },
   "HomePage": {
     "heroTitle": "Bienvenido",

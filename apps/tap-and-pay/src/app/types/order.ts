@@ -19,6 +19,8 @@ export interface TapPayOrder {
   total_amount: number;
   paid_amount: number;
   remaining_amount: number;
+  // Lo que otro comensal está pagando con Apple/Google Pay
+  monto_apartado?: number;
   payment_status: "pending" | "partial" | "paid";
   order_status:
     | "active"

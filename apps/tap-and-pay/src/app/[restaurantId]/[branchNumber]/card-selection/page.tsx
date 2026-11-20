@@ -24,9 +24,14 @@ import { useTranslations } from "next-intl";
 import {
   buildChargeRequest,
   computeMsiTotal,
+  readTableChargeBlock,
   toTransactionRecord,
 } from "@even/payments";
-import { useSavedCardCharge, useWalletPayments } from "@even/payments/react";
+import {
+  useSavedCardCharge,
+  useWalletHold,
+  useWalletPayments,
+} from "@even/payments/react";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 
 export default function CardSelectionPage() {
@@ -42,8 +47,7 @@ export default function CardSelectionPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const { setParams, params: restaurantParams } = useRestaurant();
-  const { hasPaymentMethods, paymentMethods, deletePaymentMethod } =
-    usePayment();
+  const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user, profile, isLoading: authLoading } = useAuth();
   const { guestId, guestName: contextGuestName } = useGuest();
   const { msiConfig } = useMsiConfig();
@@ -121,6 +125,8 @@ export default function CardSelectionPage() {
   // certeza de lo contrario) — el modal de error no debe ofrecer un botón
   // que dispare un segundo cobro.
   const [canRetryCharge, setCanRetryCharge] = useState(true);
+  // La cuenta cambió en el POS: los montos de esta pantalla ya no valen
+  const [cuentaCambio, setCuentaCambio] = useState(false);
   // Pantalla "Verificando tu pago…" — sustituye al mensaje de timeout de
   // OrderAnimation. La confirmación real sigue corriendo en segundo plano
   // (la misma llamada a handleConfirmPayment, que no se cancela); esta
@@ -173,6 +179,7 @@ export default function CardSelectionPage() {
         selectedItemsParam.split(",").filter((item) => item.trim() !== ""),
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- con `name` sobrescribiría lo que el comensal escribe
   }, [profile, paymentType, selectedItemsParam]);
 
   // Cargar datos de la mesa
@@ -196,6 +203,7 @@ export default function CardSelectionPage() {
       setHasCheckedOrder(true);
     };
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadTableData cambia con el estado y recargaría en cadena
   }, [tableNumber, state.order, restaurantParams]);
 
   const dishes = state.order?.items || [];
@@ -230,7 +238,49 @@ export default function CardSelectionPage() {
       setSelectedPaymentMethodId(defaultMethod.id);
     }
     setIsLoadingInitial(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo elige la tarjeta por defecto al cargar
   }, [allPaymentMethods.length]);
+
+  // El backend rechaza el cargo si la cuenta cambió en el POS o si otro
+  // comensal tiene apartada parte de la cuenta con Apple/Google Pay
+  const avisarSiCuentaCambio = (result: unknown) => {
+    const block = readTableChargeBlock(result);
+    if (!block) return;
+    setCuentaCambio(true);
+    if (block.kind === "cuenta_apartada") {
+      setErrorTitle(t("accountHeldTitle"));
+      setErrorMessage(
+        t("accountHeldMessage", { amount: block.heldByOthers.toFixed(2) }),
+      );
+      return;
+    }
+    setErrorTitle(t("orderChangedTitle"));
+    setErrorMessage(t("orderChangedMessage"));
+  };
+
+  // Apartado de wallet: vence a los ~3 min (y obliga a regresar a la cuenta) y
+  // se suelta al salir de la pantalla sin pagar
+  const walletHold = useWalletHold({
+    accountId: state.order?.order_id,
+    release: (id) => paymentService.releaseWalletHold({ id_tap_pay_order: id }),
+    onExpired: () => {
+      setCuentaCambio(true);
+      setErrorTitle(t("walletExpiredTitle"));
+      setErrorMessage(t("walletExpiredMessage"));
+    },
+  });
+  const walletVencido = walletHold.expired;
+
+  // Regresa a la cuenta ya recargada para elegir de nuevo con los montos nuevos
+  const verCuentaActualizada = async () => {
+    setErrorMessage(null);
+    setCuentaCambio(false);
+    try {
+      await loadTableData();
+    } finally {
+      navigateWithTable("/order", true);
+    }
+  };
 
   // Apple Pay y Google Pay (SDK de EcartPay): la lógica vive en @even/payments/react.
   const showWalletPaymentAnimation = (paymentId: string) => {
@@ -283,9 +333,18 @@ export default function CardSelectionPage() {
       },
     }),
     apple: { detection: "once", label: "Even" },
-    google: { paymentId: "activity_id" },
-    onApplePaySuccess: ({ paymentId }) => showWalletPaymentAnimation(paymentId),
-    onGooglePaySuccess: ({ paymentId }) => showWalletPaymentAnimation(paymentId),
+    // Google Pay deshabilitado temporalmente por problemas reportados (13-nov).
+    google: { paymentId: "activity_id", disabled: true },
+    onOrderRejected: (_provider, rejection) => avisarSiCuentaCambio(rejection),
+    onOrderCreated: () => walletHold.markHeld(),
+    onApplePaySuccess: ({ paymentId }) => {
+      walletHold.markPaid();
+      showWalletPaymentAnimation(paymentId);
+    },
+    onGooglePaySuccess: ({ paymentId }) => {
+      walletHold.markPaid();
+      showWalletPaymentAnimation(paymentId);
+    },
     onGooglePayPaymentError: () => {
       // Intento real de pago fallido: avisar al usuario y dejarlo reintentar o
       // pagar con tarjeta guardada.
@@ -427,6 +486,8 @@ export default function CardSelectionPage() {
               selected_item_ids:
                 paymentType === "select-items" ? selectedItems : undefined,
             },
+            // Nombre del recibo que el backend registra al confirmar el cobro
+            payerName: displayName,
           }),
         });
 
@@ -447,10 +508,13 @@ export default function CardSelectionPage() {
         if (outcome.status === "retryable") {
           switch (outcome.reason) {
             case "intent_mismatch":
-              // El carrito cambió: nunca se cobró con estos datos (el core
-              // ya descartó el intento).
+            case "order_changed":
+              // El carrito cambió (o el backend trajo del POS platillos nuevos
+              // antes del cargo): nunca se cobró con estos datos y el core ya
+              // descartó el intento. Con order_changed se regresa a la cuenta.
               setShowPaymentAnimation(false);
-              setCanRetryCharge(true);
+              setCanRetryCharge(outcome.reason === "intent_mismatch");
+              setCuentaCambio(outcome.reason === "order_changed");
               setErrorTitle(t("orderChangedTitle"));
               setErrorMessage(t("orderChangedMessage"));
               return;
@@ -494,10 +558,16 @@ export default function CardSelectionPage() {
           userId: user?.id,
           guestId: !user?.id ? currentGuestId : null,
           guestName: displayName,
+          tipAmount: tipAmount,
+          paymentSource: isApplePayProcessing
+            ? "apple_pay"
+            : isGooglePayProcessing
+              ? "google_pay"
+              : null,
         });
       } else if (paymentType === "equal-shares") {
         await paymentService.paySplitAmount({
-          orderId: state.order?.order_id!,
+          orderId: state.order?.order_id ?? "",
           amount: baseAmount,
           tipAmount: tipAmount,
           userId: user?.id,
@@ -521,7 +591,7 @@ export default function CardSelectionPage() {
         }
 
         await paymentService.payOrderAmount({
-          orderId: state.order?.order_id!,
+          orderId: state.order?.order_id ?? "",
           amount: baseAmount,
           tipAmount: tipAmount,
           userId: user?.id,
@@ -709,7 +779,7 @@ export default function CardSelectionPage() {
       });
 
       setShowPaymentAnimation(true);
-    } catch (error) {
+    } catch {
       setIsProcessing(false);
       setErrorMessage(t("errorGenericProcessing"));
     }
@@ -766,7 +836,7 @@ export default function CardSelectionPage() {
       if (selectedPaymentMethodId === cardId) {
         setSelectedPaymentMethodId(null);
       }
-    } catch (error) {
+    } catch {
       setErrorTitle(t("deleteCardErrorTitle"));
       setErrorMessage(t("deleteCardErrorMessage"));
     } finally {
@@ -989,7 +1059,7 @@ export default function CardSelectionPage() {
                     )}
 
                     {/* Apple Pay */}
-                    {!applePayUnavailable && (
+                    {!applePayUnavailable && !walletVencido && (
                       <div className="relative w-full h-12 short:h-11">
                         <div id="apple-pay-container" className="w-full" />
                         {!applePayReady && (
@@ -1014,7 +1084,7 @@ export default function CardSelectionPage() {
                     )}
 
                     {/* Google Pay */}
-                    {!googlePayUnavailable && (
+                    {!googlePayUnavailable && !walletVencido && (
                       <div className="relative w-full h-12 short:h-11">
                         <div id="google-pay-container" className="w-full" />
                         {!googlePayReady && (
@@ -1274,6 +1344,8 @@ export default function CardSelectionPage() {
         <div
           className="fixed inset-0 z-99999 flex items-end justify-center bg-black/50"
           onClick={() => {
+            if (walletVencido) return;
+            if (cuentaCambio) return void verCuentaActualizada();
             // Cerrar el modal no cambia si es seguro
             // recobrar — eso ya lo decidió el código que lo abrió.
             setErrorMessage(null);
@@ -1309,6 +1381,7 @@ export default function CardSelectionPage() {
                   cobro anterior no se concretó. */}
               <button
                 onClick={() => {
+                  if (cuentaCambio) return void verCuentaActualizada();
                   // Cerrar el modal no cambia si es seguro
                   // recobrar — eso ya lo decidió el código que lo abrió.
                   setErrorMessage(null);
@@ -1316,7 +1389,13 @@ export default function CardSelectionPage() {
                 }}
                 className="w-full bg-even-grass text-even-evergreen py-3 rounded-full text-base"
               >
-                {canRetryCharge ? t("tryAgainCta") : tc("understood")}
+                {walletVencido
+                  ? t("walletExpiredButton")
+                  : cuentaCambio
+                    ? t("viewUpdatedBillCta")
+                    : canRetryCharge
+                      ? t("tryAgainCta")
+                      : tc("understood")}
               </button>
             </div>
           </div>

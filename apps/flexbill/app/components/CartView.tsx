@@ -34,6 +34,18 @@ const isProfileComplete = (
 
 export default function CartView() {
   const t = useTranslations("CartView");
+
+  // Promos gratis no suben; una línea con descuento personal sube hasta su tope
+  const noPuedeSubir = (item: {
+    isPromoItem?: boolean;
+    userDiscountId?: string | null;
+    discountMaxQuantity?: number | null;
+    quantity: number;
+  }) =>
+    (!!item.isPromoItem && !item.userDiscountId) ||
+    (!!item.userDiscountId &&
+      item.discountMaxQuantity != null &&
+      item.quantity >= item.discountMaxQuantity);
   const tc = useTranslations("Common");
   const {
     state: cartState,
@@ -402,7 +414,7 @@ export default function CartView() {
                                   <Plus
                                     onClick={() =>
                                       !(
-                                        item.isPromoItem && !item.userDiscountId
+                                        noPuedeSubir(item)
                                       ) &&
                                       item.cartItemId &&
                                       updateQuantity(
@@ -411,7 +423,7 @@ export default function CartView() {
                                       )
                                     }
                                     className={`size-4 md:size-5 lg:size-6 flex items-center justify-center text-black ${
-                                      item.isPromoItem && !item.userDiscountId
+                                      noPuedeSubir(item)
                                         ? "opacity-30 cursor-not-allowed"
                                         : "cursor-pointer"
                                     }`}

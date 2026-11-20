@@ -86,6 +86,7 @@
   "CartView": {
     "generalCommentsPlaceholder": "Alergias, instrucciones especiales, comentarios...",
     "submittingCta": "Enviando pedido...",
-    "promoOnlyWarning": "Agrega otro producto para continuar"
+    "promoOnlyWarning": "Agrega otro producto para continuar",
+    "minimumWarning": "El mínimo de compra es de ${amount}"
   }
 }

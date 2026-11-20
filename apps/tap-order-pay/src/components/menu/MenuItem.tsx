@@ -14,7 +14,7 @@ import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { MenuProductCard, MenuQuickAddModal, rememberMenuPosition, startDishFlight } from "@even/ui";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
-import { usePersonalItemDiscounts } from "../../hooks/usePersonalItemDiscounts";
+import { usePersonalItemDiscounts, conCarrito } from "../../hooks/usePersonalItemDiscounts";
 
 interface MenuItemProps {
   item: MenuItemDB | MenuItemData;
@@ -56,7 +56,10 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
   const { isOpen, restaurant, restaurantId } = useRestaurant();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
   const personalDiscounts = usePersonalItemDiscounts(restaurantId);
-  const personalDiscount = personalDiscounts.get(adaptedItem.id);
+  const personalDiscount = conCarrito(
+    personalDiscounts.get(adaptedItem.id),
+    cartState.items,
+  );
   // Si el producto también tiene descuento de admin-portal, gana
   // el % mayor entre los dos — nunca se suman.
   const effectiveDiscount = Math.max(

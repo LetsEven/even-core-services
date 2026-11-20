@@ -114,6 +114,13 @@ export default function PaymentOptionsPage() {
   const unpaidAmount =
     state.order?.remaining_amount || tableTotalPrice - paidAmount;
 
+  // Sin ningún platillo que quepa en lo que falta no se ofrece pagar por platillos
+  const someDishFits = unpaidDishes.some(
+    (dish) =>
+      (dish.price + dish.extra_price) * dish.quantity - unpaidAmount <= 0.005,
+  );
+
+
   // Saldo de la cuenta en el hero (el mismo `unpaidAmount` que se paga en las opciones).
   useFlowAmount(
     isLoading
@@ -246,7 +253,7 @@ export default function PaymentOptionsPage() {
                 )}
 
                 {/* Opción 2: Seleccionar platillos específicos */}
-                {unpaidDishes.length > 0 && (
+                {unpaidDishes.length > 0 && someDishFits && (
                   <button
                     onClick={handleSelectItems}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"

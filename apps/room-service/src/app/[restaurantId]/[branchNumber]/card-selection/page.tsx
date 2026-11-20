@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError } from "@even/payments";
+import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useCart } from "@/context/CartContext";
 import { useRoomNavigation } from "@/hooks/useRoomNavigation";
 import { usePayment } from "@/context/PaymentContext";
@@ -103,7 +103,6 @@ export default function CardSelectionPage() {
     : 0;
   const baseAmount =
     Math.round((cartBaseAmount - orderDiscountAmount) * 100) / 100;
-  const MINIMUM_AMOUNT = 20;
   const tipAmountFromParam = parseFloat(searchParams.get("tipAmount") || "0");
 
   const [showTotalModal, setShowTotalModal] = useState(false);
@@ -1293,7 +1292,7 @@ export default function CardSelectionPage() {
     const msiOptions = cardBrand === "amex" ? msiConfig.amex : msiConfig.visaMc;
     const selectedOption = msiOptions.find((opt) => opt.months === selectedMSI);
     if (!selectedOption) return totalAmount;
-    return totalAmount / (1 - (selectedOption.rate / 100) * 1.16);
+    return computeMsiTotal(totalAmount, selectedOption.rate);
   };
 
   const displayTotal = getDisplayTotal();
@@ -1813,7 +1812,7 @@ export default function CardSelectionPage() {
                           <>
                             {availableOptions.map((option) => {
                               const totalWithCommission =
-                                totalAmount / (1 - (option.rate / 100) * 1.16);
+                                computeMsiTotal(totalAmount, option.rate);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

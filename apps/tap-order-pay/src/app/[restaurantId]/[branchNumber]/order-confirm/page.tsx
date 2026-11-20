@@ -9,6 +9,7 @@ import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { X } from "lucide-react";
 import ValidationError from "@/components/ValidationError";
 import { calculateCommissions } from "@/utils/commissionCalculator";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function OrderConfirmPage() {
   const t = useTranslations("OrderConfirmPage");
@@ -18,7 +19,6 @@ export default function OrderConfirmPage() {
   const { navigateWithTable } = useTableNavigation();
 
   const baseAmount = cartState.totalPrice;
-  const MINIMUM_AMOUNT = 20;
 
   const [tipPercentage, setTipPercentage] = useState(10);
   const [customTip, setCustomTip] = useState("");
@@ -27,7 +27,7 @@ export default function OrderConfirmPage() {
 
   const tipAmount = useMemo(() => {
     if (customTip && parseFloat(customTip) > 0) return parseFloat(customTip);
-    return Math.round(((baseAmount * tipPercentage) / 100) * 100) / 100;
+    return computeTipAmount(baseAmount, tipPercentage, "cents");
   }, [customTip, baseAmount, tipPercentage]);
 
   const commissions = useMemo(
@@ -169,7 +169,7 @@ export default function OrderConfirmPage() {
                   {tc("tip")}
                 </span>
                 <div className="grid grid-cols-5 gap-2 flex-1">
-                  {[0, 10, 15, 20].map((percentage) => (
+                  {TIP_PRESETS.map((percentage) => (
                     <button
                       key={percentage}
                       onClick={() => {

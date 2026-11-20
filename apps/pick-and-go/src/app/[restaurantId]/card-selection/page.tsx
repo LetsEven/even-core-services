@@ -7,7 +7,7 @@ import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError } from "@even/payments";
+import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { useGuest, useIsGuest } from "@/context/GuestContext";
@@ -120,7 +120,6 @@ export default function CardSelectionPage() {
     Math.round((cartBaseAmount - orderDiscountAmount) * 100) / 100;
 
   // Validación de compra mínima
-  const MINIMUM_AMOUNT = 20;
 
   const [showPOSModal, setShowPOSModal] = useState(false);
   const [posModalReason, setPosModalReason] = useState<
@@ -1486,7 +1485,7 @@ export default function CardSelectionPage() {
     if (!selectedOption) return totalAmount;
 
     // Calcular total con financiamiento e IVA (fórmula EcartPay: markup sobre monto final)
-    return totalAmount / (1 - (selectedOption.rate / 100) * 1.16);
+    return computeMsiTotal(totalAmount, selectedOption.rate);
   };
 
   const displayTotal = getDisplayTotal();
@@ -2069,7 +2068,7 @@ export default function CardSelectionPage() {
                             {availableOptions.map((option) => {
                               // Calcular total con financiamiento e IVA (fórmula EcartPay: markup sobre monto final)
                               const totalWithCommission =
-                                totalAmount / (1 - (option.rate / 100) * 1.16);
+                                computeMsiTotal(totalAmount, option.rate);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

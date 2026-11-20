@@ -12,6 +12,7 @@ import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { useTranslations } from "next-intl";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function TipSelectionPage() {
   const t = useTranslations("TipSelectionPage");
@@ -195,7 +196,7 @@ export default function TipSelectionPage() {
     if (customTip && parseFloat(customTip) > 0) {
       return parseFloat(customTip);
     }
-    return (baseAmount * tipPercentage) / 100;
+    return computeTipAmount(baseAmount, tipPercentage, "none");
   }, [customTip, baseAmount, tipPercentage]);
 
   const commissions = useMemo(() => {
@@ -204,7 +205,6 @@ export default function TipSelectionPage() {
 
   const { evenClientCharge, totalAmountCharged: paymentAmount } = commissions;
 
-  const MINIMUM_AMOUNT = 20;
   const isUnderMinimum = paymentAmount < MINIMUM_AMOUNT;
 
   const handleTipPercentage = (percentage: number) => {
@@ -614,7 +614,7 @@ export default function TipSelectionPage() {
                           {t("tipLabel")}
                         </span>
                         <div className="grid grid-cols-5 gap-2 flex-1">
-                          {[0, 10, 15, 20].map((percentage) => (
+                          {TIP_PRESETS.map((percentage) => (
                             <button
                               key={percentage}
                               onClick={() => {
@@ -791,7 +791,7 @@ export default function TipSelectionPage() {
                       {t("tipLabel")}
                     </span>
                     <div className="grid grid-cols-5 gap-2 flex-1">
-                      {[0, 10, 15, 20].map((percentage) => (
+                      {TIP_PRESETS.map((percentage) => (
                         <button
                           key={percentage}
                           onClick={() => {

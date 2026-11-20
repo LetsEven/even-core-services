@@ -1,9 +1,9 @@
 "use client";
 
-import { IVA_FACTOR, IVA_RATE } from "@/app/constants/fiscal";
+import { IVA_RATE } from "@/app/constants/fiscal";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError } from "@even/payments";
+import { classifyGooglePayError, computeMsiTotal, MINIMUM_AMOUNT } from "@even/payments";
 import { useSearchParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -1693,12 +1693,11 @@ export default function CardSelectionPage() {
     if (!selectedOption) return totalAmountCharged;
 
     // Cálculo EcartPay: markup sobre monto final
-    return totalAmountCharged / (1 - (selectedOption.rate / 100) * IVA_FACTOR);
+    return computeMsiTotal(totalAmountCharged, selectedOption.rate);
   };
 
   const displayTotal = getDisplayTotal();
 
-  const MINIMUM_AMOUNT = 20;
   const isUnderMinimum = totalAmountCharged < MINIMUM_AMOUNT;
 
   if (isLoadingInitial || isLoadingProvider) {
@@ -2229,8 +2228,7 @@ export default function CardSelectionPage() {
                             {availableOptions.map((option) => {
                               // Cálculo EcartPay: markup sobre monto final
                               const totalWithCommission =
-                                totalAmountCharged /
-                                (1 - (option.rate / 100) * IVA_FACTOR);
+                                computeMsiTotal(totalAmountCharged, option.rate);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

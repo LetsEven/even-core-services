@@ -28,7 +28,7 @@ import {
   clearCachedWalletOrder,
 } from "@/app/utils/walletOrderCache";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError } from "@even/payments";
+import { classifyGooglePayError, computeMsiTotal } from "@even/payments";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 
 const POLL_INTERVAL_MS = 3000;
@@ -679,7 +679,7 @@ export default function CardSelectionPage() {
     const selectedOption = msiOptions.find((opt) => opt.months === selectedMSI);
     if (!selectedOption) return totalAmountCharged;
 
-    return totalAmountCharged / (1 - (selectedOption.rate / 100) * 1.16);
+    return computeMsiTotal(totalAmountCharged, selectedOption.rate);
   };
 
   const displayTotal = getDisplayTotal();
@@ -1702,8 +1702,7 @@ export default function CardSelectionPage() {
                           <>
                             {availableOptions.map((option) => {
                               const totalWithCommission =
-                                totalAmountCharged /
-                                (1 - (option.rate / 100) * 1.16);
+                                computeMsiTotal(totalAmountCharged, option.rate);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

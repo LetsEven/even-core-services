@@ -16,6 +16,7 @@
     "@even/auth": "*",
     "@even/cart": "*",
     "@even/i18n": "*",
+    "@even/next-config": "*",
     "@even/payments": "*",
     "@even/realtime": "*",
     "@even/ui": "*",

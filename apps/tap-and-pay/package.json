@@ -15,6 +15,7 @@
     "@even/api-client": "*",
     "@even/auth": "*",
     "@even/i18n": "*",
+    "@even/next-config": "*",
     "@even/payments": "*",
     "@even/realtime": "*",
     "@even/ui": "*",

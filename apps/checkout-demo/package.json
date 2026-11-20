@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@even/api-client": "*",
+    "@even/next-config": "*",
     "@even/payments": "*",
     "@even/ui": "*",
     "next": "16.4.2",

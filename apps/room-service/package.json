@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@even/api-client": "*",
+    "@even/auth": "*",
     "@even/cart": "*",
     "@even/i18n": "*",
     "@even/payments": "*",

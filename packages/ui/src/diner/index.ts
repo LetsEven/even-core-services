@@ -69,3 +69,4 @@ export {
   unwrapProfile,
 } from "./auth/phone";
 export { useOrderAnimation, type OrderAnimationState, type UseOrderAnimationOptions } from "./useOrderAnimation";
+export { useServiceNavigation, type ServiceNavigationOptions } from "./useServiceNavigation";

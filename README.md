@@ -16,6 +16,8 @@ apps/
 packages/
   payments/           @even/payments    Flujo de pago con Ecart Pay, tarjetas, Apple Pay, CardScanner
   api-client/         @even/api-client  Cliente HTTP tipado para even-backend
+  auth/               @even/auth        Sesión por SMS: createAuthService, createAuth (AuthProvider/useAuth), registro de invitados
+  realtime/           @even/realtime    Socket.IO de las apps de cuenta compartida (FlexBill, Tap & Pay): createSocketProvider
   ui/                 @even/ui          Primitivas de UI (Button, Input, Modal, layout...), tema de Tailwind y marca
   e2e/                @even/e2e         Config de Playwright y mocks de even-backend para tests E2E
   tsconfig/           @even/tsconfig    Configuración base de TypeScript

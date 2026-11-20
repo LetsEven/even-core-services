@@ -42,11 +42,19 @@ export {
   DEFAULT_COMMISSION_RATES,
   formatMXN,
   getCommissionRates,
+  IVA_FACTOR,
+  IVA_RATE,
   SERVICE_COMMISSION_RATES,
   type CommissionBreakdown,
   type CommissionRates,
   type CommissionService,
 } from "./commissions";
+export {
+  createServicePayments,
+  type CommissionLineItem,
+  type ItemCommissionRate,
+  type ServicePayments,
+} from "./service-payments";
 export { CARD_EXPIRY_YEARS_AHEAD, getCardExpiryYears } from "./card-expiry";
 export {
   createInvoiceService,

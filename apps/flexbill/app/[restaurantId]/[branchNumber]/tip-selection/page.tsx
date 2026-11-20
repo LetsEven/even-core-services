@@ -22,6 +22,7 @@ import {
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import { useRestaurant } from "@/app/context/RestaurantContext";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function TipSelectionPage() {
   const { restaurant: menuRestaurant } = useRestaurant();
@@ -324,7 +325,7 @@ export default function TipSelectionPage() {
     if (customTip && parseFloat(customTip) > 0) {
       return parseFloat(customTip);
     }
-    return Math.round(((displaySubtotal * tipPercentage) / 100) * 100) / 100;
+    return computeTipAmount(displaySubtotal, tipPercentage, "cents");
   }, [customTip, displaySubtotal, tipPercentage]);
 
   // Propina real que hay que mandar al cálculo para que el residuo
@@ -401,7 +402,6 @@ export default function TipSelectionPage() {
   );
 
   // Validación de compra mínima - usar el total con propina, comisiones, etc.
-  const MINIMUM_AMOUNT = 20; // Mínimo de compra requerido
   const isUnderMinimum = paymentAmount < MINIMUM_AMOUNT;
 
   // "Seleccionar artículos" sumaba el precio nominal de los platillos elegidos

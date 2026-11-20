@@ -3,6 +3,8 @@ import type { Page } from "@playwright/test";
 
 import { API_URL } from "./api";
 
+export { API_URL };
+
 export const RESTAURANT_ID = 4;
 export const BRANCH_NUMBER = 1;
 export const TABLE = "12";
@@ -67,7 +69,12 @@ export interface TapOrderApiOptions {
   /** Respuesta al crear la orden de Apple/Google Pay. Por defecto, un 503 pasajero. */
   walletOrder?: MockResponse;
   payments?: Omit<PaymentsApiOptions, "apiUrl">;
+  /** Configuración de MSI que devuelve checkout-context. Por defecto, inactiva. */
+  msi?: { isActive: boolean; visaMc: unknown[]; amex: unknown[] };
 }
+
+/** Nombre y tipo con los que los specs de contrato de pagos conocen este mock. */
+export type TopApiOptions = TapOrderApiOptions;
 
 /**
  * Mock de los endpoints de even-backend que usa Tap Order & Pay: los de pagos con
@@ -76,7 +83,7 @@ export interface TapOrderApiOptions {
  */
 export async function mockTapOrderFlowApi(
   page: Page,
-  { cartItems = [], walletOrder, payments }: TapOrderApiOptions = {},
+  { cartItems = [], walletOrder, payments, msi = { isActive: false, visaMc: [], amex: [] } }: TapOrderApiOptions = {},
 ) {
   const totalItems = cartItems.reduce((n, i) => n + i.quantity, 0);
   const totalAmount = cartItems.reduce((n, i) => n + i.price * i.quantity, 0);
@@ -112,6 +119,7 @@ export async function mockTapOrderFlowApi(
       /^\/tap-orders\/restaurant\/\d+\/active\/user\/[^/]+$/,
       { success: true, hasActiveOrder: false, data: null },
     ],
+    ["GET", /^\/tap-orders\/restaurant\/\d+\/user\/[^/]+\/last$/, { success: true, data: null }],
     // Proveedor de pago, MSI, agente POS y alta demanda del checkout en una sola llamada.
     [
       "GET",
@@ -120,7 +128,7 @@ export async function mockTapOrderFlowApi(
         success: true,
         data: {
           provider: "ecartpay",
-          msi: null,
+          msi,
           agentStatus: { hasIntegration: false, isActive: false, requiresAgent: false },
           orderFlowStatus: { is_high_demand: false },
         },
@@ -162,3 +170,5 @@ export async function mockTapOrderFlowApi(
 export const cartWithClubSandwich: CartItemMock[] = [
   { id: "ci_e2e_1", menu_item_id: clubSandwich.id, name: clubSandwich.name, price: clubSandwich.price, quantity: 2 },
 ];
+
+export const mockTopApi = mockTapOrderFlowApi;

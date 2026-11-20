@@ -21,27 +21,33 @@ import { getCardTypeIcon } from "@/app/utils/cardIcons";
 import { useMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import {
-  ensurePaymentIntent,
   clearStoredPaymentIntent,
-  updateStoredPaymentIntent,
 } from "@/app/utils/paymentIdempotency";
 import {
   getOrCreateWalletOrderId,
   clearCachedWalletOrder,
 } from "@/app/utils/walletOrderCache";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError } from "@even/payments";
+import {
+  buildChargeRequest,
+  classifyGooglePayError,
+  computeMsiTotal,
+  toTransactionRecord,
+} from "@even/payments";
+import { useSavedCardCharge } from "@even/payments/react";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 60000;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Mismos estados que el backend acepta como pagado en confirmOrder.
 const PAID_ECART_STATUSES = ["paid", "completed", "succeeded", "approved"];
 
 export default function CardSelectionPage() {
   const t = useTranslations("CardSelectionPage");
   const tc = useTranslations("Common");
+  const { charge: chargeCard } = useSavedCardCharge({
+    paymentService,
+    // Tap & Pay también acepta el id en order.id (un id vacío cuenta como ausente).
+    extractOrderId: (r) => r.payment?.id || (r as any).order?.id,
+  });
   const { state, setTableNumber, loadTableData } = useTable();
   const { navigateWithTable, tableNumber } = useTableNavigation();
   const searchParams = useSearchParams();
@@ -77,23 +83,18 @@ export default function CardSelectionPage() {
   const baseAmount = parseFloat(searchParams.get("baseAmount") || "0");
   const tipAmount = parseFloat(searchParams.get("tipAmount") || "0");
   // La comisión se deriva de consumo + propina (el backend la recalcula igual).
+  const commissions = calculateCommissions(baseAmount, tipAmount);
   const {
     ivaTip,
     evenCommissionClient,
     ivaEvenClient,
     evenCommissionRestaurant,
     evenCommissionTotal,
-  } = calculateCommissions(baseAmount, tipAmount);
+  } = commissions;
+  const evenClientCharge = evenCommissionClient + ivaEvenClient;
   const selectedItemsParam = searchParams.get("selectedItems");
 
-  const evenClientCharge = evenCommissionClient + ivaEvenClient;
   const ivaEvenRestaurant = evenCommissionRestaurant * 0.16;
-  const evenRestaurantCharge = evenCommissionRestaurant + ivaEvenRestaurant;
-  const subtotalForCommission = baseAmount + tipAmount;
-  const evenRateApplied =
-    subtotalForCommission > 0
-      ? (evenCommissionTotal / subtotalForCommission) * 100
-      : 0;
 
   // Get name from profile or localStorage for guests
   const effectiveName =
@@ -682,7 +683,7 @@ export default function CardSelectionPage() {
     const selectedOption = msiOptions.find((opt) => opt.months === selectedMSI);
     if (!selectedOption) return totalAmountCharged;
 
-    return totalAmountCharged / (1 - (selectedOption.rate / 100) * 1.16);
+    return computeMsiTotal(totalAmountCharged, selectedOption.rate);
   };
 
   const displayTotal = getDisplayTotal();
@@ -762,100 +763,76 @@ export default function CardSelectionPage() {
         // NUNCA vuelve a llamar /payments con otra clave para el mismo
         // carrito. La clave y el fingerprint solo se regeneran si el
         // carrito (monto/propina) cambió.
-        const intent = await ensurePaymentIntent({
-          items: [],
-          tipAmount,
-          discountId: null,
-          total: totalAmountCharged,
-        });
-
-        chargeEcartpayOrderId = intent.ecartpayOrderId;
-
-        if (!chargeEcartpayOrderId) {
-          const chargeResult = await paymentService.processPayment({
+        const outcome = await chargeCard({
+          fingerprintInput: {
+            items: [],
+            tipAmount,
+            discountId: null,
+            total: totalAmountCharged,
+          },
+          // payment_in_progress: se espera a que resuelva el cobro con ese intentKey.
+          onVerifying: () => {
+            setShowPaymentAnimation(false);
+            setVerifying(true);
+          },
+          request: buildChargeRequest({
+            // TP no manda `service`: el backend lo deduce de id_tap_pay_order (audit R1).
+            service: undefined,
             paymentMethodId: selectedMethod.id,
             amount: totalAmountCharged,
-            currency: "MXN",
             description: `Even Tap & Pay - Mesa ${tableNumber || "N/A"}`,
             orderId: state.order?.order_id || `order-${Date.now()}`,
             tableNumber: tableNumber || undefined,
             restaurantId: restaurantParams?.restaurantId as string,
-            installments: selectedMSI || undefined,
+            installments: selectedMSI,
             baseAmount,
             tipAmount,
             // even-backend #333: identificadores para que el servidor
             // recalcule el monto contra tap_pay_orders en vez de cobrar el
             // que mandamos. Son opcionales en el backend: si no los
             // mandamos, cobra igual que antes.
-            id_tap_pay_order: state.order?.order_id,
-            payment_type: paymentType,
-            selected_item_ids:
-              paymentType === "select-items" ? selectedItems : undefined,
-            intentKey: intent.intentKey,
-            fingerprint: intent.fingerprint,
-          });
+            order: {
+              id_tap_pay_order: state.order?.order_id,
+              payment_type: paymentType,
+              selected_item_ids:
+                paymentType === "select-items" ? selectedItems : undefined,
+            },
+          }),
+        });
 
-          if (!chargeResult.success) {
-            const code =
-              chargeResult.code ??
-              (typeof chargeResult.error === "object"
-                ? chargeResult.error?.code
-                : undefined);
+        if (outcome.status === "unconfirmed") {
+          // Sin certeza de que no se cobró — nunca se ofrece recobrar.
+          setShowPaymentAnimation(false);
+          setVerifying(false);
+          setCanRetryCharge(false);
+          setErrorTitle(t("confirmFailedTitle"));
+          setErrorMessage(
+            outcome.reason === "in_progress_timeout"
+              ? t("confirmFailedMessageAfterTimeout")
+              : t("confirmFailedMessageUnknown"),
+          );
+          return;
+        }
 
-            if (code === "intent_mismatch") {
-              clearStoredPaymentIntent();
+        if (outcome.status === "retryable") {
+          switch (outcome.reason) {
+            case "intent_mismatch":
+              // El carrito cambió: nunca se cobró con estos datos (el core
+              // ya descartó el intento).
               setShowPaymentAnimation(false);
               setCanRetryCharge(true);
               setErrorTitle(t("orderChangedTitle"));
               setErrorMessage(t("orderChangedMessage"));
               return;
-            }
-
-            if (code === "idempotency_unavailable") {
+            case "idempotency_unavailable":
               setShowPaymentAnimation(false);
               setCanRetryCharge(true);
               setErrorTitle(t("retryTitle"));
               setErrorMessage(t("retryShortMessage"));
               return;
-            }
-
-            if (code === "payment_in_progress") {
-              setShowPaymentAnimation(false);
-              setVerifying(true);
-              const deadline = Date.now() + POLL_TIMEOUT_MS;
-              let resolvedId: string | null = null;
-              while (Date.now() < deadline && !resolvedId) {
-                const statusRes = await paymentService.getPaymentIntentStatus(
-                  intent.intentKey,
-                );
-                if (statusRes.success) {
-                  if (statusRes.status === "unknown") break;
-                  if (
-                    (statusRes.status === "charged" ||
-                      statusRes.status === "confirmed") &&
-                    statusRes.ecartpay_order_id
-                  ) {
-                    resolvedId = statusRes.ecartpay_order_id;
-                    break;
-                  }
-                }
-                await sleep(POLL_INTERVAL_MS);
-              }
-
-              if (!resolvedId) {
-                setVerifying(false);
-                setCanRetryCharge(false);
-                setErrorTitle(t("confirmFailedTitle"));
-                setErrorMessage(t("confirmFailedMessageAfterTimeout"));
-                return;
-              }
-              updateStoredPaymentIntent({ ecartpayOrderId: resolvedId });
-              chargeEcartpayOrderId = resolvedId;
-            } else if (code === "payment_rejected") {
-              // Rechazo definitivo (422): no se cobró y repetir con la misma
-              // tarjeta fallaría igual. Se descarta el intento guardado para
-              // que otra tarjeta no reciba el replay del rechazo.
-              clearStoredPaymentIntent();
+            case "payment_rejected":
+              // Rechazo definitivo (422): no se cobró (el core ya descartó el
+              // intento para que otra tarjeta no reciba el replay del rechazo).
               setShowPaymentAnimation(false);
               // Sin esto el botón se queda en "Procesando..." y no se puede
               // reintentar con otra tarjeta.
@@ -864,37 +841,16 @@ export default function CardSelectionPage() {
               setConfirmedPaymentId(null);
               setCanRetryCharge(true);
               setErrorTitle(t("paymentRejectedTitle"));
-              setErrorMessage(
-                chargeResult.error?.message || t("paymentRejectedMessage"),
-              );
+              setErrorMessage(outcome.message || t("paymentRejectedMessage"));
               return;
-            } else if (
-              code === "payment_unknown" ||
-              code === "charge_unconfirmed"
-            ) {
-              setShowPaymentAnimation(false);
-              setVerifying(false);
-              setCanRetryCharge(false);
-              setErrorTitle(t("confirmFailedTitle"));
-              setErrorMessage(t("confirmFailedMessageUnknown"));
-              return;
-            } else {
-              throw new Error(
-                chargeResult.error?.message || t("errorCardChargeFailed"),
-              );
-            }
-          } else {
-            const chargedPayment = (chargeResult as any).payment;
-            const chargedOrder = (chargeResult as any).order;
-            chargeEcartpayOrderId =
-              chargedPayment?.id || chargedOrder?.id || null;
+            case "missing_order_id":
+              throw new Error(t("errorProviderNotConfirmed"));
+            default:
+              throw new Error(outcome.message || t("errorCardChargeFailed"));
           }
         }
 
-        if (!chargeEcartpayOrderId) {
-          throw new Error(t("errorProviderNotConfirmed"));
-        }
-        updateStoredPaymentIntent({ ecartpayOrderId: chargeEcartpayOrderId });
+        chargeEcartpayOrderId = outcome.ecartpayOrderId;
         chargeSucceeded = true;
       }
 
@@ -1014,40 +970,28 @@ export default function CardSelectionPage() {
               ? null
               : selectedPaymentMethodId;
 
-          await paymentService.recordPaymentTransaction({
-            payment_method_id: transactionPaymentMethodId,
-            restaurant_id: parseInt(restaurantParams?.restaurantId!),
-            id_tap_pay_order: state.order?.order_id || null,
-            ecartpay_order_id: isApplePayProcessing
-              ? applePayPaymentId
-              : isGooglePayProcessing
-                ? googlePayPaymentId
-                : chargeEcartpayOrderId,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-            iva_tip: ivaTip,
-            even_commission_total: evenCommissionTotal,
-            even_commission_client: evenCommissionClient,
-            even_commission_restaurant: evenCommissionRestaurant,
-            iva_even_client: ivaEvenClient,
-            iva_even_restaurant: ivaEvenRestaurant,
-            even_client_charge: evenClientCharge,
-            even_restaurant_charge: evenRestaurantCharge,
-            even_rate_applied: evenRateApplied,
-            total_amount_charged: selectedMSI
-              ? displayTotal
-              : totalAmountCharged,
-            subtotal_for_commission: subtotalForCommission,
-            currency: "MXN",
-            transaction_by: displayName,
-            payment_source: isApplePayProcessing
-              ? "apple_pay"
-              : isGooglePayProcessing
-                ? "google_pay"
-                : isRealCardPayment
-                  ? "saved_card"
-                  : null,
-          });
+          await paymentService.recordPaymentTransaction(
+            toTransactionRecord({
+              breakdown: commissions,
+              chargedTotal: selectedMSI ? displayTotal : totalAmountCharged,
+              paymentMethodId: transactionPaymentMethodId,
+              restaurantId: parseInt(restaurantParams?.restaurantId!),
+              ecartpayOrderId: isApplePayProcessing
+                ? applePayPaymentId
+                : isGooglePayProcessing
+                  ? googlePayPaymentId
+                  : chargeEcartpayOrderId,
+              paymentSource: isApplePayProcessing
+                ? "apple_pay"
+                : isGooglePayProcessing
+                  ? "google_pay"
+                  : isRealCardPayment
+                    ? "saved_card"
+                    : null,
+              transactionBy: displayName,
+              order: { id_tap_pay_order: state.order?.order_id || null },
+            }),
+          );
         } catch (transactionError) {
           console.error("❌ Error in background operations:", transactionError);
         }
@@ -1621,8 +1565,7 @@ export default function CardSelectionPage() {
                           <>
                             {availableOptions.map((option) => {
                               const totalWithCommission =
-                                totalAmountCharged /
-                                (1 - (option.rate / 100) * 1.16);
+                                computeMsiTotal(totalAmountCharged, option.rate);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

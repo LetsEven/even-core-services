@@ -21,6 +21,7 @@ import {
   readCheckoutDraft,
   writeCheckoutDraft,
 } from "@even/cart";
+import { computeTipAmount, MINIMUM_AMOUNT } from "@even/payments";
 import { useCheckoutPrefetch } from "@/hooks/useCheckoutPrefetch";
 
 export default function OrderConfirmPage() {
@@ -41,7 +42,6 @@ export default function OrderConfirmPage() {
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
 
   const baseAmount = cartState.totalPrice;
-  const MINIMUM_AMOUNT = 20;
 
   // La propina elegida se conserva al ir a "pago" y volver.
   const [initialDraft] = useState(() => readCheckoutDraft(restaurantId));
@@ -76,7 +76,7 @@ export default function OrderConfirmPage() {
     if (customTip && parseFloat(customTip) > 0) {
       return parseFloat(customTip);
     }
-    return (baseAmount * tipPercentage) / 100;
+    return computeTipAmount(baseAmount, tipPercentage, "none");
   };
 
   const tipAmount = calculateTipAmount();

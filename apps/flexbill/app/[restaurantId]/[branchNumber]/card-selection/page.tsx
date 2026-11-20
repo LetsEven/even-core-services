@@ -6,7 +6,13 @@ import { FlowStepCard, useFlowAmount } from "@even/ui/diner";
 import { IVA_FACTOR, IVA_RATE } from "@/app/constants/fiscal";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { useTranslations } from "next-intl";
-import { classifyGooglePayError } from "@even/payments";
+import {
+  buildChargeRequest,
+  classifyGooglePayError,
+  computeMsiTotal,
+  MINIMUM_AMOUNT,
+  toTransactionRecord,
+} from "@even/payments";
 import { useSearchParams } from "next/navigation";
 import { useTable } from "@/app/context/TableContext";
 import { useTableNavigation } from "@/app/hooks/useTableNavigation";
@@ -166,13 +172,14 @@ export default function CardSelectionPage() {
   const tipAmount = parseFloat(searchParams.get("tipAmount") || "0"); // Propina
   // La comisión se deriva de consumo + propina; el backend la recalcula por
   // ítem (computeFlexBillAmountDue), así que esto solo es el respaldo.
+  const commissions = calculateCommissions(baseAmount, tipAmount);
   const {
     ivaTip,
     evenCommissionClient,
     ivaEvenClient,
     evenCommissionRestaurant,
     evenCommissionTotal,
-  } = calculateCommissions(baseAmount, tipAmount);
+  } = commissions;
   const userName = searchParams.get("userName");
   const selectedItemsParam = searchParams.get("selectedItems");
 
@@ -607,45 +614,26 @@ export default function CardSelectionPage() {
       // efectivo, un error acá no aborta el pago — solo se loguea para
       // reconciliación manual.
       const registrarTransaccion = async () => {
-        await paymentService.recordPaymentTransaction({
-          payment_method_id: transactionPaymentMethodId,
-          restaurant_id: parseInt(restaurantId),
-          id_table_order: tableOrderId,
-          id_tap_orders_and_pay: null,
-          ecartpay_order_id: ecartpayOrderId,
-          payment_source: paymentSource,
-          payment_type: paymentType,
-          selected_item_ids: selectedItemIds,
-          base_amount: flexBillBreakdown?.base_amount ?? baseAmount,
-          tip_amount: flexBillBreakdown?.tip_amount ?? tipAmount,
-          iva_tip: flexBillBreakdown?.iva_tip ?? ivaTip,
-          even_commission_total:
-            flexBillBreakdown?.even_commission_total ?? evenCommissionTotal,
-          even_commission_client:
-            flexBillBreakdown?.even_commission_client ?? evenCommissionClient,
-          even_commission_restaurant:
-            flexBillBreakdown?.even_commission_restaurant ??
-            evenCommissionRestaurant,
-          iva_even_client:
-            flexBillBreakdown?.iva_even_client ?? ivaEvenClient,
-          iva_even_restaurant:
-            flexBillBreakdown?.iva_even_restaurant ?? ivaEvenRestaurant,
-          even_client_charge:
-            flexBillBreakdown?.even_client_charge ??
-            evenCommissionClient + ivaEvenClient,
-          even_restaurant_charge:
-            flexBillBreakdown?.even_restaurant_charge ?? evenRestaurantCharge,
-          even_rate_applied:
-            flexBillBreakdown?.even_rate_applied ?? evenRateApplied,
-          total_amount_charged:
-            flexBillBreakdown?.total_amount_charged ??
-            (selectedMSI ? displayTotal : totalAmountCharged),
-          subtotal_for_commission:
-            flexBillBreakdown?.subtotal_for_commission ??
-            subtotalForCommission,
-          currency: "MXN",
-          transaction_by: transactionBy,
-        });
+        await paymentService.recordPaymentTransaction(
+          toTransactionRecord({
+            // Si /payments devolvió el desglose real (flexBillBreakdown), manda
+            // sobre el local campo por campo.
+            breakdown: commissions,
+            serverBreakdown: flexBillBreakdown,
+            chargedTotal: selectedMSI ? displayTotal : totalAmountCharged,
+            paymentMethodId: transactionPaymentMethodId,
+            restaurantId: parseInt(restaurantId),
+            ecartpayOrderId,
+            paymentSource,
+            transactionBy,
+            order: {
+              id_table_order: tableOrderId,
+              id_tap_orders_and_pay: null,
+              payment_type: paymentType,
+              selected_item_ids: selectedItemIds,
+            },
+          }),
+        );
       };
 
       try {
@@ -1409,26 +1397,30 @@ export default function CardSelectionPage() {
           ? undefined
           : getEcartPayItems();
 
-      const paymentData = {
+      const paymentData = buildChargeRequest({
+        // FB no manda `service`: el backend usa la tarifa de Flex Bill por
+        // id_table_order (audit R1). Enviarlo es el PR 4.6, aparte.
+        service: undefined,
         paymentMethodId: paymentMethodToUse.id,
         amount: totalAmountCharged,
-        currency: "MXN",
         description: `Even Restaurant Payment - Table ${tableNumber || state.tableNumber || "N/A"}${userName ? ` - ${userName}` : ""} - Tip: $${tipAmount.toFixed(2)} - Commission: $${(evenCommissionClient + ivaEvenClient).toFixed(2)}`,
         orderId: `order-${Date.now()}-attempt-${paymentAttempts + 1}`,
         tableNumber: tableNumber || state.tableNumber,
         restaurantId: restaurantId,
-        installments: selectedMSI || undefined,
+        installments: selectedMSI,
         baseAmount,
         tipAmount,
         items: ecartPayItems,
         // Flex Bill: le permite al backend recalcular el monto real a cobrar
         // desde los dish_order de la mesa en vez de confiar en baseAmount —
         // ver processPayment/computeFlexBillAmountDue.
-        id_table_order:
-          dishOrders.length > 0 ? dishOrders[0].table_order_id : null,
-        payment_type: paymentType,
-        selected_item_ids: selectedItemIdsForPayment,
-      };
+        order: {
+          id_table_order:
+            dishOrders.length > 0 ? dishOrders[0].table_order_id : null,
+          payment_type: paymentType,
+          selected_item_ids: selectedItemIdsForPayment,
+        },
+      });
 
       // Después de un 2xx de /payments, esta
       // app NUNCA vuelve a llamar /payments con otra clave para el mismo
@@ -1696,7 +1688,7 @@ export default function CardSelectionPage() {
     if (!selectedOption) return totalAmountCharged;
 
     // Cálculo EcartPay: markup sobre monto final
-    return totalAmountCharged / (1 - (selectedOption.rate / 100) * IVA_FACTOR);
+    return computeMsiTotal(totalAmountCharged, selectedOption.rate);
   };
 
   const displayTotal = getDisplayTotal();
@@ -2139,8 +2131,7 @@ export default function CardSelectionPage() {
                             {availableOptions.map((option) => {
                               // Cálculo EcartPay: markup sobre monto final
                               const totalWithCommission =
-                                totalAmountCharged /
-                                (1 - (option.rate / 100) * IVA_FACTOR);
+                                computeMsiTotal(totalAmountCharged, option.rate);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

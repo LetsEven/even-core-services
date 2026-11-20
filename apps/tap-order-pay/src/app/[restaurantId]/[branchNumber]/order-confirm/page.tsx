@@ -14,6 +14,7 @@ import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { X } from "lucide-react";
 import ValidationError from "@/components/ValidationError";
 import { calculateCommissions } from "@/utils/commissionCalculator";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function OrderConfirmPage() {
   const t = useTranslations("OrderConfirmPage");
@@ -24,7 +25,6 @@ export default function OrderConfirmPage() {
   const { navigateWithTable } = useTableNavigation();
 
   const baseAmount = cartState.totalPrice;
-  const MINIMUM_AMOUNT = 20;
 
   // La propina elegida se conserva al ir a "pago" y volver.
   const draftScope = `${params?.restaurantId}/${params?.branchNumber}`;
@@ -51,7 +51,7 @@ export default function OrderConfirmPage() {
 
   const tipAmount = useMemo(() => {
     if (customTip && parseFloat(customTip) > 0) return parseFloat(customTip);
-    return Math.round(((baseAmount * tipPercentage) / 100) * 100) / 100;
+    return computeTipAmount(baseAmount, tipPercentage, "cents");
   }, [customTip, baseAmount, tipPercentage]);
 
   const commissions = useMemo(

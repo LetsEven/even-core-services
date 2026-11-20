@@ -13,6 +13,7 @@ import { orderService } from "@/app/services/order.service";
 import { calculateCommissions } from "@/app/utils/commissionCalculator";
 import { prefetchMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useTranslations } from "next-intl";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function TipSelectionPage() {
   const t = useTranslations("TipSelectionPage");
@@ -203,7 +204,7 @@ export default function TipSelectionPage() {
     if (customTip && parseFloat(customTip) > 0) {
       return parseFloat(customTip);
     }
-    return (baseAmount * tipPercentage) / 100;
+    return computeTipAmount(baseAmount, tipPercentage, "none");
   }, [customTip, baseAmount, tipPercentage]);
 
   const commissions = useMemo(() => {
@@ -212,7 +213,6 @@ export default function TipSelectionPage() {
 
   const { evenClientCharge, totalAmountCharged: paymentAmount } = commissions;
 
-  const MINIMUM_AMOUNT = 20;
   const isUnderMinimum = paymentAmount < MINIMUM_AMOUNT;
 
   // El hero lee este mismo `paymentAmount`: es el que cobra el botón de pagar.

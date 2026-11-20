@@ -56,18 +56,39 @@ export interface ConfirmResponse<TOrder> {
   success: boolean;
   data?: { order?: TOrder | null };
   code?: string;
+  /** HTTP status (undefined si hubo un fallo de red). Lo lee el predicado de cada app. */
+  status?: number;
+}
+
+/**
+ * Predicado de reintento por defecto de pollConfirm: solo el 409
+ * `confirm_in_progress`. Es el de Pick & Go y Room Service.
+ */
+export function isConfirmInProgress(result: { code?: string }): boolean {
+  return result.code === "confirm_in_progress";
+}
+
+export interface PollConfirmOptions<TOrder> extends PollOptions {
+  /**
+   * Decide si un /confirm que no resolvió se reintenta. Cada app inyecta el
+   * suyo (Tap Order & Pay reintenta además confirm_conflict, red, 429 y 5xx).
+   * Por defecto, `isConfirmInProgress`.
+   */
+  isConfirmRetryable?: (result: ConfirmResponse<TOrder>) => boolean;
 }
 
 /**
  * Reintenta /confirm (de cada app: tap orders, room orders...) hasta que
- * resuelva o se agote el tiempo. Solo reintenta con 409 `confirm_in_progress`;
- * cualquier otro fallo es terminal. Siempre hace al menos un intento.
+ * resuelva o se agote el tiempo. Por defecto solo reintenta con 409
+ * `confirm_in_progress` (ver `isConfirmRetryable`); cualquier otro fallo es
+ * terminal. Siempre hace al menos un intento.
  */
 export async function pollConfirm<TOrder>(
   confirm: () => Promise<ConfirmResponse<TOrder>>,
-  options?: PollOptions,
+  options?: PollConfirmOptions<TOrder>,
 ): Promise<{ success: true; order: TOrder } | { success: false }> {
   const { intervalMs, timeoutMs, sleep, now } = resolveOptions(options);
+  const isRetryable = options?.isConfirmRetryable ?? isConfirmInProgress;
   const deadline = now() + timeoutMs;
   let firstAttempt = true;
 
@@ -78,7 +99,7 @@ export async function pollConfirm<TOrder>(
     if (confirmResult.success && confirmResult.data?.order) {
       return { success: true, order: confirmResult.data.order };
     }
-    if (confirmResult.code !== "confirm_in_progress") {
+    if (!isRetryable(confirmResult)) {
       return { success: false };
     }
     await sleep(intervalMs);

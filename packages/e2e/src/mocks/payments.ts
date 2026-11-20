@@ -117,7 +117,10 @@ export async function mockPaymentsApi(page: Page, options: PaymentsApiOptions = 
   };
 
   await page.route(
-    (url) => url.href.startsWith(`${apiUrl}/payment-methods`) || url.href.startsWith(`${apiUrl}/payments`),
+    (url) =>
+      url.href.startsWith(`${apiUrl}/payment-methods`) ||
+      url.href.startsWith(`${apiUrl}/payments`) ||
+      url.href.startsWith(`${apiUrl}/loyalty/`),
     async (route, request) => {
       const method = request.method();
       if (method === "OPTIONS") {

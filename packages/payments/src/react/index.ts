@@ -20,3 +20,10 @@ export {
   type CardScannerLabels,
   type CardScannerProps,
 } from "./CardScanner";
+export {
+  useWalletPayments,
+  type ApplePaySuccessInfo,
+  type GooglePaySuccessInfo,
+  type UseWalletPaymentsOptions,
+  type WalletOrderPlan,
+} from "./useWalletPayments";

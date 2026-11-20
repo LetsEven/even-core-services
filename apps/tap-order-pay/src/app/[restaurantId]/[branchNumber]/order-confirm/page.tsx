@@ -27,7 +27,7 @@ export default function OrderConfirmPage() {
 
   const tipAmount = useMemo(() => {
     if (customTip && parseFloat(customTip) > 0) return parseFloat(customTip);
-    return computeTipAmount(baseAmount, tipPercentage, "cents");
+    return computeTipAmount(baseAmount, tipPercentage);
   }, [customTip, baseAmount, tipPercentage]);
 
   const commissions = useMemo(

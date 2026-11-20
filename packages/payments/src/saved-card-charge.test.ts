@@ -61,9 +61,16 @@ describe("createSavedCardCharge", () => {
     expect(confirm.mock.calls.map((x) => x[0])).toEqual([{ n: 1 }, { n: 2 }]);
   });
 
-  it("sin predicado, confirm solo reintenta confirm_in_progress", async () => {
+  it("sin predicado, confirm usa isConfirmRetryable: reintenta un 503 y no un 402", async () => {
     const { c, confirm } = setup();
-    confirm.mockResolvedValue({ success: false, status: 503 });
+    confirm
+      .mockResolvedValueOnce({ success: false, status: 503 })
+      .mockResolvedValueOnce({ success: true, data: { order: { id: "o1" } } });
+    expect(await c.confirm(() => ({ n: 1 }))).toEqual({ success: true, order: { id: "o1" } });
+    expect(confirm).toHaveBeenCalledTimes(2);
+
+    confirm.mockReset();
+    confirm.mockResolvedValue({ success: false, status: 402, code: "payment_required" });
     expect(await c.confirm(() => ({ n: 1 }))).toEqual({ success: false });
     expect(confirm).toHaveBeenCalledOnce();
   });

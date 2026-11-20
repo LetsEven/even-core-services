@@ -325,7 +325,7 @@ export default function TipSelectionPage() {
     if (customTip && parseFloat(customTip) > 0) {
       return parseFloat(customTip);
     }
-    return computeTipAmount(displaySubtotal, tipPercentage, "cents");
+    return computeTipAmount(displaySubtotal, tipPercentage);
   }, [customTip, displaySubtotal, tipPercentage]);
 
   // Propina real que hay que mandar al cálculo para que el residuo

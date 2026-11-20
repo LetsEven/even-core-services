@@ -199,13 +199,17 @@ test("las órdenes de Apple y Google Pay se arman sin precio inflado ni comisió
   await expect.poll(() => walletBodies.google.some((b) => canon(b) === canon(expected))).toBe(true);
 });
 
-test.describe("reintentos de /confirm de Pick & Go: solo confirm_in_progress", () => {
+test.describe("reintentos de /confirm de Pick & Go: transitorios (conflict, red, 429, 5xx), igual que el core", () => {
   const cases: Array<{ name: string; reply: Reply; calls: number; ok: boolean }> = [
-    { name: "500 no se reintenta", reply: { status: 500, body: { success: false } }, calls: 1, ok: false },
-    { name: "409 confirm_conflict no se reintenta", reply: { status: 409, body: { success: false, code: "confirm_conflict" } }, calls: 1, ok: false },
-    { name: "429 no se reintenta", reply: { status: 429, body: { success: false } }, calls: 1, ok: false },
-    { name: "red caída no se reintenta", reply: "abort", calls: 1, ok: false },
+    { name: "500 se reintenta", reply: { status: 500, body: { success: false } }, calls: 2, ok: true },
+    { name: "503 se reintenta", reply: { status: 503, body: { success: false } }, calls: 2, ok: true },
+    { name: "429 se reintenta", reply: { status: 429, body: { success: false } }, calls: 2, ok: true },
+    { name: "409 confirm_conflict se reintenta", reply: { status: 409, body: { success: false, code: "confirm_conflict" } }, calls: 2, ok: true },
     { name: "409 confirm_in_progress se reintenta", reply: { status: 409, body: { success: false, code: "confirm_in_progress" } }, calls: 2, ok: true },
+    { name: "red caída se reintenta", reply: "abort", calls: 2, ok: true },
+    { name: "402 payment_required no se reintenta", reply: { status: 402, body: { success: false, code: "payment_required" } }, calls: 1, ok: false },
+    { name: "404 order_not_found no se reintenta", reply: { status: 404, body: { success: false, code: "order_not_found" } }, calls: 1, ok: false },
+    { name: "409 payment_amount_mismatch no se reintenta", reply: { status: 409, body: { success: false, code: "payment_amount_mismatch" } }, calls: 1, ok: false },
   ];
   for (const c of cases) {
     test(c.name, async ({ page }) => {
@@ -293,7 +297,7 @@ test.describe("máquina de estados de la tarjeta guardada", () => {
 
 test.describe("propina de Pick & Go: no se redondea antes de calcular", () => {
   // $20.90 de consumo, 15 %: propina cruda 3.135. El total mostrado depende de si la propina se redondea
-  // antes de calcular la comisión (PG/RS/TP no; TOP/FB sí).
+  // antes de calcular la comisión (ninguna app la redondea; solo el total final).
   const cart = [{ id: "ci_e2e_2", menu_item_id: 101, name: "Club sándwich", price: 20.9, quantity: 1 }];
   test("15% -> total y tipAmount de la URL", async ({ page }) => {
     await mockPickAndGoApi(page, { cartItems: cart });

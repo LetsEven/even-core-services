@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calculateCommissions } from "./commissions";
 import { computeMsiTotal } from "./msi";
 import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "./tip";
 
@@ -27,15 +28,31 @@ describe("propina", () => {
     expect(MINIMUM_AMOUNT).toBe(20);
   });
 
-  it('"none" no redondea (PG/RS/TP) y "cents" redondea a centavos (TOP/FB)', () => {
-    expect(computeTipAmount(33.5, 15, "none")).toBe(5.025);
-    expect(computeTipAmount(20.9, 15, "none")).toBe(3.135);
-    expect(computeTipAmount(20.9, 15, "cents")).toBe(3.14);
-    expect(computeTipAmount(100, 0, "cents")).toBe(0);
+  it("no redondea la propina (igual que even-backend); solo el total final se redondea", () => {
+    expect(computeTipAmount(33.5, 15)).toBe(5.025);
+    expect(computeTipAmount(20.9, 15)).toBe(3.135);
+    expect(computeTipAmount(100, 0)).toBe(0);
     for (const base of [10.5, 33.33, 199.99, 1234.56]) {
       for (const pct of TIP_PRESETS) {
-        expect(computeTipAmount(base, pct, "none")).toBe((base * pct) / 100);
-        expect(computeTipAmount(base, pct, "cents")).toBe(Math.round(((base * pct) / 100) * 100) / 100);
+        expect(computeTipAmount(base, pct)).toBe((base * pct) / 100);
+      }
+    }
+  });
+
+  it("el total enviado es siempre un monto de 2 decimales aunque la propina no lo sea", () => {
+    // 0 % cliente (TOP/FB/TP): r2(20.9 + 3.135) = 24.03; con la propina a centavos (3.14) era 24.04.
+    const zero = calculateCommissions(20.9, computeTipAmount(20.9, 15), "tap-order-and-pay");
+    expect(zero.tipAmount).toBe(3.135);
+    expect(zero.totalAmountCharged).toBe(24.03);
+    // 2 % cliente (PG/RS): la comisión sale del subtotal sin redondear y solo el total se redondea.
+    const two = calculateCommissions(20.9, computeTipAmount(20.9, 15), "pick-and-go");
+    expect(two.totalAmountCharged).toBe(24.59);
+    for (const base of [10.5, 20.9, 33.33, 199.99, 1234.56]) {
+      for (const pct of TIP_PRESETS) {
+        for (const service of ["pick-and-go", "tap-order-and-pay"] as const) {
+          const { totalAmountCharged } = calculateCommissions(base, computeTipAmount(base, pct), service);
+          expect(totalAmountCharged).toBe(Math.round(totalAmountCharged * 100) / 100);
+        }
       }
     }
   });

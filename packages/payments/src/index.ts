@@ -1,7 +1,12 @@
 export const PACKAGE_NAME = "@even/payments";
 export * from "./types";
 export { createPaymentService, type PaymentService } from "./payment-service";
-export { classifyGooglePayError, isDefinitiveWalletRejection } from "./wallet";
+export {
+  classifyGooglePayError,
+  isDefinitiveWalletRejection,
+  isWalletDocumentSecure,
+  WALLET_PAID_STATUSES,
+} from "./wallet";
 export {
   PAYMENT_INTENT_STORAGE_KEY,
   computeFingerprint,
@@ -16,6 +21,7 @@ export {
 } from "./idempotency";
 export {
   isConfirmInProgress,
+  isConfirmRetryable,
   POLL_INTERVAL_MS,
   POLL_TIMEOUT_MS,
   pollConfirm,
@@ -77,7 +83,7 @@ export {
   type TransactionRecordParams,
 } from "./transaction-record";
 export { computeMsiTotal } from "./msi";
-export { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS, type TipRounding } from "./tip";
+export { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "./tip";
 export { CARD_EXPIRY_YEARS_AHEAD, getCardExpiryYears } from "./card-expiry";
 export {
   createInvoiceService,

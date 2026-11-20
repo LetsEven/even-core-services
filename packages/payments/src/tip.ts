@@ -5,15 +5,10 @@ export const TIP_PRESETS = [0, 10, 15, 20] as const;
 export const MINIMUM_AMOUNT = 20;
 
 /**
- * Cómo se redondea la propina calculada por porcentaje. Cada app conserva el
- * suyo (unificarlo es una decisión de producto aparte; ver audit R4):
- * - `"none"`: sin redondear (Pick & Go, Room Service, Tap & Pay).
- * - `"cents"`: a centavos antes de calcular la comisión (Tap Order & Pay, FlexBill).
+ * Propina de `pct` % sobre `base`. Sin redondear, igual que even-backend: la
+ * propina viaja y se suma cruda; solo el total final se redondea a centavos
+ * (`calculateCommissions`: `r2(base + propina + comisión cliente)`).
  */
-export type TipRounding = "none" | "cents";
-
-/** Propina de `pct` % sobre `base`, con el redondeo propio de la app. */
-export function computeTipAmount(base: number, pct: number, rounding: TipRounding): number {
-  const tip = (base * pct) / 100;
-  return rounding === "cents" ? Math.round(tip * 100) / 100 : tip;
+export function computeTipAmount(base: number, pct: number): number {
+  return (base * pct) / 100;
 }

@@ -172,14 +172,14 @@ test("las órdenes de Apple y Google Pay no mandan `service` ni precio inflado",
 });
 
 test.describe("propina de Tap & Pay: no se redondea antes de calcular", () => {
-  // choose-amount $20.90 + 15 %: propina cruda 3.135 (TOP/FB la redondean a centavos).
+  // choose-amount $20.90 + 15 %: propina cruda 3.135.
   test("15% sobre $20.90 -> tipAmount de la URL", async ({ page }) => {
     await mockTapAndPayApi(page);
     await page.goto(`/${RESTAURANT_ID}/2/tip-selection?table=${TABLE}&type=choose-amount&amount=20.9`);
     await page.getByRole("button", { name: "15%", exact: true }).click();
     await expect(page.locator("body")).toContainText("$24.03");
     await page.getByRole("button", { name: "Pagar" }).click();
-    // Propina cruda en la URL (3.135): TP no la redondea a centavos.
+    // Propina cruda en la URL (3.135).
     await expect(page).toHaveURL(/card-selection\?type=choose-amount&amount=24\.03&baseAmount=20\.9&tipAmount=3\.135&/);
   });
 });

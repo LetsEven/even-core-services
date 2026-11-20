@@ -31,7 +31,11 @@ if (outcome.status === "charged") {
 | `payment-service.ts` | Endpoints de `/payment-methods` y `/payments` (tarjetas, cobro, MSI, Apple/Google Pay, estado de intent). |
 | `idempotency.ts` | `intentKey` + fingerprint del carrito en sessionStorage (regla de oro: nunca recobrar el mismo carrito con otra clave). |
 | `charge.ts` | `chargeSavedCard`: cobro con tarjeta guardada y clasificación de los códigos del backend. |
-| `polling.ts` | `waitForChargedIntent` y `pollConfirm` (409 `confirm_in_progress`). |
+| `polling.ts` | `waitForChargedIntent` y `pollConfirm`. Por defecto solo reintenta 409 `confirm_in_progress` (PG y RS); `isConfirmRetryable` permite un predicado propio (Tap Order & Pay: `confirm_conflict`, red, 429 y 5xx, ver `apps/tap-order-pay/src/utils/confirmRetry.ts`). |
+| `saved-card-charge.ts` | `createSavedCardCharge`: `chargeSavedCard` + `pollConfirm` con la configuración de una app (`confirm`, `isConfirmRetryable`, `extractOrderId`). En React, `useSavedCardCharge` (`@even/payments/react`). Reglas de idempotencia intactas; el mapeo a mensajes queda en cada página. |
+| `commissions.ts` / `service-payments.ts` | Tarifas (`SERVICE_COMMISSION_RATES`), `IVA_RATE`/`IVA_FACTOR` y `createServicePayments(service)`: comisión, precio/subtotal/propina de display y cuenta dividida ligados a un servicio (ver `docs/comisiones.md`). |
+| `msi.ts` / `tip.ts` | `computeMsiTotal` (`total / (1 - tasa% * 1.16)`, sin redondeo) y propina: `computeTipAmount(base, pct, "none" \| "cents")` conserva el redondeo de cada app (PG/RS/TP sin redondear, TOP/FB a centavos), `TIP_PRESETS`, `MINIMUM_AMOUNT`. |
+| `charge-request.ts` / `transaction-record.ts` | `buildChargeRequest` (cuerpo de `POST /payments`; `service` obligatorio, `undefined` en FB/TP a propósito) y `toTransactionRecord` (`POST /payment-transactions` de FB/TP). Solo asignan campos: base y propina reales, nunca precios inflados ni comisión en la base. |
 | `wallet.ts` | `isDefinitiveWalletRejection` para ocultar Apple/Google Pay solo ante rechazos 4xx definitivos. |
 | `ecartpay.ts` | Tipos del SDK de EcartPay, carga y normalización del resultado de `Pay.Checkout.create`. |
 

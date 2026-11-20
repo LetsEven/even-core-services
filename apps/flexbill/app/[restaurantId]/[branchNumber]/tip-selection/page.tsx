@@ -718,7 +718,7 @@ export default function TipSelectionPage() {
                                 <p className="text-black text-base md:text-lg lg:text-xl">
                                   {dish.quantity}
                                 </p>
-                                <p className="text-black w-14 md:w-16 lg:w-20 text-base md:text-lg lg:text-xl">
+                                <p className="text-black min-w-14 md:min-w-16 lg:min-w-20 text-base md:text-lg lg:text-xl">
                                   $
                                   {(
                                     dish.total_display_price ?? dish.total_price

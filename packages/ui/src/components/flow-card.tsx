@@ -57,7 +57,7 @@ export function FlowCard({
         </div>
       )}
       {/* Espacio flexible: el hero queda arriba y la tarjeta abajo. */}
-      {anchored && <div aria-hidden className="min-h-6 flex-1" />}
+      {anchored && <div aria-hidden className="min-h-2 flex-1" />}
       <div
         className={cn(sheetClasses.card, cardClassName ?? (anchored ? "flex-none py-8" : "overflow-hidden"))}
         style={cardStyle}

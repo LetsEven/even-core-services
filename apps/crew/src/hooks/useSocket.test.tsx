@@ -23,9 +23,12 @@ const props = {
   onDishStatusChanged: vi.fn(),
   onRefetch: vi.fn(),
 };
-const auth = (kind: "clerk" | "local"): AuthProvider => ({
+const auth = (
+  kind: "clerk" | "local",
+  status: AuthProvider["status"] = "signedIn",
+): AuthProvider => ({
   kind,
-  status: "signedIn",
+  status,
   user: null,
   getToken: async () => "t",
   signOut: async () => {},
@@ -56,5 +59,23 @@ describe("useSocket", () => {
     expect(open).toHaveBeenCalledWith(
       expect.objectContaining({ branchId: "sel", kind: "clerk" }),
     );
+  });
+
+  it("no conecta sin sesion y conecta al pasar a signedIn", () => {
+    open.mockClear();
+    let status: AuthProvider["status"] = "signedOut";
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <AuthContext.Provider value={auth("clerk", status)}>
+        {children}
+      </AuthContext.Provider>
+    );
+    const { rerender } = renderHook(
+      () => useSocket({ ...props, branchId: "sel" }),
+      { wrapper },
+    );
+    expect(open).not.toHaveBeenCalled();
+    status = "signedIn";
+    rerender();
+    expect(open).toHaveBeenCalledTimes(1);
   });
 });

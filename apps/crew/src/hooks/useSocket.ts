@@ -93,7 +93,8 @@ export function useSocket({
     onTurnoClosedRef.current = onTurnoClosed;
   });
 
-  const { kind, getToken } = useAuth();
+  const { kind, status, getToken } = useAuth();
+  const isSignedIn = status === "signedIn";
   const getTokenRef = useRef(getToken);
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -109,6 +110,8 @@ export function useSocket({
 
   // El socket se conecta/reconecta cuando cambia branchId
   useEffect(() => {
+    // Sin sesión no hay token: no abrir el socket (se conecta al iniciar sesión)
+    if (!isSignedIn) return;
     console.log(
       `[CREW:SOCKET] Iniciando — branchId=${branchId} deviceId=${deviceId}`,
     );
@@ -298,7 +301,7 @@ export function useSocket({
       stop();
       socketRef.current = null;
     };
-  }, [branchId, handshakeBranchId, deviceId, kind]); // reconecta si cambia la sucursal
+  }, [branchId, handshakeBranchId, deviceId, kind, isSignedIn]); // reconecta si cambia la sucursal o la sesión
 
   const setMaster = useCallback((targetDeviceId: string) => {
     if (demoSocketRef.current) {

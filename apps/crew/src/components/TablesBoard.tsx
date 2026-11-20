@@ -352,10 +352,11 @@ export default function TablesBoard({
       }
     }
 
+    // Mesa libre: va a la cuenta ("Abrir cuenta") en vez de saltar al menú.
     // La comanda desde Crew nace como Flex Bill. Tap & Pay y el modo POS Even
     // sin servicio contratado no abren cuenta desde aquí todavía.
     if (hasFlexBill && openService !== "tap_pay") {
-      navigate(`/mesas/${encodeURIComponent(unit.number)}/comanda`);
+      navigate(`/mesas/${encodeURIComponent(unit.number)}`);
     }
   }
 

@@ -284,7 +284,7 @@ export default function SessionProvider({
     updatePrepTimeExtraMinutes,
     removeOrder,
     updateDishFromSocket,
-  } = useKitchenOrders(branchId);
+  } = useKitchenOrders(branchId, isSignedIn);
 
   const handleOrderClosed = useCallback(
     (orderId: string) => removeOrder(orderId),
@@ -295,11 +295,11 @@ export default function SessionProvider({
       updateDishFromSocket(dishId, status),
     [updateDishFromSocket],
   );
-  // Resetear tracking de notificaciones al cambiar de sucursal
+  // Resetear tracking de notificaciones al cambiar de sucursal o de sesión
   useEffect(() => {
     prevOrderIdsRef.current = null;
     setNewOrderNotifications([]);
-  }, [branchId]);
+  }, [branchId, isSignedIn]);
 
   // Inicializar prevOrderIdsRef tras la primera carga real (sin notificar).
   // Solo cuando la carga terminó (!ordersLoading) para evitar inicializar

@@ -20,7 +20,8 @@ function sortOrders(orders: Order[]): Order[] {
   );
 }
 
-export function useKitchenOrders(branchId: string | null) {
+// `enabled`: solo con sesión iniciada. Antes de eso no hay token y no se pide nada.
+export function useKitchenOrders(branchId: string | null, enabled: boolean) {
   const { getToken } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   // Inicia en true: siempre hay un fetch inicial. Evita que el efecto de
@@ -43,11 +44,16 @@ export function useKitchenOrders(branchId: string | null) {
 
   const fetchOrders = useCallback(
     async (showSpinner = false): Promise<Order[] | undefined> => {
-      if (showSpinner) setLoading(true);
       const seq = ++fetchSeqRef.current;
+      // Sin token no se cargó nada: no marcar "cargado y vacío" (conserva loading)
+      let noToken = false;
       try {
         const token = await getToken();
-        if (!token) return undefined;
+        if (!token) {
+          noToken = true;
+          return undefined;
+        }
+        if (showSpinner) setLoading(true);
         const data = await getActiveOrders(token, branchId);
         if (seq !== fetchSeqRef.current) return data;
         setOrders((prev) => {
@@ -79,7 +85,7 @@ export function useKitchenOrders(branchId: string | null) {
         setError(e.message);
         return undefined;
       } finally {
-        setLoading(false);
+        if (!noToken) setLoading(false);
       }
     },
     [getToken, branchId],
@@ -87,27 +93,36 @@ export function useKitchenOrders(branchId: string | null) {
 
   // Reset state when branch changes so the loader shows immediately
   useEffect(() => {
+    // Sin sesión: lista vacía y loading en true (aún no hay primer fetch real)
+    if (!enabled) {
+      setLoading(true);
+      setOrders([]);
+      return;
+    }
     if (!branchId) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setOrders([]);
-  }, [branchId]);
+  }, [branchId, enabled]);
 
+  // Se refetchea al iniciar sesión aunque getToken/branchId no cambien
   useEffect(() => {
+    if (!enabled) return;
     fetchOrders();
-  }, [fetchOrders]);
+  }, [fetchOrders, enabled]);
 
   // Al volver al frente (PWA minimizada, otra app) el socket pudo perder eventos: refresca en todas las pantallas
   useEffect(() => {
+    if (!enabled) return;
     const handleVisibility = () => {
       if (document.visibilityState === "visible") fetchOrders();
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
-  }, [fetchOrders]);
+  }, [fetchOrders, enabled]);
 
   const updateDish = useCallback(
     async (

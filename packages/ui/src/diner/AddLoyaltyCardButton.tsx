@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Button } from "../components/button";
 import {
   esIOS,
   type DisponibilidadDeTarjeta,
@@ -94,22 +95,26 @@ export default function AddLoyaltyCardButton({
   if (!disponible?.puede) return null;
 
   return (
-    <div>
-      <button
+    <div className="w-full">
+      {/* Se pinta sobre pantallas Evergreen (ticket, estado del pedido): botón claro, ancho completo. */}
+      <Button
+        variant="light"
+        fullWidth
         onClick={agregar}
         disabled={emitiendo || listo}
-        className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-warm-100 disabled:opacity-60"
+        loading={emitiendo}
+        className="gap-[clamp(0.5rem,2vw,0.75rem)] py-[clamp(0.625rem,1.8vh,1rem)] text-[length:clamp(0.875rem,2.4vw,1.125rem)]"
       >
-        <Wallet className="size-5 md:size-6 lg:size-7" strokeWidth={1.5} />
+        {!emitiendo && <Wallet className="size-[1.25em]" strokeWidth={1.6} />}
         {emitiendo
           ? t("adding")
           : esIOS()
             ? t("ctaApple")
             : t("ctaGoogle")}
-      </button>
+      </Button>
 
       {error && (
-        <p className="mt-2 text-center text-sm text-danger-600">{error}</p>
+        <p className="mt-2 text-center text-sm text-white">{error}</p>
       )}
     </div>
   );

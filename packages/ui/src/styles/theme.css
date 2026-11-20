@@ -13,6 +13,12 @@
 /* Y los de @even/payments (CardScanner, formularios de pago), que usan los tokens del tema. */
 @source "../../../payments/src";
 
+/*
+ * Pantallas de poca altura (iPhone SE/8 con 667px, Android compactos con 640px): `short:` compacta el hero del flujo
+ * de pago para que cada vista quepa sin scroll del documento. En pantallas altas no cambia nada.
+ */
+@custom-variant short (@media (max-height: 700px));
+
 @theme static {
   /* Marca (mismos nombres que el landing) */
   --color-even-grass: #82e657; /* primario: CTAs, marca, éxito */

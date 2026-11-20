@@ -496,7 +496,7 @@ export default function TipSelectionPage() {
   // Aún sin datos de la mesa: el esqueleto del paso (su forma depende del tipo de pago) y la transición espera.
   if (isLoading) {
     return (
-      <div className="min-h-dvh brand-evergreen flex flex-col app-root">
+      <div className={`brand-evergreen flex flex-col app-root ${isSelectItems ? "h-dvh overflow-hidden" : "min-h-dvh"}`}>
         <MenuHeaderBack
           restaurant={restaurantData}
           tableNumber={state.tableNumber}
@@ -510,8 +510,9 @@ export default function TipSelectionPage() {
 
   return (
     <div
-      className={`min-h-dvh brand-evergreen flex flex-col app-root ${
-        isSelectItems ? " overflow-y-auto overflow-x-hidden" : ""
+      className={`brand-evergreen flex flex-col app-root ${
+        // Con artículos solo la lista de la tarjeta se desplaza: el documento queda a la altura de la pantalla.
+        isSelectItems ? "h-dvh overflow-hidden" : "min-h-dvh"
       }`}
     >
       <MenuHeaderBack
@@ -550,12 +551,11 @@ export default function TipSelectionPage() {
         <>
           <FlowStepCard
             step="tip-selection"
-            // Con artículos a elegir la tarjeta crece con la lista y deja lugar al resumen fijo de abajo.
+            // Con artículos la tarjeta mide lo que su contenido hasta llenar la pantalla: la lista se desplaza y el resumen queda fijo.
             cardClassName={
-              isSelectItems
-                ? `flex-none px-0 md:px-0 lg:px-0 pt-8 md:pt-10 lg:pt-12 ${isUnderMinimum ? "pb-75" : "pb-60"}`
-                : undefined
+              isSelectItems ? "min-h-0 flex-initial px-0 md:px-0 lg:px-0 pt-8 md:pt-10 lg:pt-12 pb-0 short:pt-4" : undefined
             }
+            className={isSelectItems ? "min-h-0" : undefined}
             hero={
               isSelectItems ? (
                 <div className="relative">
@@ -637,14 +637,14 @@ export default function TipSelectionPage() {
 
                 {/* Seleccionar artículos específicos */}
                 {paymentType === "select-items" && (
-                  <div className="mb-6 px-8 md:px-10 lg:px-12">
+                  <div className="flex min-h-0 flex-col px-8 md:px-10 lg:px-12">
                     {filteredUnpaidDishes.length > 0 && (
-                      <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-14 justify-end translate-y-4">
+                      <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-14 justify-end flex-none">
                         <span>{t("qtyLabel")}</span>
                         <span>{t("priceLabel")}</span>
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <div data-select-items-list className="min-h-0 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain">
                       {filteredUnpaidDishes.map((dish) => {
                         const isSelected = selectedItems.includes(
                           dish.dish_order_id,
@@ -788,16 +788,10 @@ export default function TipSelectionPage() {
                     </div>
                   </div>
                 )}
-          </FlowStepCard>
-
-          {/* Propina y botón de pagar - fijos cuando es select-items */}
+          {/* Propina y botón de pagar: fijos bajo la lista cuando es select-items */}
           {paymentType === "select-items" && (
             <div
-              className="fixed fixed-col bottom-0 bg-white pt-8 md:pt-10 lg:pt-12"
-              style={{
-                paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
-                zIndex: 40,
-              }}
+              className="flex-none bg-white pt-8 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pt-10 lg:pt-12 short:pt-4 short:pb-[max(1rem,env(safe-area-inset-bottom))]"
             >
               <div className="px-8 md:px-10 lg:px-12">
                 {selectItemsExceedsRemaining && (
@@ -845,6 +839,7 @@ export default function TipSelectionPage() {
               </div>
             </div>
           )}
+          </FlowStepCard>
         </>
       )}
 

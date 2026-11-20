@@ -26,7 +26,7 @@ const SHEET_PADDING_X = "px-6 md:px-8 lg:px-10";
 export const sheetClasses = {
   screen: "app-col relative z-10 isolate flex min-h-dvh flex-col",
   // Bloque superior fijo del flujo: misma posición en todas las vistas (la tarjeta se ancla abajo).
-  hero: "sheet-hero z-0 flex-none px-8 pt-9 pb-6 md:px-10 md:pt-10 md:pb-8 lg:px-12 lg:pt-12 lg:pb-10",
+  hero: "sheet-hero z-0 flex-none px-8 pt-9 pb-6 md:px-10 md:pt-10 md:pb-8 lg:px-12 lg:pt-12 lg:pb-10 short:pt-3 short:pb-2",
   card: cn("sheet-card relative z-10 flex w-full flex-1 flex-col rounded-t-4xl bg-white", SHEET_PADDING_X),
 } as const;
 

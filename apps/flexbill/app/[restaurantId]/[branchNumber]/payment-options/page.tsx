@@ -353,7 +353,7 @@ export default function PaymentOptionsPage() {
                     onClick={handlePayFullBill}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 short:py-3 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <ReceiptText
                           className="text-black size-9 md:size-11 lg:size-12"
@@ -378,7 +378,7 @@ export default function PaymentOptionsPage() {
                     onClick={handleSelectItems}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 short:py-3 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <img
                           src="/icons/select-items-logo.svg"
@@ -404,7 +404,7 @@ export default function PaymentOptionsPage() {
                     onClick={handleEqualShares}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 short:py-3 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <img
                           src="/icons/split-bill-logo.png"
@@ -430,7 +430,7 @@ export default function PaymentOptionsPage() {
                     onClick={handleChooseAmount}
                     className="w-full bg-white cursor-pointer active:bg-even-grass/10 transition-all duration-300"
                   >
-                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
+                    <div className="flex items-center gap-4 md:gap-5 lg:gap-6 py-4 short:py-3 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6">
                       <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md border border-black flex items-center justify-center">
                         <DollarSign
                           className="text-black size-9 md:size-11 lg:size-12"

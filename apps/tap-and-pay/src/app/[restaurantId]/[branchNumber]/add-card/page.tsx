@@ -279,9 +279,9 @@ function AddCardContent() {
               )}
 
               {/* Add Card Form */}
-              <div className="space-y-4 md:space-y-5 text-sm md:text-base lg:text-lg">
+              <div className="space-y-4 short:space-y-2.5 md:space-y-5 text-sm md:text-base lg:text-lg">
                 <div>
-                  <label className="block text-tone-700 mb-2">
+                  <label className="block text-tone-700 mb-2 short:mb-1">
                     {t("fullNameLabel")}
                   </label>
                   <input
@@ -291,7 +291,7 @@ function AddCardContent() {
                     onKeyDown={handleKeyDown}
                     autoComplete="cc-name"
                     placeholder="John Doe"
-                    className={`w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black rounded-lg focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent ${errors.fullName ? "border-danger-500 bg-danger-50" : "border-tone-300"}`}
+                    className={`w-full px-4 md:px-5 lg:px-6 py-3 short:py-2 md:py-4 lg:py-5 border text-black rounded-lg focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent ${errors.fullName ? "border-danger-500 bg-danger-50" : "border-tone-300"}`}
                   />
                   {errors.fullName && (
                     <p className="text-danger-500 text-xs mt-1">
@@ -301,7 +301,7 @@ function AddCardContent() {
                 </div>
 
                 <div>
-                  <label className="block text-tone-700 mb-2">
+                  <label className="block text-tone-700 mb-2 short:mb-1">
                     {t("cardNumberLabel")}
                   </label>
                   <input
@@ -313,7 +313,7 @@ function AddCardContent() {
                     inputMode="numeric"
                     placeholder="**** 2098"
                     maxLength={19}
-                    className={`w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 text-black rounded-lg focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent ${errors.cardNumber ? "border border-danger-500 bg-danger-50" : "bg-tone-100 border border-tone-200"}`}
+                    className={`w-full px-4 md:px-5 lg:px-6 py-3 short:py-2 md:py-4 lg:py-5 text-black rounded-lg focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent ${errors.cardNumber ? "border border-danger-500 bg-danger-50" : "bg-tone-100 border border-tone-200"}`}
                   />
                   {errors.cardNumber && (
                     <p className="text-danger-500 text-xs mt-1">
@@ -324,7 +324,7 @@ function AddCardContent() {
 
                 {/* Expiration Date */}
                 <div>
-                  <label className="block text-tone-700 mb-2">
+                  <label className="block text-tone-700 mb-2 short:mb-1">
                     {t("expiryLabel")}
                   </label>
                   <div className="flex gap-3">
@@ -334,7 +334,7 @@ function AddCardContent() {
                         setExpMonthIdx(MONTHS.indexOf(e.target.value))
                       }
                       autoComplete="cc-exp-month"
-                      className="flex-1 px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 rounded-lg text-black focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent bg-tone-100 border border-tone-200"
+                      className="flex-1 px-4 md:px-5 lg:px-6 py-3 short:py-2 md:py-4 lg:py-5 rounded-lg text-black focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent bg-tone-100 border border-tone-200"
                     >
                       {MONTHS.map((m) => (
                         <option key={m} value={m}>
@@ -348,7 +348,7 @@ function AddCardContent() {
                         setExpYearIdx(YEARS.indexOf(e.target.value))
                       }
                       autoComplete="cc-exp-year"
-                      className="flex-1 px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 rounded-lg text-black focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent bg-tone-100 border border-tone-200"
+                      className="flex-1 px-4 md:px-5 lg:px-6 py-3 short:py-2 md:py-4 lg:py-5 rounded-lg text-black focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent bg-tone-100 border border-tone-200"
                     >
                       {YEARS.map((y) => (
                         <option key={y} value={y}>
@@ -361,7 +361,7 @@ function AddCardContent() {
 
                 {/* CVV Field */}
                 <div>
-                  <label className="block text-tone-700 mb-2">CVV</label>
+                  <label className="block text-tone-700 mb-2 short:mb-1">CVV</label>
                   <input
                     type="text"
                     value={cvv}
@@ -371,7 +371,7 @@ function AddCardContent() {
                     inputMode="numeric"
                     placeholder="123"
                     maxLength={4}
-                    className={`w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 text-black rounded-lg focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent ${errors.cvv ? "border border-danger-500 bg-danger-50" : "border border-tone-300"}`}
+                    className={`w-full px-4 md:px-5 lg:px-6 py-3 short:py-2 md:py-4 lg:py-5 text-black rounded-lg focus:outline-none focus:ring focus:ring-even-grass focus:border-transparent ${errors.cvv ? "border border-danger-500 bg-danger-50" : "border border-tone-300"}`}
                   />
                   {errors.cvv && (
                     <p className="text-danger-500 text-xs mt-1">{errors.cvv}</p>
@@ -383,7 +383,7 @@ function AddCardContent() {
               <button
                 onClick={handleSave}
                 disabled={isLoading}
-                className="bg-black hover:bg-warm-950 text-base md:text-lg lg:text-xl w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors mt-8 disabled:bg-warm-600 disabled:cursor-not-allowed"
+                className="bg-black hover:bg-warm-950 text-base md:text-lg lg:text-xl w-full text-white py-3 short:py-2 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors mt-8 short:mt-4 disabled:bg-warm-600 disabled:cursor-not-allowed"
               >
                 {isLoading ? t("savingCta") : t("saveCta")}
               </button>

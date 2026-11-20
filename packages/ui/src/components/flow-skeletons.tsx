@@ -124,13 +124,13 @@ export type CardSelectionSkeletonLabels = {
  */
 export function CardSelectionSkeleton({ labels }: { labels: CardSelectionSkeletonLabels }) {
   return (
-    <div className="flex-1 py-8 pb-[130px]">
-      <h3 className={cn("mb-3", CARD_LABEL)}>{labels.paymentMethods}</h3>
+    <div className="flex-1 py-8 pb-[130px] short:py-3 short:pb-[96px]">
+      <h3 className={cn("mb-3 short:mb-2", CARD_LABEL)}>{labels.paymentMethods}</h3>
       <div className="space-y-2.5">
-        <div className="h-[58px] w-full animate-pulse rounded-full bg-tone-100" />
-        <div className="h-[58px] w-full animate-pulse rounded-full bg-tone-100" />
+        <div className="h-[58px] w-full animate-pulse rounded-full bg-tone-100 short:h-[50px]" />
+        <div className="h-[58px] w-full animate-pulse rounded-full bg-tone-100 short:h-[50px]" />
       </div>
-      <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:px-8 lg:px-10">
+      <div className="fixed fixed-col bottom-0 z-10 bg-white px-6 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] short:py-4 md:px-8 lg:px-10">
         <PayButtonSkeleton label={labels.payCta} />
       </div>
     </div>
@@ -144,7 +144,7 @@ export function PaymentOptionsSkeleton() {
       <div className="mt-4 flex flex-col md:mt-6">
         {[1, 2, 3, 4].map((item) => (
           <div key={item} className="w-full animate-pulse border-b border-stroke bg-white">
-            <div className="flex items-center gap-4 px-4 py-4 md:gap-5 md:px-5 md:py-5 lg:gap-6 lg:px-6 lg:py-6">
+            <div className="flex items-center gap-4 px-4 py-4 short:py-3 md:gap-5 md:px-5 md:py-5 lg:gap-6 lg:px-6 lg:py-6">
               <div className="size-16 rounded-sm bg-tone-200 md:size-20 md:rounded-md lg:size-24" />
               <div className="flex-1">
                 <div className="h-6 w-3/4 rounded bg-tone-200" />
@@ -230,13 +230,13 @@ export type AddCardSkeletonLabels = {
 };
 
 const ADD_CARD_INPUT =
-  "w-full animate-pulse rounded-lg border border-transparent bg-tone-100 px-4 py-3 md:px-5 md:py-4 lg:px-6 lg:py-5";
+  "w-full animate-pulse rounded-lg border border-transparent bg-tone-100 px-4 py-3 short:py-2 md:px-5 md:py-4 lg:px-6 lg:py-5";
 
 /** Cuerpo de "agregar tarjeta": cuatro campos y el botón de guardar, con las mismas clases que el formulario real. */
 export function AddCardSkeleton({ labels }: { labels: AddCardSkeletonLabels }) {
   const field = (label: ReactNode) => (
     <div className="text-sm md:text-base lg:text-lg">
-      <span className="mb-2 block text-tone-700">{label}</span>
+      <span className="mb-2 block text-tone-700 short:mb-1">{label}</span>
       <div className={ADD_CARD_INPUT}>
         <span className="invisible">Dato</span>
       </div>
@@ -244,11 +244,11 @@ export function AddCardSkeleton({ labels }: { labels: AddCardSkeletonLabels }) {
   );
   return (
     <>
-      <div className="space-y-4 text-sm md:space-x-5 md:text-base lg:text-lg">
+      <div className="space-y-4 text-sm short:space-y-2.5 md:space-x-5 md:text-base lg:text-lg">
         {field(labels.fullName)}
         {field(labels.cardNumber)}
         <div className="text-sm md:text-base lg:text-lg">
-          <span className="mb-2 block text-tone-700">{labels.expiry}</span>
+          <span className="mb-2 block text-tone-700 short:mb-1">{labels.expiry}</span>
           <div className="flex gap-3">
             <div className={cn(ADD_CARD_INPUT, "flex-1")}>
               <span className="invisible">01</span>
@@ -260,7 +260,7 @@ export function AddCardSkeleton({ labels }: { labels: AddCardSkeletonLabels }) {
         </div>
         {field("CVV")}
       </div>
-      <div className="mt-8 w-full animate-pulse rounded-full bg-black/20 py-3 text-base md:py-4 md:text-lg lg:py-5 lg:text-xl">
+      <div className="mt-8 w-full animate-pulse rounded-full bg-black/20 py-3 text-base short:mt-4 short:py-2 md:py-4 md:text-lg lg:py-5 lg:text-xl">
         <span className="invisible block text-center">{labels.saveCta}</span>
       </div>
     </>
@@ -295,7 +295,7 @@ export function ChooseAmountSkeletonBlock({
 
 /**
  * Cuerpo de "seleccionar artículos": encabezado de columnas, filas de platillos (casilla, foto, nombre, cantidad y
- * precio), la indicación de elegir uno y el resumen fijo abajo. La cantidad de filas real depende de la mesa.
+ * precio), la indicación de elegir uno y el resumen fijo abajo (dentro de la tarjeta, bajo la lista que se desplaza). La cantidad de filas real depende de la mesa.
  */
 export function SelectItemsSkeleton({
   labels,
@@ -313,12 +313,12 @@ export function SelectItemsSkeleton({
 }) {
   return (
     <>
-      <div className="mb-6 px-8 md:px-10 lg:px-12">
-        <div className="flex translate-y-4 justify-end gap-10 text-sm font-medium text-black md:gap-12 md:text-base lg:gap-14 lg:text-lg">
+      <div className="flex min-h-0 flex-col px-8 md:px-10 lg:px-12">
+        <div className="flex flex-none justify-end gap-10 text-sm font-medium text-black md:gap-12 md:text-base lg:gap-14 lg:text-lg">
           <span>{labels.qty}</span>
           <span>{labels.price}</span>
         </div>
-        <div className="space-y-3">
+        <div className="min-h-0 space-y-3 overflow-hidden">
           {Array.from({ length: Math.max(rows, 1) }, (_, row) => (
             <div key={row} className="py-3 md:py-4 lg:py-5">
               <div className="flex items-center justify-between gap-3">
@@ -342,7 +342,7 @@ export function SelectItemsSkeleton({
         </div>
         <Ghost className="mt-2 block text-center text-sm md:text-base lg:text-lg">{labels.hint}</Ghost>
       </div>
-      <div className="fixed fixed-col bottom-0 z-40 bg-white pt-8 pb-6 md:pt-10 lg:pt-12">
+      <div className="flex-none bg-white pt-8 pb-6 md:pt-10 lg:pt-12 short:pt-4 short:pb-4">
         <TipSkeleton labels={labels} />
       </div>
     </>

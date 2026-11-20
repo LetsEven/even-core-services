@@ -117,7 +117,7 @@ export function chooseAmountScreen({
   };
 }
 
-/** Propina de "seleccionar artículos": la tarjeta crece con la lista y el resumen queda fijo abajo. */
+/** Propina de "seleccionar artículos": solo la lista de la tarjeta se desplaza y el resumen queda fijo abajo. */
 export function selectItemsScreen({
   context,
   contextClassName,
@@ -139,8 +139,9 @@ export function selectItemsScreen({
     hero: amountHero({ context, contextClassName, title, amountLabel }),
     body: <SelectItemsSkeleton labels={labels} showImages={showImages} showGuest={showGuest} rows={rows} />,
     layout: "anchored",
-    // Al inicio no hay nada elegido (bajo el mínimo): la tarjeta reserva el alto del resumen fijo con su aviso.
-    cardClassName: "flex-none px-0 md:px-0 lg:px-0 pt-8 pb-75 md:pt-10 lg:pt-12",
+    // La tarjeta mide lo que su contenido hasta llenar la pantalla: la lista se desplaza y el resumen queda fijo.
+    cardClassName: "min-h-0 flex-initial px-0 md:px-0 lg:px-0 pt-8 pb-0 md:pt-10 lg:pt-12 short:pt-4",
+    frameClassName: "min-h-0",
   };
 }
 
@@ -188,6 +189,6 @@ export function addCardScreen({
   return {
     hero: <TitleHero context={context} contextClassName={contextClassName} title={title} subtitle={subtitle} />,
     body: <AddCardSkeleton labels={labels} />,
-    cardClassName: "py-6 md:py-8 lg:py-10",
+    cardClassName: "py-6 short:py-4 md:py-8 lg:py-10",
   };
 }

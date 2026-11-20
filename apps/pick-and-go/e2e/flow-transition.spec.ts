@@ -92,10 +92,24 @@ test.describe("transición de tarjeta del acceso (auth-selection)", () => {
   });
 });
 
-/** Vistas sin contenido largo: ni la página ni la tarjeta deben mostrar scroll (la lista de artículos queda fuera a propósito). */
-for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }]) {
+/**
+ * Pantallas altas y bajas (iPhone SE 375x667, Android compacto 360x640): el hero se compacta por altura y todas las
+ * vistas del flujo caben sin scroll del documento.
+ */
+const SCROLL_VIEWPORTS = [
+  { width: 390, height: 844 },
+  { width: 768, height: 1024 },
+  { width: 375, height: 667 },
+  { width: 360, height: 640 },
+];
+
+/** Vistas sin contenido largo: ni la página ni la tarjeta deben mostrar scroll (la lista de artículos se prueba aparte). */
+for (const viewport of SCROLL_VIEWPORTS) {
   test.describe(`sin scrolls inesperados (${viewport.width}x${viewport.height})`, () => {
     test.use({ viewport });
+    // En 360x640 los métodos de pago (tarjeta, Apple/Google Pay, agregar) con el desglose de comisión no caben del todo:
+    // la vista se desplaza con el botón de pagar fijo. En el resto de tamaños cabe sin scroll.
+    const cardSelectionScroll = { allowDocumentY: viewport.height <= 640 };
 
     test("carrito, confirmación, pago, agregar tarjeta y acceso no tienen scroll", async ({ page }) => {
       await mockPickAndGoApi(page, { cartItems: cartWithClubSandwich });
@@ -110,9 +124,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 
 
       await expectFlowTransition(page, () => page.getByRole("button", { name: /^Pagar \$/ }).click(), {
         step: "card-selection",
+        // Donde la vista real se desplaza, el esqueleto (que no desborda) no puede medir lo mismo.
+        skipHeightCheck: viewport.height <= 640,
       });
       await expect(page.getByText(/•••• 4242|\*\*\*\* 4242/)).toBeVisible();
-      await expectNoUnexpectedScroll(page, {}, "card-selection");
+      await expectNoUnexpectedScroll(page, cardSelectionScroll, "card-selection");
 
       await expectFlowTransition(page, () => page.getByRole("button", { name: "Agregar método de pago" }).click(), {
         step: "add-card",
@@ -120,8 +136,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 
       await expect(page.getByPlaceholder("123")).toBeVisible();
       await expectNoUnexpectedScroll(page, {}, "add-card");
 
-      await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "card-selection" });
-      await expectNoUnexpectedScroll(page, {}, "card-selection (vuelta)");
+      await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), {
+        step: "card-selection",
+        skipHeightCheck: viewport.height <= 640,
+      });
+      await expectNoUnexpectedScroll(page, cardSelectionScroll, "card-selection (vuelta)");
 
       await page.goto("/4/auth-selection?branch=1");
       await expect(page.getByPlaceholder("Número de teléfono")).toBeVisible();

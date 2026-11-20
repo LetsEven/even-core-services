@@ -41,7 +41,7 @@ export function ReceiptPaper({ mode = "appear", printMs = RECEIPT_PRINT_MS, clas
   const paper = (
     <div className="drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)]">
       <div
-        className={cn("relative bg-even-offwhite text-even-ink px-5 pt-5 font-mono", className)}
+        className={cn("relative bg-even-offwhite text-even-ink px-5 pt-5 short:pt-3 font-mono", className)}
         style={{ ...ZIGZAG, paddingBottom: TOOTH + 16 }}
       >
         {children}
@@ -55,7 +55,7 @@ export function ReceiptPaper({ mode = "appear", printMs = RECEIPT_PRINT_MS, clas
         {/* Ranura de la impresora */}
         <div className="relative z-10 mx-auto h-3 w-[96%] rounded-full bg-black/70 shadow-[inset_0_2px_3px_rgba(0,0,0,0.6)]" />
         {/* El ticket entero (con su contenido) sale de la ranura y baja a tirones; el hueco ya está reservado */}
-        <div className="-mt-1.5 overflow-hidden px-3 pb-4">
+        <div className="-mt-1.5 overflow-hidden px-3 pb-4 short:pb-2">
           <m.div
             initial={{ y: PRINT_Y[0] }}
             animate={{ y: PRINT_Y }}
@@ -69,12 +69,12 @@ export function ReceiptPaper({ mode = "appear", printMs = RECEIPT_PRINT_MS, clas
   }
 
   if (mode === "static") {
-    return <div className="w-full px-3 pb-4">{paper}</div>;
+    return <div className="w-full px-3 pb-4 short:pb-2">{paper}</div>;
   }
 
   return (
     <m.div
-      className="w-full px-3 pb-4"
+      className="w-full px-3 pb-4 short:pb-2"
       initial={{ opacity: 0, y: 28, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ ...SPRING, opacity: { duration: 0.18 } }}
@@ -132,7 +132,7 @@ export function ReceiptStamp({
 
 /** Línea punteada divisoria del ticket. */
 export function ReceiptRule({ className }: { className?: string }) {
-  return <div role="separator" className={cn("my-3 border-t-2 border-dashed border-even-ink/25", className)} />;
+  return <div role="separator" className={cn("my-3 short:my-2 border-t-2 border-dashed border-even-ink/25", className)} />;
 }
 
 /** Renglón del ticket: concepto a la izquierda, importe a la derecha. */
@@ -150,7 +150,7 @@ export function ReceiptRow({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-start justify-between gap-3 py-1.5", strong && "font-bold", className)}>
+    <div className={cn("flex items-start justify-between gap-3 py-1.5 short:py-1", strong && "font-bold", className)}>
       <div className="min-w-0 flex-1">
         <div className="text-sm leading-snug">{left}</div>
         {sub ? <div className="mt-0.5 text-xs text-even-ink/55">{sub}</div> : null}

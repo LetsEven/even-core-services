@@ -1768,9 +1768,9 @@ export default function CardSelectionPage() {
 
         {/* Contenido scrolleable */}
         <FlowStepCard step="card-selection">
-              <div className="flex-1 overflow-y-auto py-8 pb-[130px]">
+              <div className="flex-1 overflow-y-auto py-8 pb-[130px] short:py-3 short:pb-[96px]">
                 {/* "Pagar en meses" (el total vive en el hero) */}
-                <div className="mb-6">
+                <div className="mb-6 short:mb-2">
                   {(() => {
                     const selectedMethod = allPaymentMethods.find(
                       (pm) => pm.id === selectedPaymentMethodId,
@@ -1844,7 +1844,7 @@ export default function CardSelectionPage() {
 
                   {/* Saved Cards List */}
                   <div className="space-y-2.5 mb-2.5">
-                    <h3 className="mb-3 text-lg font-medium text-black md:text-xl lg:text-2xl">
+                    <h3 className="mb-3 text-lg font-medium text-black short:mb-2 md:text-xl lg:text-2xl">
                       {t("paymentMethodsLabel")}
                     </h3>
                     {(showAllCards
@@ -1855,7 +1855,7 @@ export default function CardSelectionPage() {
                     ).map((method) => (
                         <div
                           key={method.id}
-                          className={`flex items-center py-4 px-5 pl-10 border rounded-full transition-colors ${
+                          className={`flex items-center py-4 px-5 pl-10 short:py-3 border rounded-full transition-colors ${
                             selectedPaymentMethodId === method.id
                               ? "border-even-grass bg-even-grass/10"
                               : "border-black/50  bg-surface"
@@ -1916,7 +1916,7 @@ export default function CardSelectionPage() {
                       <button
                         type="button"
                         onClick={() => setShowAllCards(true)}
-                        className="w-full py-1.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
+                        className="w-full py-1.5 short:py-0.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
                       >
                         {t("showOtherCards", {
                           count: allPaymentMethods.length - 1,
@@ -2015,7 +2015,7 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija — botón pagar */}
         <div
-          className={`fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-opacity duration-200 ${paymentStatus ? "opacity-0 pointer-events-none" : ""}`}
+          className={`fixed fixed-col bottom-0 bg-white mx-4 px-8 z-90 py-6 short:py-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-opacity duration-200 ${paymentStatus ? "opacity-0 pointer-events-none" : ""}`}
         >
           <PayButton
             onClick={handlePayment}
@@ -2080,7 +2080,7 @@ export default function CardSelectionPage() {
                     cardBrand === "amex" ? msiConfig.amex : msiConfig.visaMc;
 
                   return (
-                    <div className="space-y-2.5">
+                    <div className="space-y-2.5 short:space-y-1.5">
                       {/* Opción: Pago completo */}
                       <div
                         onClick={() => setSelectedMSI(null)}

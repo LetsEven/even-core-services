@@ -70,8 +70,8 @@ const menu = [
   },
 ];
 
-/** Dos club sándwich sin pagar en la mesa: $360. */
-export const dishOrders = [1, 2].map((n) => ({
+/** Platillos sin pagar de la mesa: `dishOrders` son dos club sándwich ($360); `manyDishOrders` una lista más larga que la pantalla. */
+const makeDishOrders = (count: number) => Array.from({ length: count }, (_, i) => i + 1).map((n) => ({
   dish_order_id: `do_e2e_${n}`,
   menu_item_id: clubSandwich.id,
   item: clubSandwich.name,
@@ -88,7 +88,12 @@ export const dishOrders = [1, 2].map((n) => ({
   images: [],
 }));
 
+export const dishOrders = makeDishOrders(2);
+export const manyDishOrders = makeDishOrders(14);
+
 export interface FlexBillApiOptions {
+  /** Platillos sin pagar de la mesa; por defecto `dishOrders`. */
+  dishes?: typeof dishOrders;
   /** Respuesta al crear la orden de Apple/Google Pay. Por defecto, un 503 pasajero. */
   walletOrder?: MockResponse;
   payments?: Omit<PaymentsApiOptions, "apiUrl">;
@@ -99,7 +104,7 @@ export interface FlexBillApiOptions {
  * `mockPaymentsApi` y el resto (validación de mesa, menú, cuenta de la mesa,
  * POS) aquí. Lo que no tenga mock lo aborta el guard de red de `@even/e2e`.
  */
-export async function mockFlexBillApi(page: Page, { walletOrder, payments }: FlexBillApiOptions = {}) {
+export async function mockFlexBillApi(page: Page, { walletOrder, payments, dishes = dishOrders }: FlexBillApiOptions = {}) {
   const wallet = walletOrder ?? { status: 503, body: { success: false, error: "Servicio no disponible" } };
   const tablePath = String.raw`\/restaurants\/\d+\/branches\/\d+\/tables\/[^/]+`;
 
@@ -124,7 +129,7 @@ export async function mockFlexBillApi(page: Page, { walletOrder, payments }: Fle
         },
       },
     ],
-    ["GET", new RegExp(`^${tablePath}\\/orders$`), { success: true, data: dishOrders }],
+    ["GET", new RegExp(`^${tablePath}\\/orders$`), { success: true, data: dishes }],
     ["GET", new RegExp(`^${tablePath}\\/active-users$`), { success: true, data: [] }],
     ["GET", new RegExp(`^${tablePath}\\/equal-split-selection$`), { success: true, data: null }],
     // Sin POS integrado: el pedido no depende de un agente conectado.

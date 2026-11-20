@@ -5,6 +5,7 @@ import {
   CARD_SELECTION_URL,
   ORDER_URL,
   PAYMENT_OPTIONS_URL,
+  manyDishOrders,
   mockFlexBillApi,
   mockFlexBillAuthApi,
 } from "./mocks";
@@ -224,8 +225,19 @@ test.describe("transición de tarjeta del flujo secundario: cuenta → acceso", 
   });
 });
 
-/** Vistas sin contenido largo: ni la página ni la tarjeta deben mostrar scroll (la lista de artículos queda fuera a propósito). */
-for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }]) {
+/**
+ * Pantallas altas y bajas (iPhone SE 375x667, Android compacto 360x640): el hero se compacta por altura y todas las
+ * vistas del flujo caben sin scroll del documento.
+ */
+const SCROLL_VIEWPORTS = [
+  { width: 390, height: 844 },
+  { width: 768, height: 1024 },
+  { width: 375, height: 667 },
+  { width: 360, height: 640 },
+];
+
+/** Vistas sin contenido largo: ni la página ni la tarjeta deben mostrar scroll (la lista de artículos se prueba aparte). */
+for (const viewport of SCROLL_VIEWPORTS) {
   test.describe(`sin scrolls inesperados (${viewport.width}x${viewport.height})`, () => {
     test.use({ viewport });
 
@@ -258,6 +270,38 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 
       // Y de vuelta: la transición de bajada tampoco deja scroll.
       await expectFlowTransition(page, () => page.getByTestId("flow-back").click(), { step: "card-selection" });
       await expectNoUnexpectedScroll(page, {}, "card-selection (vuelta)");
+    });
+
+    test("seleccionar artículos: solo la lista se desplaza; hero y resumen quedan fijos", async ({ page }) => {
+      await mockFlexBillApi(page, { dishes: manyDishOrders });
+      await mockFlexBillAuthApi(page);
+      await page.goto("/4/1/payment-options?table=12&session=e2e-table-session");
+      await expect(page.getByText("Seleccionar artículos")).toBeVisible();
+      await expectFlowTransition(page, () => page.getByText("Seleccionar artículos").click(), {
+        step: "tip-selection",
+        tolerance: 12,
+      });
+      const list = page.locator("[data-select-items-list]");
+      await expect(list).toBeVisible();
+      await expectNoUnexpectedScroll(page, { allow: ["[data-select-items-list]"] }, "select-items");
+
+      // La lista es lo único que se desplaza (hay más artículos que espacio) y tiene un alto razonable.
+      const metrics = await list.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
+      expect(metrics.scroll).toBeGreaterThan(metrics.client);
+      expect(metrics.client).toBeGreaterThan(60);
+      // Desplazar la lista no mueve el hero ni el resumen de pago, y el documento sigue sin scroll.
+      const heroTop = async () => page.locator("[data-flow-hero]").first().evaluate((el) => Math.round(el.getBoundingClientRect().top));
+      const payBox = async () => page.getByRole("button", { name: /^Pagar \$/ }).boundingBox();
+      const before = { hero: await heroTop(), pay: await payBox() };
+      await list.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+      expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+      expect(await heroTop()).toBe(before.hero);
+      expect(await payBox()).toEqual(before.pay);
+      expect(before.hero).toBeGreaterThanOrEqual(0);
+      const viewportHeight = page.viewportSize()!.height;
+      expect(before.pay!.y + before.pay!.height).toBeLessThanOrEqual(viewportHeight);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      await expectNoUnexpectedScroll(page, { allow: ["[data-select-items-list]"] }, "select-items (desplazada)");
     });
 
     test("acceso y nombre no tienen scroll", async ({ page }) => {

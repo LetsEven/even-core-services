@@ -1494,7 +1494,7 @@ export default function CardSelectionPage() {
         <MenuHeaderBack />
 
         <FlowStepCard step="card-selection">
-              <div className="flex-1 overflow-y-auto py-8 pb-[130px]">
+              <div className="flex-1 overflow-y-auto py-8 pb-[130px] short:py-3 short:pb-[96px]">
                 {/* Descuento (el total vive en el hero) */}
                 {accountDiscount && orderDiscountAmount > 0 && (
                   <div className="mb-4 flex items-center justify-between">
@@ -1563,10 +1563,10 @@ export default function CardSelectionPage() {
 
                 {/* Métodos de pago */}
                 <div className="mb-2.5">
-                  <h3 className="mb-3 text-lg font-medium text-black md:text-xl lg:text-2xl">
+                  <h3 className="mb-3 text-lg font-medium text-black short:mb-2 md:text-xl lg:text-2xl">
                     Métodos de pago
                   </h3>
-                  <div className="space-y-2.5">
+                  <div className="space-y-2.5 short:space-y-1.5">
                     {(showAllCards
                       ? allPaymentMethods
                       : allPaymentMethods.filter(
@@ -1575,7 +1575,7 @@ export default function CardSelectionPage() {
                     ).map((method) => (
                       <div
                         key={method.id}
-                        className={`flex items-center py-4 px-5 pl-10 border rounded-full transition-colors ${
+                        className={`flex items-center py-4 px-5 pl-10 short:py-3 border rounded-full transition-colors ${
                           selectedPaymentMethodId === method.id
                             ? "border-even-grass bg-even-grass/10"
                             : "border-black/50 bg-surface"
@@ -1632,7 +1632,7 @@ export default function CardSelectionPage() {
                       <button
                         type="button"
                         onClick={() => setShowAllCards(true)}
-                        className="w-full py-1.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
+                        className="w-full py-1.5 short:py-0.5 text-sm md:text-base font-medium text-tone-600 underline underline-offset-4 cursor-pointer"
                       >
                         {t("showOtherCards", {
                           count: allPaymentMethods.length - 1,
@@ -1651,7 +1651,7 @@ export default function CardSelectionPage() {
                       !isLoadingAgentStatus &&
                       !isAgentDisconnected &&
                       !isTurnoClosed && (
-                        <div className="relative w-full h-12">
+                        <div className="relative w-full h-12 short:h-11">
                           <div id="apple-pay-container" className="w-full" />
                           {cartBlock && (
                             <div
@@ -1685,7 +1685,7 @@ export default function CardSelectionPage() {
                       !isLoadingAgentStatus &&
                       !isAgentDisconnected &&
                       !isTurnoClosed && (
-                        <div className="relative w-full h-12">
+                        <div className="relative w-full h-12 short:h-11">
                           <div id="google-pay-container" className="w-full" />
                           {cartBlock && (
                             <div
@@ -1734,7 +1734,7 @@ export default function CardSelectionPage() {
                 <div className="mb-2.5">
                   <button
                     onClick={handleAddCard}
-                    className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full cursor-pointer transition-colors bg-surface hover:bg-tone-100"
+                    className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 short:py-2 rounded-full cursor-pointer transition-colors bg-surface hover:bg-tone-100"
                   >
                     <Plus className="size-5" />
                     Agregar método de pago
@@ -1744,7 +1744,7 @@ export default function CardSelectionPage() {
         </FlowStepCard>
 
         {/* Barra inferior fija */}
-        <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="fixed fixed-col bottom-0 bg-white px-6 md:px-8 lg:px-10 z-90 py-6 short:py-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <PayButton
             onClick={handleInitiatePayment}
             disabled={

@@ -659,7 +659,7 @@ export default function TipSelectionPage() {
                 {paymentType === "select-items" && (
                   <div className="flex min-h-0 flex-col px-8 md:px-10 lg:px-12">
                     {filteredDishes.length > 0 && (
-                      <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-10 md:gap-12 lg:gap-14 justify-end flex-none">
+                      <div className="text-black font-medium text-sm md:text-base lg:text-lg flex gap-6 sm:gap-10 md:gap-12 lg:gap-14 justify-end flex-none">
                         <span>{t("qtyLabel")}</span>
                         <span>{t("priceLabel")}</span>
                       </div>
@@ -760,7 +760,7 @@ export default function TipSelectionPage() {
                                   )}
                                 </div>
                               </div>
-                              <div className="text-right flex gap-10 md:gap-12 lg:gap-14">
+                              <div className="text-right flex gap-6 sm:gap-10 md:gap-12 lg:gap-14">
                                 <p className="text-black text-base md:text-lg lg:text-xl">
                                   {dish.quantity}
                                 </p>

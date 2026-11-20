@@ -2,10 +2,13 @@
   "name": "@even/i18n",
   "version": "0.0.0",
   "private": true,
-  "description": "Textos compartidos de las apps de comensal (es/en) y helper para combinarlos con los de cada app.",
+  "description": "Textos compartidos de las apps de comensal (es/en), helpers para combinarlos con los de cada app, locale, acci\u00f3n de idioma y LanguageToggleButton.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./locale": "./src/locale.ts",
+    "./actions": "./src/actions.ts",
+    "./language-toggle-button": "./src/language-toggle-button.tsx",
     "./messages/es.json": "./src/messages/es.json",
     "./messages/en.json": "./src/messages/en.json"
   },
@@ -14,10 +17,24 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
+  "dependencies": {
+    "react-world-flags": "^1.6.0"
+  },
+  "peerDependencies": {
+    "next": "*",
+    "next-intl": "*",
+    "react": "^19"
+  },
   "devDependencies": {
     "@even/eslint-config": "*",
     "@even/tsconfig": "*",
+    "@types/node": "^22",
+    "@types/react": "^19.3.0",
+    "@types/react-world-flags": "^1.6.0",
     "eslint": "^9",
+    "next": "16.4.6",
+    "next-intl": "4.13.3",
+    "react": "19.2.9",
     "typescript": "^5.9.3",
     "vitest": "^5.0.4"
   }

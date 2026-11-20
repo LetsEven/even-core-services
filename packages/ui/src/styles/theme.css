@@ -12,6 +12,8 @@
 @source "../";
 /* Y los de @even/payments (CardScanner, formularios de pago), que usan los tokens del tema. */
 @source "../../../payments/src";
+/* Y los de @even/i18n (LanguageToggleButton). */
+@source "../../../i18n/src";
 
 /*
  * Pantallas de poca altura (iPhone SE/8 con 667px, Android compactos con 640px): `short:` compacta el hero del flujo

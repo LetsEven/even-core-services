@@ -4,7 +4,7 @@ import { lazy, Suspense } from "react";
 import { useNavigation } from "../../hooks/useNavigation";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 
-const LanguageToggleButton = lazy(() => import("../UI/LanguageToggleButton"));
+const LanguageToggleButton = lazy(() => import("@even/i18n/language-toggle-button"));
 
 interface DashboardHeaderProps {
   onClose?: () => void;

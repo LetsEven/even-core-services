@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthModalView, usePhoneAuth } from "@even/ui/diner";
-import LanguageToggleButton from "@/app/components/UI/LanguageToggleButton";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 import { useAuth } from "@/app/context/AuthContext";
 
 interface AuthViewProps {

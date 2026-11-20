@@ -20,7 +20,7 @@ import {
   useScrollLock,
 } from "@even/ui";
 import PepperIcon from "../UI/PepperIcon";
-import LanguageToggleButton from "../UI/LanguageToggleButton";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 import MenuCategory from "./MenuCategory";
 import { X, RefreshCw, Loader2, Utensils, ShoppingCart, ShoppingBag, CheckCircle2 } from "lucide-react";
 import {

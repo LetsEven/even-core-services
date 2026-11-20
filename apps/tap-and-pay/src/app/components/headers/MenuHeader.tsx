@@ -10,7 +10,7 @@ import { Restaurant } from "@/app/types/restaurant";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { useTranslations } from "next-intl";
 
-const LanguageToggleButton = lazy(() => import("../UI/LanguageToggleButton"));
+const LanguageToggleButton = lazy(() => import("@even/i18n/language-toggle-button"));
 
 interface MenuHeaderProps {
   restaurant?: Restaurant;

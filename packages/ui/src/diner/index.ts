@@ -4,6 +4,7 @@
  * siga sin depender de next-intl (crew y checkout-demo no lo usan).
  */
 export { default as HighDemandBanner } from "./HighDemandBanner";
+export { default as InvoiceModal } from "./InvoiceModal";
 export { default as ItemCustomizations } from "./ItemCustomizations";
 export { default as POSBlockedModal } from "./POSBlockedModal";
 export { default as UnavailableCartRow } from "./UnavailableCartRow";

@@ -13,12 +13,9 @@ import {
   ChevronLeft,
   Calendar,
 } from "lucide-react";
-import {
-  invoiceService,
-  type FiscalData,
-  type BillingProfile,
-} from "@/services/invoice.service";
-import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
+import type { BillingProfile, FiscalData, InvoiceService } from "@even/payments";
+import { lockScroll, unlockScroll } from "../lib/scroll-lock";
+import { useModalBackClose } from "../lib/use-modal-back-close";
 
 // SAT catalog values shown in dropdowns
 const REGIMEN_FISCAL_OPTIONS = [
@@ -91,6 +88,8 @@ interface Props {
   isAuthenticated: boolean;
   onInvoiceCreated?: (invoiceId: string) => void;
   existingInvoiceId?: string | null;
+  /** Servicio de facturación de la app (`createInvoiceService` de `@even/payments`). */
+  invoiceService: InvoiceService;
 }
 
 export default function InvoiceModal({
@@ -101,6 +100,7 @@ export default function InvoiceModal({
   isAuthenticated,
   onInvoiceCreated,
   existingInvoiceId,
+  invoiceService,
 }: Props) {
   const t = useTranslations("InvoiceModal");
   const format = useFormatter();
@@ -138,6 +138,7 @@ export default function InvoiceModal({
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- estado de carga al abrir el modal (código movido tal cual)
     setIsLoadingProfile(true);
     invoiceService
       .getBillingProfile()
@@ -161,6 +162,7 @@ export default function InvoiceModal({
   // Reset when closed
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- se reinicia el flujo al cerrar el modal
       setStep("info");
       setError(null);
       setPreviewBlobUrl(null);
@@ -176,6 +178,7 @@ export default function InvoiceModal({
   // Jump straight to done step when reopening an already-issued invoice
   useEffect(() => {
     if (isOpen && existingInvoiceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- salta a "listo" al reabrir con una factura ya emitida
       setInvoiceId(existingInvoiceId);
       setStep("done");
     }
@@ -246,8 +249,8 @@ export default function InvoiceModal({
       prevBlobRef.current = url;
       setPreviewBlobUrl(url);
       setStep("preview");
-    } catch (err: any) {
-      setError(err.message || t("errorPreview"));
+    } catch (err: unknown) {
+      setError((err instanceof Error && err.message) || t("errorPreview"));
     } finally {
       setIsLoadingPreview(false);
     }
@@ -266,8 +269,8 @@ export default function InvoiceModal({
       setEmailInput(fiscalData.email || "");
       setStep("done");
       onInvoiceCreated?.(result.invoiceId);
-    } catch (err: any) {
-      setError(err.message || t("errorCreate"));
+    } catch (err: unknown) {
+      setError((err instanceof Error && err.message) || t("errorCreate"));
     } finally {
       setIsLoadingCreate(false);
     }
@@ -302,8 +305,8 @@ export default function InvoiceModal({
         emailInput.trim(),
       );
       setEmailSent(true);
-    } catch (err: any) {
-      setError(err.message || t("errorSendEmail"));
+    } catch (err: unknown) {
+      setError((err instanceof Error && err.message) || t("errorSendEmail"));
     } finally {
       setIsSendingEmail(false);
     }

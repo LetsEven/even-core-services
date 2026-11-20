@@ -27,3 +27,22 @@ export {
 } from "./PepperMascots";
 export { default as SupportTab } from "./SupportTab";
 export { useOrderAnimation, type OrderAnimationState, type UseOrderAnimationOptions } from "./useOrderAnimation";
+export {
+  usePhoneAuth,
+  type AuthenticatedInfo,
+  type AuthResult,
+  type PhoneAuth,
+  type PhoneAuthOptions,
+  type PhoneAuthSession,
+  type PhoneAuthStep,
+  type ProfileFields,
+} from "./auth/usePhoneAuth";
+export {
+  COUNTRIES,
+  ageFromBirthDate,
+  birthDateFromAge,
+  formatPhoneInput,
+  formatPhoneNumber,
+  isProfileComplete,
+  unwrapProfile,
+} from "./auth/phone";

@@ -1,0 +1,22 @@
+{
+  "name": "@even/security",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Content-Security-Policy y headers de seguridad (PCI DSS) de los middleware de las apps.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@even/eslint-config": "*",
+    "@even/tsconfig": "*",
+    "eslint": "^9",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  }
+}

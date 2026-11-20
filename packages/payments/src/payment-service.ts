@@ -116,6 +116,19 @@ export function createPaymentService(requestWithAuth: Requester) {
       });
     },
 
+    // Suelta el monto apartado por la pantalla de cobro con Apple/Google Pay.
+    // keepalive: sale aunque la página se esté cerrando. La cuenta va como
+    // id_table_order (FlexBill) o id_tap_pay_order (Tap & Pay).
+    releaseWalletHold(
+      account: { id_table_order: string } | { id_tap_pay_order: string },
+    ): void {
+      void request("/payments/wallet-hold/release", {
+        method: "POST",
+        body: JSON.stringify(account),
+        keepalive: true,
+      }).catch(() => {});
+    },
+
     // Estado real de la orden en EcartPay (para wallets cuyo callback no llegó).
     // Respuesta plana {success, status}, no {success, data}.
     async getEcartOrderStatus(orderId: string): Promise<string | null> {

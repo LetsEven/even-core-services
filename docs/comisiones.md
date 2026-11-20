@@ -16,7 +16,8 @@ Un servicio que no está en la tabla (o sin `service`) usa el reparto por defect
 
 - **even-backend es la autoridad**: `src/utils/commissionCalculator.js` (`SERVICE_COMMISSION_RATES`). Recalcula todo desde el carrito/orden al cobrar.
 - **`@even/payments`** (`packages/payments/src/commissions.ts`) es el espejo para *preview* en pantalla: `SERVICE_COMMISSION_RATES`, `getCommissionRates(amount, service)` y `calculateCommissions(base, tip, service)`. Acepta los mismos alias que el backend (`tap-order-pay`, `flexbill`, `tap_pay`...).
-- **Cada app** fija su servicio en `commissionCalculator.ts` (`COMMISSION_SERVICE`) y re-exporta `getCommissionRates` y `calculateCommissions` ya ligados a él, así que los callers no pasan `service`. Las funciones por ítem (`getItemCommissionRate`, `getItemDisplayPrice`, etc.) derivan su tarifa de esa misma tabla.
+- **`createServicePayments(service)`** (`packages/payments/src/service-payments.ts`) devuelve las funciones ya ligadas a un servicio: `getCommissionRates`, `calculateCommissions`, las de ítem (`getItemCommissionRate`, `getItemDisplayPrice`, `getDisplaySubtotal`, `getDisplayTip`, `resolveTipAmountForTargetDisplay`) y las de cuenta dividida (`calculateItemCommission`, `calculateProportionalCommission`, `getDisplaySubtotalForFraction`). Todas derivan su tarifa de `SERVICE_COMMISSION_RATES`; no hay tarifas en ningún otro lado. `IVA_RATE` (0.16) e `IVA_FACTOR` (1.16) se exportan de `@even/payments`.
+- **Cada app** fija su servicio en `commissionCalculator.ts` (`COMMISSION_SERVICE`), llama a `createServicePayments` y re-exporta lo que usa ya ligado a él, así que los callers no pasan `service`.
 
 | App | Archivo |
 |---|---|

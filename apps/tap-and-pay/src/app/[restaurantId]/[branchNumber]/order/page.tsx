@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
+  UserCircle,
   Clock,
   Eye,
   EyeClosed,
@@ -20,7 +21,50 @@ import { useRestaurant } from "@/app/context/RestaurantContext";
 import MenuHeader from "@/app/components/headers/MenuHeader";
 import { useSearchParams, useParams } from "next/navigation";
 import { orderService, type POSStatus } from "@/app/services/order.service";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
+import { lockScroll, unlockScroll } from "@/app/utils/scrollLock";
+
+const AuthView = lazy(() => import("@/app/components/AuthView"));
+const DashboardView = lazy(() => import("@/app/components/DashboardView"));
+
+type DashboardTab = "profile" | "cards" | "history" | "support";
+
+// Botón de cuenta del header: foto o inicial con sesión, ícono sin ella.
+function AccountButton({
+  isAuthenticated,
+  profile,
+  onClick,
+}: {
+  isAuthenticated: boolean;
+  profile: { photoUrl?: string; firstName?: string } | null;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Cuenta"
+      className="size-10 md:size-12 lg:size-14 bg-white border border-tone-300 rounded-full flex items-center justify-center overflow-hidden cursor-pointer active:scale-95 transition-transform duration-200"
+    >
+      {isAuthenticated && profile?.photoUrl ? (
+        <img
+          src={profile.photoUrl}
+          alt=""
+          className="w-full h-full object-cover"
+        />
+      ) : isAuthenticated && profile?.firstName ? (
+        <span className="text-even-evergreen font-semibold text-base md:text-lg lg:text-xl select-none">
+          {profile.firstName.charAt(0).toUpperCase()}
+        </span>
+      ) : (
+        <UserCircle
+          className="text-warm-500 size-6 md:size-7 lg:size-8"
+          strokeWidth={1.2}
+        />
+      )}
+    </button>
+  );
+}
 
 // Perfil completo = tiene nombre Y fecha de nacimiento (igual que en
 // pick-and-go/auth-selection). Si falta el nombre, addActiveUser terminaría
@@ -64,12 +108,12 @@ function EmptyBill({
         )}
         <div
           className={`relative size-20 md:size-24 rounded-full flex items-center justify-center ${
-            posIssue ? "bg-amber-100" : "bg-even-grass/20"
+            posIssue ? "bg-hue-amber-100" : "bg-even-grass/20"
           }`}
         >
           <Icon
             className={`size-10 md:size-12 ${
-              posIssue ? "text-amber-700" : "text-even-evergreen"
+              posIssue ? "text-hue-amber-700" : "text-even-evergreen"
             }`}
           />
         </div>
@@ -78,7 +122,7 @@ function EmptyBill({
         {title}
       </h3>
       {!posIssue && (
-        <p className="mt-2 text-gray-500 text-base md:text-lg">
+        <p className="mt-2 text-tone-500 text-base md:text-lg">
           {t("emptyBillMessage")}
         </p>
       )}
@@ -100,7 +144,54 @@ export default function OrderPage() {
   const params = useParams();
   const { state, setTableNumber, loadTableData, loadActiveUsers } = useTable();
   const { navigateWithTable } = useTableNavigation();
-  const { isAuthenticated, isLoading: authLoading, user, profile } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    user,
+    profile,
+    logout,
+  } = useAuth();
+
+  // Modal de cuenta (login o dashboard), igual que en MenuView de los demás servicios.
+  const [showAccount, setShowAccount] = useState(false);
+  const [isAccountClosing, setIsAccountClosing] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState<DashboardTab>("profile");
+
+  const closeAccount = () => {
+    setIsAccountClosing(true);
+    setTimeout(() => {
+      setShowAccount(false);
+      setIsAccountClosing(false);
+      setDashboardTab("profile");
+    }, 380);
+  };
+
+  // Cerrar con animación antes de limpiar la sesión, sin flash de AuthView.
+  const handleAccountLogout = () => {
+    setIsAccountClosing(true);
+    setTimeout(() => {
+      setShowAccount(false);
+      setIsAccountClosing(false);
+      logout();
+    }, 380);
+  };
+
+  // Regreso de "agregar tarjeta" (?dashboard=cards): abre la pestaña de tarjetas.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("dashboard") === "cards") {
+      setDashboardTab("cards");
+      setShowAccount(true);
+      url.searchParams.delete("dashboard");
+      window.history.replaceState({}, "", url);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showAccount) return;
+    lockScroll();
+    return unlockScroll;
+  }, [showAccount]);
   const { guestId } = useGuest();
   const { restaurant, setParams } = useRestaurant();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
@@ -281,6 +372,20 @@ export default function OrderPage() {
     }
   }, [state.tableNumber]);
 
+  // La cuenta ya existía en Even: traer lo que se agregó en el POS desde entonces
+  const [syncedOrderId, setSyncedOrderId] = useState<string | null>(null);
+  useEffect(() => {
+    const orderId = state.order?.order_id;
+    if (!initialLoadDone || !orderId || syncedOrderId === orderId) return;
+    setSyncedOrderId(orderId);
+    orderService
+      .syncOrderFromPOS(orderId)
+      .then(() => loadTableData())
+      .catch(() => {
+        // Sin agente: se queda la cuenta local; el backend vuelve a revisar al cobrar
+      });
+  }, [initialLoadDone, state.order?.order_id, syncedOrderId, loadTableData]);
+
   // Sin cuenta todavía: revisar en silencio cada 20s mientras la pantalla esté visible
   const waitingForBill = initialLoadDone && !state.isLoading && !state.order;
   useEffect(() => {
@@ -314,7 +419,71 @@ export default function OrderPage() {
         restaurant={restaurant || undefined}
         tableNumber={state.tableNumber}
         showBackButton={false}
+        leftSlot={
+          <AccountButton
+            isAuthenticated={isAuthenticated}
+            profile={profile}
+            onClick={() => setShowAccount(true)}
+          />
+        }
       />
+
+      {showAccount && (
+        <div>
+          <div
+            className="fixed inset-0 z-1000 bg-black/30 backdrop-blur-sm"
+            style={{
+              animation: isAccountClosing
+                ? "accountFadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "accountFadeIn 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+            onClick={closeAccount}
+          />
+          <div
+            className="fixed inset-x-0 z-1000 flex flex-col rounded-t-3xl shadow-2xl border-t border-white/20"
+            style={{
+              top: "5%",
+              bottom: 0,
+              paddingBottom: "env(safe-area-inset-bottom)",
+              background: "rgba(255, 255, 255, 0.82)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              animation: isAccountClosing
+                ? "accountSlideDown 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "accountSlideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-tone-300/80" />
+            </div>
+            <Suspense fallback={null}>
+              {isAuthenticated && profile?.firstName ? (
+                <div className="flex-1 min-h-0">
+                  <DashboardView
+                    onClose={closeAccount}
+                    onLogout={handleAccountLogout}
+                    initialTab={dashboardTab}
+                  />
+                </div>
+              ) : (
+                <AuthView onClose={closeAccount} />
+              )}
+            </Suspense>
+          </div>
+          <style>{`
+            @keyframes accountSlideUp {
+              from { transform: translateY(100%); opacity: 0.6; }
+              to   { transform: translateY(0);    opacity: 1; }
+            }
+            @keyframes accountSlideDown {
+              from { transform: translateY(0);    opacity: 1; }
+              to   { transform: translateY(100%); opacity: 0.6; }
+            }
+            @keyframes accountFadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes accountFadeOut { from { opacity: 1; } to { opacity: 0; } }
+          `}</style>
+        </div>
+      )}
 
       <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
         <div className="left-4 right-4 bg-even-evergreen rounded-t-4xl translate-y-7 z-0">
@@ -354,7 +523,7 @@ export default function OrderPage() {
                   <h2 className="text-2xl md:text-3xl lg:text-4xl font-medium text-even-evergreen mb-2 md:mb-3">
                     {t("tableClosedTitle")}
                   </h2>
-                  <p className="text-gray-600 text-base md:text-lg lg:text-xl mb-4 md:mb-6">
+                  <p className="text-tone-600 text-base md:text-lg lg:text-xl mb-4 md:mb-6">
                     {t("tableClosedMessage")}
                   </p>
                   <button
@@ -379,7 +548,7 @@ export default function OrderPage() {
                         <button
                           onClick={handleRefresh}
                           disabled={state.isLoading}
-                          className="flex items-center gap-2 text-even-evergreen hover:text-even-shamrock transition-colors disabled:text-gray-400 cursor-pointer"
+                          className="flex items-center gap-2 text-even-evergreen hover:text-even-shamrock transition-colors disabled:text-tone-400 cursor-pointer"
                         >
                           <svg
                             className={`w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 ${state.isLoading ? "animate-spin" : ""}`}
@@ -428,7 +597,7 @@ export default function OrderPage() {
                                 <div className="flex items-center gap-3 md:gap-4 lg:gap-5">
                                   {showImages && (
                                     <div className="shrink-0 mt-1">
-                                      <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                                      <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
                                         {dish.images?.[0] ? (
                                           <img
                                             src={dish.images[0]}
@@ -514,7 +683,7 @@ export default function OrderPage() {
                                   <div className="flex items-center gap-3 md:gap-4 lg:gap-5">
                                     {showImages && (
                                       <div className="shrink-0 mt-1">
-                                        <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                                        <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
                                           {dish.images?.[0] ? (
                                             <img
                                               src={dish.images[0]}

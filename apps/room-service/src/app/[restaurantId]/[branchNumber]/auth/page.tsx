@@ -8,37 +8,17 @@ import { useTranslations } from "next-intl";
 import { authService } from "@/services/auth.service";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useAuth } from "@/context/AuthContext";
+import {
+  COUNTRIES,
+  formatPhoneNumber,
+  unwrapProfile,
+  usePhoneAuth,
+} from "@even/ui/diner";
 import TermsCheckbox from "@/components/TermsCheckbox";
 import { useRoomNavigation } from "@/hooks/useRoomNavigation";
 import { useGuest } from "@/context/GuestContext";
 
-type Step = "phone" | "verify" | "profile";
-
-interface Country {
-  code: string;
-  flag: string;
-  name: string;
-}
-
-const countries: Country[] = [
-  { code: "+52", flag: "MX", name: "México" },
-  { code: "+1", flag: "US", name: "Estados Unidos" },
-  { code: "+34", flag: "ES", name: "España" },
-  { code: "+54", flag: "AR", name: "Argentina" },
-  { code: "+57", flag: "CO", name: "Colombia" },
-  { code: "+58", flag: "VE", name: "Venezuela" },
-];
-
-// Perfil completo = tiene nombre Y fecha de nacimiento (apellido es opcional en el form).
-const isProfileComplete = (
-  p?: { firstName?: string; birthDate?: string } | null,
-) => !!p?.firstName && !!p?.birthDate;
-
-const ageFromBirthDate = (birthDate?: string): number | "" => {
-  if (!birthDate) return "";
-  const year = new Date(birthDate).getUTCFullYear();
-  return Number.isNaN(year) ? "" : new Date().getUTCFullYear() - year;
-};
+const countries = COUNTRIES;
 
 export default function AuthPage() {
   const t = useTranslations("Auth");
@@ -61,62 +41,61 @@ export default function AuthPage() {
   const branchNumber = params?.branchNumber as string;
   const roomNumber = searchParams.get("room");
 
-  const [step, setStep] = useState<Step>("phone");
-  const [countryCode, setCountryCode] = useState("+52");
-  const [phoneNumber, setPhoneNumber] = useState(""); // Solo números sin formato
-  const [phoneNumberDisplay, setPhoneNumberDisplay] = useState(""); // Con formato para mostrar
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
   const { guestName } = useGuest();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState<number | "">("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // Envío del SMS en curso: el paso de código se muestra de inmediato
-  const [sendingCode, setSendingCode] = useState(false);
-  const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const authCompletedRef = useRef(false);
 
-  // Formatear número de teléfono para mostrar
-  const formatPhoneNumber = (phoneNumber: string) => {
-    if (!phoneNumber) return "";
-
-    const cleaned = phoneNumber.replace(/\D/g, "");
-
-    // Sin código de país - solo 10 dígitos
-    if (cleaned.length === 10) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-
-    // Con código de país
-    if (cleaned.length > 10) {
-      const countryCode = cleaned.slice(0, cleaned.length - 10);
-      const areaCode = cleaned.slice(-10, -7);
-      const firstPart = cleaned.slice(-7, -4);
-      const lastPart = cleaned.slice(-4);
-      return `+${countryCode} (${areaCode}) ${firstPart}-${lastPart}`;
-    }
-
-    return phoneNumber;
-  };
-
-  // Formatear número mientras se escribe (para el input)
-  const formatPhoneInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
-
-    if (cleaned.length <= 3) {
-      return cleaned;
-    } else if (cleaned.length <= 6) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    } else if (cleaned.length <= 10) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
-  };
+  const auth = usePhoneAuth({
+    sendOtp: (fullPhone) => authService.sendPhoneOTP(fullPhone),
+    verifyOtp: verifyOTP,
+    saveProfile: updateProfile,
+    refreshProfile,
+    // Tras verificar el código se pide el perfil aparte: con nombre sigue el flujo, sin él pide el perfil.
+    hasProfile: async () => {
+      const profileResponse = await authService.getMyProfile();
+      if (!profileResponse.success || !profileResponse.data) return false;
+      const found = unwrapProfile(profileResponse.data);
+      return { firstName: found?.firstName, lastName: found?.lastName };
+    },
+    // Si ya hay una sesión activa (CartView redirige acá cuando el usuario está
+    // autenticado pero el perfil quedó incompleto), no tiene sentido pedir
+    // teléfono/OTP de nuevo: saltar directo al step de perfil, precargando lo
+    // que ya exista. Solo en el step "phone": tras verificar OTP lo decide hasProfile.
+    session: {
+      isAuthenticated,
+      isLoading: isAuthLoading,
+      profile,
+      decideAfterVerify: false,
+    },
+    onAuthenticated: () => handleAuthRedirect(),
+  });
+  const {
+    step,
+    phone,
+    countryCode,
+    setCountryCode,
+    phoneNumber,
+    phoneDisplay: phoneNumberDisplay,
+    otp,
+    setOtp,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    age,
+    setAge,
+    acceptedTerms,
+    setAcceptedTerms,
+    loading,
+    sendingCode,
+    error,
+    countdown,
+    changeNumber,
+  } = auth;
+  const handleSendOTP = auth.sendCode;
+  const handleVerifyOTP = auth.verifyCode;
+  const handleResendOTP = auth.resendCode;
+  const handleProfileSubmit = auth.submitProfile;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -155,31 +134,6 @@ export default function AuthPage() {
     setRestaurantId,
     setBranchNumber,
   ]);
-
-  // Si ya hay una sesión activa (CartView redirige acá cuando el usuario está
-  // autenticado pero el perfil quedó incompleto), no tiene sentido pedir
-  // teléfono/OTP de nuevo: saltar directo al step de perfil, precargando lo
-  // que ya exista. Si el perfil ya está completo, no hace falta hacer nada
-  // acá — es un caso límite (CartView normalmente no manda a un usuario así
-  // a esta pantalla), no el flujo principal.
-  // Solo en el step "phone": tras verificar OTP lo decide handleVerifyOTP.
-  useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || step !== "phone") return;
-    if (!isProfileComplete(profile)) {
-      setFirstName(profile?.firstName || "");
-      setLastName(profile?.lastName || "");
-      setAge(ageFromBirthDate(profile?.birthDate));
-      setStep("profile");
-    }
-  }, [isAuthLoading, isAuthenticated, profile, step]);
-
-  // Countdown timer
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
 
   // Flags de sessionStorage usados para decidir a dónde volver una vez que
   // el usuario termina teléfono+perfil (ver handleAuthRedirect). Si en vez
@@ -226,9 +180,7 @@ export default function AuthPage() {
       }
       if (step === "verify") {
         // Absorbe el back como un paso atrás (verify -> phone), sin salir.
-        setStep("phone");
-        setOtp("");
-        setError("");
+        changeNumber();
         window.history.pushState({ evenAuthGuard: true }, "");
         return;
       }
@@ -237,7 +189,7 @@ export default function AuthPage() {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [step]);
+  }, [step, changeNumber]);
 
   // Consume la entrada guardia para que sea `popstate` quien decida si hay
   // que volver un step o salir de verdad de la página — usado por el botón
@@ -282,134 +234,6 @@ export default function AuthPage() {
     }
   };
 
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSendingCode(true);
-
-    try {
-      const fullPhone = countryCode + phoneNumber;
-      setPhone(fullPhone);
-      setStep("verify");
-
-      const response = await authService.sendPhoneOTP(fullPhone);
-
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setStep("phone");
-        setError(response.error || t("errorSendCode"));
-      }
-    } catch (err) {
-      setStep("phone");
-      setError(t("errorSendCodeGeneric"));
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    if (otp.length !== 6) {
-      setError(t("errorInvalidCodeLength"));
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await verifyOTP(phone, otp);
-
-      if (response.success) {
-        // Check if profile exists
-        const profileResponse = await authService.getMyProfile();
-
-        if (profileResponse.success && profileResponse.data) {
-          // Handle nested data structure: data.data.profile or data.profile or data
-          const responseData = profileResponse.data as any;
-          const profile =
-            responseData.data?.profile ||
-            responseData.profile ||
-            responseData.data ||
-            responseData;
-
-          console.log("👤 profile object:", profile);
-          console.log("👤 profile.firstName:", profile.firstName);
-
-          // If profile has firstName, redirect based on context
-          if (profile.firstName) {
-            await refreshProfile();
-            handleAuthRedirect();
-          } else {
-            // Profile exists but incomplete, go to profile step
-            setStep("profile");
-          }
-        } else {
-          // No profile, go to profile step
-          setStep("profile");
-        }
-      } else {
-        setError(response.error || t("errorInvalidCode"));
-      }
-    } catch (err) {
-      console.error("❌ Error in handleVerifyOTP:", err);
-      setError(t("errorVerifyCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-
-    setError("");
-    setLoading(true);
-
-    try {
-      const response = await authService.sendPhoneOTP(phone);
-
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setError(response.error || t("errorResendCode"));
-      }
-    } catch (err) {
-      setError(t("errorResendCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (age === "" || !acceptedTerms) return;
-    setError("");
-    setLoading(true);
-
-    try {
-      const birthYear = new Date().getUTCFullYear() - Number(age);
-      const response = await updateProfile({
-        firstName,
-        lastName,
-        birthDate: `${birthYear}-01-01`,
-        acceptedTerms: true,
-      });
-
-      if (response.success) {
-        await refreshProfile();
-        handleAuthRedirect();
-      } else {
-        setError(response.error || t("errorSaveProfile"));
-      }
-    } catch (err) {
-      setError(t("errorSaveProfile"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-dvh brand-evergreen flex flex-col justify-center items-center px-4">
       {/* Back Button */}
@@ -440,7 +264,7 @@ export default function AuthPage() {
                 ? t("verifyStepTitle")
                 : t("profileStepTitle")}
           </h1>
-          <p className="text-gray-200 mt-2">
+          <p className="text-tone-200 mt-2">
             {step === "phone"
               ? tp("phoneStepSubtitle")
               : step === "verify"
@@ -451,7 +275,7 @@ export default function AuthPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm">
+          <div className="mb-4 p-3 bg-danger-500/20 border border-danger-500 rounded-lg text-white text-sm">
             {error}
           </div>
         )}
@@ -466,7 +290,7 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="h-12 w-22.5 px-3 text-gray-700 font-medium bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent cursor-pointer hover:border-gray-400 transition-colors flex items-center justify-between gap-1.5"
+                    className="h-12 w-22.5 px-3 text-tone-700 font-medium bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent cursor-pointer hover:border-tone-400 transition-colors flex items-center justify-between gap-1.5"
                     disabled={loading}
                   >
                     <div className="flex items-center gap-1.5">
@@ -479,11 +303,11 @@ export default function AuthPage() {
                       />
                       <span className="text-sm">{countryCode}</span>
                     </div>
-                    <ChevronDown className="size-3 text-gray-500 shrink-0" />
+                    <ChevronDown className="size-3 text-tone-500 shrink-0" />
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 overflow-hidden">
+                    <div className="absolute top-full left-0 mt-1 w-full bg-white border border-tone-300 rounded-lg shadow-lg z-50 overflow-hidden">
                       {countries.map((country) => (
                         <button
                           key={country.code}
@@ -492,13 +316,13 @@ export default function AuthPage() {
                             setCountryCode(country.code);
                             setIsDropdownOpen(false);
                           }}
-                          className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-100 transition-colors text-left"
+                          className="w-full px-3 py-2 flex items-center gap-2 hover:bg-tone-100 transition-colors text-left"
                         >
                           <Flag
                             code={country.flag}
                             style={{ width: 20, height: 15, borderRadius: 2 }}
                           />
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-tone-700">
                             {country.code}
                           </span>
                         </button>
@@ -509,18 +333,13 @@ export default function AuthPage() {
 
                 {/* Phone Number Input */}
                 <div className="relative flex-1">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                   <input
                     required
                     type="tel"
                     value={phoneNumberDisplay}
-                    onChange={(e) => {
-                      // Only allow numbers
-                      const value = e.target.value.replace(/\D/g, "");
-                      setPhoneNumber(value);
-                      setPhoneNumberDisplay(formatPhoneInput(value));
-                    }}
-                    className="h-12 w-full pl-10 pr-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent"
+                    onChange={(e) => auth.changePhone(e.target.value)}
+                    className="h-12 w-full pl-10 pr-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent"
                     placeholder={t("phonePlaceholder")}
                     disabled={loading}
                     maxLength={14}
@@ -561,7 +380,7 @@ export default function AuthPage() {
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               placeholder="000000"
-              className="w-full px-3 py-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
+              className="w-full px-3 py-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
               required
               disabled={loading}
               autoFocus
@@ -588,8 +407,8 @@ export default function AuthPage() {
                 disabled={countdown > 0 || loading || sendingCode}
                 className={`text-sm underline transition-colors ${
                   countdown > 0
-                    ? "text-gray-400 cursor-not-allowed"
-                    : "text-white hover:text-gray-200 cursor-pointer"
+                    ? "text-tone-400 cursor-not-allowed"
+                    : "text-white hover:text-tone-200 cursor-pointer"
                 }`}
               >
                 {countdown > 0
@@ -603,7 +422,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={goToPreviousStep}
-                className="text-sm text-white hover:text-gray-200 underline"
+                className="text-sm text-white hover:text-tone-200 underline"
               >
                 {t("changeNumber")}
               </button>
@@ -616,13 +435,13 @@ export default function AuthPage() {
           <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder={t("firstNamePlaceholder")}
-                  className="h-12 w-full pl-10 pr-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
+                  className="h-12 w-full pl-10 pr-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
                   required
                   disabled={loading}
                 />
@@ -632,7 +451,7 @@ export default function AuthPage() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder={t("lastNamePlaceholder")}
-                className="h-12 w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
+                className="h-12 w-full px-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
                 disabled={loading}
               />
             </div>
@@ -647,7 +466,7 @@ export default function AuthPage() {
                 onChange={(e) =>
                   setAge(e.target.value === "" ? "" : Number(e.target.value))
                 }
-                className="h-12 w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer appearance-none"
+                className="h-12 w-full px-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer appearance-none"
                 disabled={loading}
               >
                 <option value="" disabled>

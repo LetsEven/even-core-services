@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { UserDiscount } from "../userDiscounts";
 import { createUseAccountDiscount } from "./useAccountDiscount";
 import { createUseClaimedOrderDiscount } from "./useClaimedOrderDiscount";
-import { createUsePersonalItemDiscounts } from "./usePersonalItemDiscounts";
+import {
+  conCarrito,
+  createUsePersonalItemDiscounts,
+} from "./usePersonalItemDiscounts";
 
 const discount = (over: Partial<UserDiscount>): UserDiscount => ({
   id: "d1",
@@ -157,7 +160,7 @@ describe("usePersonalItemDiscounts", () => {
       }),
       discount({ id: "x", discount_type: "order" }),
     ]);
-    const useHook = createUsePersonalItemDiscounts({
+    const { usePersonalItemDiscounts: useHook } = createUsePersonalItemDiscounts({
       userDiscountsService: service,
       useAuth: auth(),
     });
@@ -165,13 +168,17 @@ describe("usePersonalItemDiscounts", () => {
     const second = renderHook(() => useHook(1));
     await waitFor(() => expect(first.result.current.size).toBe(2));
     await waitFor(() => expect(second.result.current.size).toBe(2));
-    expect(first.result.current.get(5)).toEqual({ id: "b", percentage: 25 });
+    expect(first.result.current.get(5)).toEqual({
+      id: "b",
+      percentage: 25,
+      piezas: null,
+    });
     expect(service.getActive).toHaveBeenCalledTimes(1);
   });
 
   it("sin sesión devuelve un mapa vacío", () => {
     const service = userDiscountsService([]);
-    const useHook = createUsePersonalItemDiscounts({
+    const { usePersonalItemDiscounts: useHook } = createUsePersonalItemDiscounts({
       userDiscountsService: service,
       useAuth: auth({ isAuthenticated: false }),
     });
@@ -185,7 +192,7 @@ describe("usePersonalItemDiscounts", () => {
       discount({ discount_type: "item", menu_item_id: 5, status: "assigned" }),
     ]);
     let uid = "u1";
-    const useHook = createUsePersonalItemDiscounts({
+    const { usePersonalItemDiscounts: useHook } = createUsePersonalItemDiscounts({
       userDiscountsService: service,
       useAuth: () => ({
         isAuthenticated: true,
@@ -199,5 +206,71 @@ describe("usePersonalItemDiscounts", () => {
     const b = renderHook(() => useHook(1));
     await waitFor(() => expect(b.result.current.size).toBe(1));
     expect(service.getActive).toHaveBeenCalledTimes(2);
+  });
+
+  it("invalidate vuelve a pedir los descuentos", async () => {
+    const service = userDiscountsService([
+      discount({ discount_type: "item", menu_item_id: 5, status: "assigned" }),
+    ]);
+    const { usePersonalItemDiscounts: useHook, invalidate } =
+      createUsePersonalItemDiscounts({
+        userDiscountsService: service,
+        useAuth: auth(),
+      });
+    const { result } = renderHook(() => useHook(1));
+    await waitFor(() => expect(result.current.size).toBe(1));
+    act(() => invalidate());
+    await waitFor(() => expect(service.getActive).toHaveBeenCalledTimes(2));
+  });
+
+  it("omite los descuentos sin usos libres", async () => {
+    const service = userDiscountsService([
+      discount({
+        discount_type: "item",
+        menu_item_id: 5,
+        status: "assigned",
+        usos_libres: 0,
+        piezas_restantes: 0,
+      }),
+    ]);
+    const { usePersonalItemDiscounts: useHook } =
+      createUsePersonalItemDiscounts({
+        userDiscountsService: service,
+        useAuth: auth(),
+      });
+    const { result } = renderHook(() => useHook(1));
+    await waitFor(() => expect(service.getActive).toHaveBeenCalled());
+    expect(result.current.size).toBe(0);
+  });
+});
+
+describe("conCarrito", () => {
+  const base = { id: "d1", percentage: 20, piezas: 3, usos: 3 };
+
+  it("resta las piezas del carrito local", () => {
+    expect(
+      conCarrito(base, [
+        { userDiscountId: "d1", quantity: 2 },
+        { userDiscountId: null, quantity: 5 },
+      ]),
+    ).toEqual({ ...base, piezas: 1 });
+  });
+
+  it("quita la oferta cuando el carrito agota los usos", () => {
+    expect(conCarrito(base, [{ userDiscountId: "d1", quantity: 3 }])).toBe(
+      undefined,
+    );
+  });
+
+  it("ilimitado y backend sin usos_libres quedan igual", () => {
+    expect(conCarrito({ ...base, usos: null }, [])).toEqual({
+      ...base,
+      usos: null,
+      piezas: null,
+    });
+    const sinUsos = { id: "d1", percentage: 20, piezas: 2 };
+    expect(conCarrito(sinUsos, [{ userDiscountId: "d1", quantity: 9 }])).toBe(
+      sinUsos,
+    );
   });
 });

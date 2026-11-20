@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { MenuItemData } from "../interfaces/menuItemData";
 import { cartApi, CartItem as ApiCartItem } from "../services/cartApi";
+import { invalidarDescuentosPersonales } from "../hooks/usePersonalItemDiscounts";
 import { useAuth } from "./AuthContext";
 import { useRestaurant } from "./RestaurantContext";
 
@@ -80,6 +81,7 @@ function lineSignature(item: {
   extraPrice?: number;
   customFields?: CartItem["customFields"];
   isPromoItem?: boolean;
+  userDiscountId?: string | null;
 }) {
   const fields = (item.customFields || [])
     .map((f: any) => ({
@@ -97,7 +99,7 @@ function lineSignature(item: {
     extra: item.extraPrice || 0,
     fields,
     promo: item.isPromoItem || false,
-  });
+  }) + `|ud:${item.userDiscountId ?? ""}`;
 }
 
 function computeTotals(items: CartItem[]) {
@@ -232,6 +234,7 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
     promoActivationId: apiItem.promoActivationId || null,
     promoDiscountPercentage: apiItem.promoDiscountPercentage ?? null,
     userDiscountId: apiItem.userDiscountId || null,
+    discountMaxQuantity: apiItem.discountMaxQuantity ?? null,
   };
 }
 
@@ -265,6 +268,19 @@ const CartContext = createContext<CartContextType | null>(null);
 // Provider del carrito
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+
+  // Cuando cambian las piezas con descuento personal, el menú vuelve a pedir cuántas quedan
+  const piezasConDescuento = state.items
+    .filter((i) => i.userDiscountId)
+    .map((i) => `${i.userDiscountId}:${i.quantity}`)
+    .join(",");
+  const piezasPrevias = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (piezasPrevias.current !== null && piezasPrevias.current !== piezasConDescuento) {
+      invalidarDescuentosPersonales();
+    }
+    piezasPrevias.current = piezasConDescuento;
+  }, [piezasConDescuento]);
   const [orderNotes, setOrderNotes] = useState("");
   const { user, isLoading } = useAuth();
   const { restaurantId, branchNumber } = useRestaurant();
@@ -343,6 +359,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
 
       if (response.success && response.data) {
+        // Con descuento personal el servidor puede dividir la pieza (las de más van
+        // a precio normal en otra línea): se toma el carrito real en vez del optimista
+        if (item.userDiscountId) {
+          const fresh = await cartApi.getCart();
+          if (fresh.success && fresh.data) {
+            const items = fresh.data.items.map(convertApiItemToCartItem);
+            dispatch({
+              type: "SET_CART",
+              payload: {
+                items,
+                ...computeTotals(items),
+                cartId: fresh.data.cart_id,
+              },
+            });
+            return;
+          }
+        }
         dispatch({
           type: "SET_CART_ITEM_ID",
           payload: {

@@ -83,7 +83,7 @@ export default function RestaurantClosedModal({
                   className="w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 object-contain rounded-lg md:rounded-xl mb-3 md:mb-4 lg:mb-5"
                 />
               ) : (
-                <div className="w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 bg-gray-200 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 lg:mb-5">
+                <div className="w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 bg-tone-200 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 lg:mb-5">
                   <img
                     src="/even/even-asterisk-evergreen.svg"
                     alt="Logo Even"
@@ -100,14 +100,14 @@ export default function RestaurantClosedModal({
           )}
 
           <div className="space-y-4 md:space-y-5 lg:space-y-6">
-            <p className="text-gray-600 text-base md:text-lg lg:text-xl text-center">
+            <p className="text-tone-600 text-base md:text-lg lg:text-xl text-center">
               {when
                 ? t("notYetMessage", { when })
                 : t("message", { name: restaurantName ?? "" })}
             </p>
 
             {nextOpeningTime && (
-              <div className="bg-[#f9f9f9] border border-[#bfbfbf]/50 rounded-lg md:rounded-xl p-2 md:p-3 lg:p-4">
+              <div className="bg-surface border border-stroke-soft/50 rounded-lg md:rounded-xl p-2 md:p-3 lg:p-4">
                 <p className="text-black font-medium text-center text-base md:text-lg lg:text-xl">
                   {nextOpeningTime}
                 </p>

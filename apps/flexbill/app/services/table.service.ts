@@ -50,6 +50,8 @@ export interface TableSummary {
   total_amount: number;
   paid_amount: number;
   remaining_amount: number;
+  // Lo que otro comensal está pagando con Apple/Google Pay
+  monto_apartado?: number;
   no_items: number;
   status: "not_paid" | "partial" | "paid";
 }

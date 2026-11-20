@@ -6,51 +6,11 @@ import Flag from "react-world-flags";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
 import TermsCheckbox from "@/components/TermsCheckbox";
-import { useModalBackClose } from "@/hooks/useModalBackClose";
-import LanguageToggleButton from "@/components/UI/LanguageToggleButton";
+import { useModalBackClose } from "@even/ui";
+import { COUNTRIES, formatPhoneNumber, usePhoneAuth } from "@even/ui/diner";
+import LanguageToggleButton from "@even/i18n/language-toggle-button";
 
-type Step = "phone" | "verify" | "profile";
-
-interface Country {
-  code: string;
-  flag: string;
-  name: string;
-}
-
-const countries: Country[] = [
-  { code: "+52", flag: "MX", name: "México" },
-  { code: "+1", flag: "US", name: "Estados Unidos" },
-  { code: "+34", flag: "ES", name: "España" },
-  { code: "+54", flag: "AR", name: "Argentina" },
-  { code: "+57", flag: "CO", name: "Colombia" },
-  { code: "+58", flag: "VE", name: "Venezuela" },
-];
-
-// Pure functions — defined outside to avoid re-creation on every render
-function formatPhoneNumber(phoneNumber: string) {
-  if (!phoneNumber) return "";
-  const cleaned = phoneNumber.replace(/\D/g, "");
-  if (cleaned.length === 10) {
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-  }
-  if (cleaned.length > 10) {
-    const cc = cleaned.slice(0, cleaned.length - 10);
-    const areaCode = cleaned.slice(-10, -7);
-    const firstPart = cleaned.slice(-7, -4);
-    const lastPart = cleaned.slice(-4);
-    return `+${cc} (${areaCode}) ${firstPart}-${lastPart}`;
-  }
-  return phoneNumber;
-}
-
-function formatPhoneInput(value: string) {
-  const cleaned = value.replace(/\D/g, "");
-  if (cleaned.length <= 3) return cleaned;
-  if (cleaned.length <= 6) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-  if (cleaned.length <= 10)
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-  return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
-}
+const countries = COUNTRIES;
 
 interface AuthViewProps {
   onClose: () => void;
@@ -67,22 +27,51 @@ export default function AuthView({ onClose }: AuthViewProps) {
     profile: authProfile,
   } = useAuth();
 
-  const [step, setStep] = useState<Step>("phone");
-  const [selectedCountry, setSelectedCountry] = useState(countries[0]);
+  const auth = usePhoneAuth({
+    sendOtp: sendOTP,
+    // Tras verificar el código se recarga el perfil; el efecto [user, authProfile] decide el siguiente paso
+    // (con nombre el modal cambia a DashboardView; sin él, al paso del perfil).
+    verifyOtp: async (fullPhone, code) => {
+      const response = await verifyOTP(fullPhone, code);
+      if (response.success) await refreshProfile();
+      return response;
+    },
+    saveProfile: updateProfile,
+    refreshProfile,
+    onAuthenticated: () => undefined,
+  });
+  const {
+    step,
+    phone,
+    countryCode,
+    setCountryCode,
+    phoneNumber,
+    phoneDisplay: phoneNumberDisplay,
+    otp,
+    setOtp,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    age,
+    setAge,
+    acceptedTerms,
+    setAcceptedTerms,
+    loading,
+    sendingCode,
+    error,
+    countdown,
+    changeNumber,
+    goToProfile,
+  } = auth;
+  const handleSendOTP = auth.sendCode;
+  const handleVerifyOTP = auth.verifyCode;
+  const handleResendOTP = auth.resendCode;
+  const handleProfileSubmit = auth.submitProfile;
+  const selectedCountry =
+    countries.find((c) => c.code === countryCode) ?? countries[0];
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [phoneNumberDisplay, setPhoneNumberDisplay] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState<number | "">("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // Envío del SMS en curso: el paso de código se muestra de inmediato
-  const [sendingCode, setSendingCode] = useState(false);
-  const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(0);
   // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // useEffect(() => {
@@ -105,109 +94,12 @@ export default function AuthView({ onClose }: AuthViewProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isDropdownOpen]);
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
   // Si ya está autenticado pero sin nombre (ej. recarga de página), ir directo a perfil
   useEffect(() => {
-    if (user && !authProfile?.firstName && !loading) {
-      setStep("profile");
+    if (user && !authProfile?.firstName && !loading && step !== "profile") {
+      goToProfile();
     }
-  }, [user, authProfile, loading]);
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSendingCode(true);
-    try {
-      const fullPhone = selectedCountry.code + phoneNumber;
-      setPhone(fullPhone);
-      setStep("verify");
-      const response = await sendOTP(fullPhone);
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setStep("phone");
-        setError(response.error || t("errorSendCode"));
-      }
-    } catch {
-      setStep("phone");
-      setError(t("errorSendCodeGeneric"));
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    if (otp.length !== 6) {
-      setError(t("errorInvalidCodeLength"));
-      setLoading(false);
-      return;
-    }
-    try {
-      const response = await verifyOTP(phone, otp);
-      if (response.success) {
-        await refreshProfile();
-        // El useEffect [user, authProfile] maneja la navegación:
-        // - Si authProfile.firstName existe → modal se cierra (isAuthenticated = true)
-        // - Si no → setStep("profile")
-      } else {
-        setError(response.error || t("errorInvalidCode"));
-      }
-    } catch {
-      setError(t("errorVerifyCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-    setError("");
-    setLoading(true);
-    try {
-      const response = await sendOTP(phone);
-      if (response.success) setCountdown(60);
-      else setError(response.error || t("errorResendCode"));
-    } catch {
-      setError(t("errorResendCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (age === "" || !acceptedTerms) return;
-    setError("");
-    setLoading(true);
-    try {
-      const birthYear = new Date().getUTCFullYear() - Number(age);
-      const response = await updateProfile({
-        firstName,
-        lastName,
-        birthDate: `${birthYear}-01-01`,
-        acceptedTerms: true,
-      });
-      if (response.success) {
-        await refreshProfile();
-        // isAuthenticated → true, modal auto-switches to DashboardView
-      } else {
-        setError(response.error || t("errorSaveProfile"));
-      }
-    } catch {
-      setError(t("errorSaveProfile"));
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, authProfile, loading, step, goToProfile]);
 
   // Un solo handler para el click del botón y para el gesto/botón atrás
   // del dispositivo (vía useModalBackClose). `rearm` solo lo pasa el
@@ -216,9 +108,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
   // dejar que cierre el modal completo.
   const handleBack = (rearm?: () => void) => {
     if (step === "verify") {
-      setStep("phone");
-      setOtp("");
-      setError("");
+      changeNumber();
       rearm?.();
     } else if (step === "profile") {
       // no se puede regresar, usuario ya autenticado
@@ -240,7 +130,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
         <button
           onClick={() => handleBack()}
           disabled={step === "profile"}
-          className={`text-gray-400 hover:text-gray-700 rounded-full p-1 md:p-1.5 transition-colors ${
+          className={`text-tone-400 hover:text-tone-700 rounded-full p-1 md:p-1.5 transition-colors ${
             step === "profile"
               ? "opacity-30 cursor-not-allowed"
               : "cursor-pointer"
@@ -272,7 +162,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   ? t("verifyStepTitle")
                   : t("profileStepTitle")}
             </h1>
-            <p className="text-gray-500 mt-2 text-sm md:text-base">
+            <p className="text-tone-500 mt-2 text-sm md:text-base">
               {step === "phone" ? (
                 t("phoneStepSubtitle")
               ) : step === "verify" ? (
@@ -289,7 +179,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
 
           {/* Error */}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-400/50 rounded-lg text-red-600 text-sm">
+            <div className="mb-4 p-3 bg-danger-500/10 border border-danger-400/50 rounded-lg text-danger-600 text-sm">
               {error}
             </div>
           )}
@@ -303,7 +193,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                     <button
                       type="button"
                       onClick={() => setIsDropdownOpen((o) => !o)}
-                      className="h-[48px] w-[90px] px-3 text-gray-700 font-medium bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent cursor-pointer hover:border-gray-400 transition-colors flex items-center justify-between gap-1.5"
+                      className="h-[48px] w-[90px] px-3 text-tone-700 font-medium bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent cursor-pointer hover:border-tone-400 transition-colors flex items-center justify-between gap-1.5"
                       disabled={loading}
                     >
                       <div className="flex items-center gap-1.5">
@@ -313,25 +203,25 @@ export default function AuthView({ onClose }: AuthViewProps) {
                         />
                         <span className="text-sm">{selectedCountry.code}</span>
                       </div>
-                      <ChevronDown className="size-3 text-gray-500 shrink-0" />
+                      <ChevronDown className="size-3 text-tone-500 shrink-0" />
                     </button>
                     {isDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 overflow-hidden">
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-tone-300 rounded-lg shadow-lg z-50 overflow-hidden">
                         {countries.map((country) => (
                           <button
                             key={country.code}
                             type="button"
                             onClick={() => {
-                              setSelectedCountry(country);
+                              setCountryCode(country.code);
                               setIsDropdownOpen(false);
                             }}
-                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-100 transition-colors text-left"
+                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-tone-100 transition-colors text-left"
                           >
                             <Flag
                               code={country.flag}
                               style={{ width: 20, height: 15, borderRadius: 2 }}
                             />
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className="text-sm font-medium text-tone-700">
                               {country.code}
                             </span>
                           </button>
@@ -341,17 +231,13 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   </div>
 
                   <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                     <input
                       required
                       type="tel"
                       value={phoneNumberDisplay}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "");
-                        setPhoneNumber(value);
-                        setPhoneNumberDisplay(formatPhoneInput(value));
-                      }}
-                      className="h-[48px] w-full pl-10 pr-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                      onChange={(e) => auth.changePhone(e.target.value)}
+                      className="h-[48px] w-full pl-10 pr-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                       placeholder={t("phonePlaceholder")}
                       disabled={loading}
                       maxLength={14}
@@ -379,7 +265,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="000000"
-                className="w-full px-3 py-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
+                className="w-full px-3 py-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
                 required
                 disabled={loading}
                 autoFocus
@@ -403,8 +289,8 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   disabled={countdown > 0 || loading || sendingCode}
                   className={`text-sm underline transition-colors ${
                     countdown > 0
-                      ? "text-gray-400 cursor-not-allowed"
-                      : "text-gray-600 hover:text-black cursor-pointer"
+                      ? "text-tone-400 cursor-not-allowed"
+                      : "text-tone-600 hover:text-black cursor-pointer"
                   }`}
                 >
                   {countdown > 0
@@ -416,7 +302,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                 <button
                   type="button"
                   onClick={() => handleBack()}
-                  className="text-sm text-gray-600 hover:text-black underline"
+                  className="text-sm text-tone-600 hover:text-black underline"
                 >
                   {t("changeNumber")}
                 </button>
@@ -429,13 +315,13 @@ export default function AuthView({ onClose }: AuthViewProps) {
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder={t("firstNamePlaceholder")}
-                    className="h-[48px] w-full pl-10 pr-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                    className="h-[48px] w-full pl-10 pr-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                     required
                     disabled={loading}
                   />
@@ -445,7 +331,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder={t("lastNamePlaceholder")}
-                  className="h-[48px] w-full px-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                  className="h-[48px] w-full px-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                   disabled={loading}
                 />
               </div>
@@ -459,7 +345,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                   onChange={(e) =>
                     setAge(e.target.value === "" ? "" : Number(e.target.value))
                   }
-                  className="h-[48px] w-full px-3 text-gray-700 bg-white/70 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer"
+                  className="h-[48px] w-full px-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer"
                   disabled={loading}
                 >
                   <option value="" disabled>

@@ -1,0 +1,183 @@
+/*
+ * Estilos compartidos por las apps de comensal (Pick & Go, Room Service, Tap Order & Pay,
+ * Tap & Pay y FlexBill). Son las reglas que estaban copiadas idénticas en el globals.css de las cinco.
+ * Se importa después de theme.css: `@import "@even/ui/diner.css";`.
+ * No va en theme.css porque crew y checkout-demo también lo importan y no deben recibir estas reglas globales.
+ */
+
+/* Fly to cart animation */
+.flying-to-cart {
+  transform-origin: center center;
+  border-radius: 50%;
+}
+
+@keyframes shake-cart {
+  0% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  50% {
+    transform: translateY(-50%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cart-badge-animate {
+  animation: shake-cart 0.3s ease forwards;
+}
+
+/* OrderAnimation styles */
+@keyframes expand-circle {
+  0% {
+    transform: scale(0.01);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(35);
+    opacity: 1;
+  }
+}
+
+@keyframes simple-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-ring-animation {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.circle-animation {
+  width: 50px;
+  height: 50px;
+  aspect-ratio: 1;
+  background: white;
+  border-radius: 50%;
+  transform: scale(0.01);
+  will-change: transform;
+  animation: expand-circle 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.green-circle-from-logo {
+  width: 96px;
+  height: 96px;
+  background: var(--color-even-grass);
+  border-radius: 50%;
+  transform-origin: center center;
+  will-change: transform;
+  animation: expand-green-from-logo 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-simple-fade-in {
+  animation: simple-fade-in 0.4s ease-in forwards;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border: 5px solid var(--color-line);
+  border-radius: 50%;
+  animation: pulse-ring-animation 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.pulse-ring-delay-1 {
+  animation-delay: 0.6s;
+}
+
+.pulse-ring-delay-2 {
+  animation-delay: 1.2s;
+}
+
+/* Payment success animations */
+@keyframes logo-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-logo-fade-in {
+  animation: logo-fade-in 0.8s ease-out forwards;
+}
+
+@keyframes fadeInText {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s ease-in-out forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.5s ease-in-out forwards;
+}
+
+/* Apple Pay button border radius and height */
+#apple-pay-container apple-pay-button {
+  --apple-pay-button-border-radius: 9999px;
+  height: 48px;
+}
+
+#apple-pay-container > * {
+  border-radius: 9999px !important;
+  height: 48px !important;
+}
+
+/* Google Pay button — same shape and height as Apple Pay */
+#google-pay-container {
+  border-radius: 9999px !important;
+  overflow: hidden !important;
+  height: 48px !important;
+}
+
+#google-pay-container > *,
+#google-pay-container iframe {
+  width: 100% !important;
+  height: 48px !important;
+}

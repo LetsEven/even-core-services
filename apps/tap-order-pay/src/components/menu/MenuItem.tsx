@@ -9,13 +9,13 @@ import {
 } from "../../interfaces/menuItemData";
 import { useCart } from "../../context/CartContext";
 import OutOfStockModal from "../OutOfStockModal";
-import { rememberMenuPosition } from "../../utils/menuScrollMemory";
+import { rememberMenuPosition } from "@even/ui";
 import { useTableNavigation } from "../../hooks/useTableNavigation";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { Plus, Minus } from "lucide-react";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
-import { usePersonalItemDiscounts } from "../../hooks/usePersonalItemDiscounts";
+import { usePersonalItemDiscounts, conCarrito } from "../../hooks/usePersonalItemDiscounts";
 
 interface MenuItemProps {
   item: MenuItemDB | MenuItemData;
@@ -56,7 +56,10 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
   const { isOpen, restaurant, restaurantId } = useRestaurant();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
   const personalDiscounts = usePersonalItemDiscounts(restaurantId);
-  const personalDiscount = personalDiscounts.get(adaptedItem.id);
+  const personalDiscount = conCarrito(
+    personalDiscounts.get(adaptedItem.id),
+    cartState.items,
+  );
   // Si el producto también tiene descuento de admin-portal, gana
   // el % mayor entre los dos — nunca se suman.
   const effectiveDiscount = Math.max(
@@ -261,7 +264,7 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
         <div
           ref={cardRef}
           data-menu-item-id={adaptedItem.id}
-          className="border-b border-gray-300 py-3 md:py-4 cursor-pointer"
+          className="border-b border-tone-300 py-3 md:py-4 cursor-pointer"
           onClick={handleImageClick}
         >
           <div className="flex items-center gap-3 md:gap-4">
@@ -289,12 +292,12 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
                     {adaptedItem.description}
                   </p>
                   {effectiveDiscount > 0 && (
-                    <span className="shrink-0 bg-red-600 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 tracking-wide">
+                    <span className="shrink-0 bg-danger-600 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 tracking-wide">
                       {effectiveDiscount}% OFF
                     </span>
                   )}
                   {isOutOfStock && (
-                    <span className="shrink-0 bg-red-600 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 tracking-wide">
+                    <span className="shrink-0 bg-danger-600 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 tracking-wide">
                       {tc("outOfStockBadge")}
                     </span>
                   )}
@@ -342,13 +345,13 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
       <div
         ref={cardRef}
         data-menu-item-id={adaptedItem.id}
-        className="border-b border-gray-300 py-4 md:py-6 lg:py-7 relative"
+        className="border-b border-tone-300 py-4 md:py-6 lg:py-7 relative"
         onClick={handleImageClick}
       >
         <div className="flex items-center gap-4 md:gap-5 lg:gap-6">
           {/* Image */}
           <div className="relative shrink-0 cursor-pointer size-36 md:size-40 lg:size-44">
-            <div className="size-full bg-gray-300 rounded-xl md:rounded-2xl flex items-center justify-center hover:scale-105 transition-transform duration-200 overflow-hidden">
+            <div className="size-full bg-tone-300 rounded-xl md:rounded-2xl flex items-center justify-center hover:scale-105 transition-transform duration-200 overflow-hidden">
               {adaptedItem.images[0] ? (
                 <img
                   src={adaptedItem.images[0]}
@@ -367,14 +370,14 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
             </div>
             {effectiveDiscount > 0 && (
               <div className="absolute top-0 left-0 rounded-tl-xl md:rounded-tl-2xl overflow-hidden">
-                <span className="block bg-red-600 text-white text-[11px] md:text-xs font-bold px-2 pt-1 pb-0.5 tracking-wide">
+                <span className="block bg-danger-600 text-white text-[11px] md:text-xs font-bold px-2 pt-1 pb-0.5 tracking-wide">
                   {effectiveDiscount}% OFF
                 </span>
               </div>
             )}
             {isOutOfStock && (
               <div className="absolute bottom-0 right-0 rounded-br-xl md:rounded-br-2xl overflow-hidden">
-                <span className="block bg-red-600 text-white text-[12px] md:text-xs font-bold px-2 py-0.5 tracking-wide">
+                <span className="block bg-danger-600 text-white text-[12px] md:text-xs font-bold px-2 py-0.5 tracking-wide">
                   {tc("outOfStockBadge")}
                 </span>
               </div>

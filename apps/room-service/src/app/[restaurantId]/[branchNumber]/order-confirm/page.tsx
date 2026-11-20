@@ -9,6 +9,7 @@ import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { X } from "lucide-react";
 import ValidationError from "@/components/ValidationError";
 import { calculateCommissions } from "@/utils/commissionCalculator";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function OrderConfirmPage() {
   const t = useTranslations("OrderConfirmPage");
@@ -18,7 +19,6 @@ export default function OrderConfirmPage() {
   const { navigateWithRoom } = useRoomNavigation();
 
   const baseAmount = cartState.totalPrice;
-  const MINIMUM_AMOUNT = 20;
 
   const [tipPercentage, setTipPercentage] = useState(10);
   const [customTip, setCustomTip] = useState("");
@@ -27,7 +27,7 @@ export default function OrderConfirmPage() {
 
   const calculateTipAmount = () => {
     if (customTip && parseFloat(customTip) > 0) return parseFloat(customTip);
-    return (baseAmount * tipPercentage) / 100;
+    return computeTipAmount(baseAmount, tipPercentage);
   };
 
   const tipAmount = calculateTipAmount();
@@ -94,28 +94,28 @@ export default function OrderConfirmPage() {
 
             <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 gap-4">
               <div className="flex justify-between items-center">
-                <div className="h-4 w-16 bg-gray-200 rounded-full animate-pulse" />
-                <div className="h-4 w-24 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse" />
+                <div className="h-4 w-24 bg-tone-200 rounded-full animate-pulse" />
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="h-4 w-16 bg-gray-200 rounded-full animate-pulse shrink-0" />
+                <div className="h-4 w-16 bg-tone-200 rounded-full animate-pulse shrink-0" />
                 <div className="grid grid-cols-5 gap-2 flex-1">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
-                      className="h-8 bg-gray-100 rounded-full animate-pulse"
+                      className="h-8 bg-tone-100 rounded-full animate-pulse"
                     />
                   ))}
                 </div>
               </div>
 
               <div className="flex justify-between items-center border-t pt-4">
-                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
-                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
+                <div className="h-5 w-28 bg-tone-200 rounded-full animate-pulse" />
               </div>
 
-              <div className="h-12 w-full bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-12 w-full bg-tone-200 rounded-full animate-pulse" />
             </div>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function OrderConfirmPage() {
                   {tc("tip")}
                 </span>
                 <div className="grid grid-cols-5 gap-2 flex-1">
-                  {[0, 10, 15, 20].map((percentage) => (
+                  {TIP_PRESETS.map((percentage) => (
                     <button
                       key={percentage}
                       onClick={() => {
@@ -176,7 +176,7 @@ export default function OrderConfirmPage() {
                       className={`py-1 md:py-1.5 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
                         tipPercentage === percentage && !showCustomTipInput
                           ? "bg-even-grass text-even-evergreen"
-                          : "bg-surface hover:border-gray-400"
+                          : "bg-surface hover:border-tone-400"
                       }`}
                     >
                       {percentage === 0 ? "0%" : `${percentage}%`}
@@ -190,7 +190,7 @@ export default function OrderConfirmPage() {
                     className={`py-1 md:py-1.5 rounded-full border border-stroke/40 text-black transition-colors cursor-pointer ${
                       showCustomTipInput
                         ? "bg-even-grass text-even-evergreen"
-                        : "bg-surface hover:border-gray-400"
+                        : "bg-surface hover:border-tone-400"
                     }`}
                   >
                     $
@@ -212,7 +212,7 @@ export default function OrderConfirmPage() {
                       step="0.01"
                       min="0"
                       autoFocus
-                      className="w-full pl-8 pr-4 py-1 md:py-1.5 border border-stroke/40 rounded-full focus:outline-none focus:ring focus:ring-gray-400 text-black text-center bg-surface [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                      className="w-full pl-8 pr-4 py-1 md:py-1.5 border border-stroke/40 rounded-full focus:outline-none focus:ring focus:ring-tone-400 text-black text-center bg-surface [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                     />
                   </div>
                 </div>
@@ -228,11 +228,11 @@ export default function OrderConfirmPage() {
             </div>
 
             {/* Alerta mínimo */}
-            {isUnderMinimum && totalAmount > 0 && (
-              <div className="bg-linear-to-br from-red-50 to-red-100 px-6 py-3 -mx-8 rounded-lg mb-4">
+            {isUnderMinimum && cartState.items.length > 0 && (
+              <div className="bg-linear-to-br from-danger-50 to-danger-100 px-6 py-3 -mx-8 rounded-lg mb-4">
                 <div className="flex justify-center items-center gap-3">
-                  <X className="size-6 text-red-500 shrink-0" />
-                  <p className="text-red-700 font-medium text-base md:text-lg">
+                  <X className="size-6 text-danger-500 shrink-0" />
+                  <p className="text-danger-700 font-medium text-base md:text-lg">
                     {t("minimumAmountWarning", {
                       amount: MINIMUM_AMOUNT.toFixed(2),
                     })}

@@ -1,7 +1,6 @@
 import {
-  calculateCommissions as calculateServiceCommissions,
+  createServicePayments,
   formatMXN,
-  getCommissionRates as getServiceCommissionRates,
   type CommissionBreakdown,
   type CommissionRates,
 } from "@even/payments";
@@ -12,41 +11,18 @@ export const COMMISSION_SERVICE = "room-service" as const;
 
 export { formatMXN, type CommissionBreakdown, type CommissionRates };
 
-export function getCommissionRates(amount: number): CommissionRates {
-  return getServiceCommissionRates(amount, COMMISSION_SERVICE);
-}
+const payments = createServicePayments(COMMISSION_SERVICE);
 
-export function calculateCommissions(
-  baseAmount: number,
-  tipAmount: number,
-): CommissionBreakdown {
-  return calculateServiceCommissions(baseAmount, tipAmount, COMMISSION_SERVICE);
-}
+export const getCommissionRates = payments.getCommissionRates;
+export const calculateCommissions = payments.calculateCommissions;
 
-// ============================================================
+// Room Service no infla el precio mostrado con su propio modelo, pero el historial es compartido
+// entre servicios y puede mostrar órdenes de otros servicios — ver HistoryTab.tsx.
+
 // Comisión por ítem — espejo de even-backend/src/utils/commissionCalculator.js.
-// Room Service no infla el precio mostrado con su propio modelo, pero el
-// historial es compartido entre servicios y puede mostrar órdenes de Tap
-// Order & Pay / Flex Bill, que sí lo hacen — ver HistoryTab.tsx.
-// ============================================================
-
-export interface ItemCommissionRate {
-  clientPays: number;
-  restaurantPays: number;
-}
-
-export function getItemCommissionRate(
-  _unitPrice: number,
-): ItemCommissionRate {
-  const { clientPays, restaurantPays } = getCommissionRates(0);
-  return { clientPays, restaurantPays };
-}
-
-// Precio que ve el cliente: precio real + comisión del cliente + IVA sobre
-// esa comisión, ya incrustados.
-export function getItemDisplayPrice(unitPrice: number): number {
-  const rate = getItemCommissionRate(unitPrice);
-  const commission = unitPrice * (rate.clientPays / 100);
-  const iva = commission * 0.16;
-  return Math.round((unitPrice + commission + iva) * 100) / 100;
-}
+// Solo para PREVIEW visual; el backend recalcula todo desde el carrito.
+export type { ItemCommissionRate } from "@even/payments";
+export const getItemCommissionRate = payments.getItemCommissionRate;
+// Precio que ve el cliente: precio real + comisión del cliente + IVA ya incrustados.
+// Con 0 % cliente es el precio real (regla 1 de docs/comisiones.md).
+export const getItemDisplayPrice = payments.getItemDisplayPrice;

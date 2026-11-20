@@ -14,7 +14,7 @@ import {
   useImperativeHandle,
 } from "react";
 import { useTranslations } from "next-intl";
-import { setMenuCategory, takeMenuPosition } from "@/app/utils/menuScrollMemory";
+import { setMenuCategory, takeMenuPosition, useModalBackClose } from "@even/ui";
 import MenuHeader from "@/app/components/headers/MenuHeader";
 import MenuCategory from "@/app/components/MenuCategory";
 import PepperIcon from "@/app/components/UI/PepperIcon";
@@ -37,7 +37,6 @@ import { useRestaurant } from "@/app/context/RestaurantContext";
 import { DEFAULT_IMAGES } from "@/app/constants/images";
 import { useTable } from "@/app/context/TableContext";
 import ReorderModal from "@/app/components/ReorderModal";
-import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 
 const ChatView = lazy(() => import("@/app/components/ChatView"));
 const AuthView = lazy(() => import("./AuthView"));
@@ -50,13 +49,13 @@ const RestaurantClosedModal = lazy(
 function getStatusColor(status: string) {
   switch (status) {
     case "preparing":
-      return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      return "bg-caution-100 text-caution-800 border-caution-300";
     case "ready":
-      return "bg-orange-100 text-orange-800 border-orange-300";
+      return "bg-warning-100 text-warning-800 border-warning-300";
     case "delivered":
-      return "bg-green-100 text-green-800 border-green-300";
+      return "bg-positive-100 text-positive-800 border-positive-300";
     default:
-      return "bg-gray-100 text-gray-800 border-gray-300";
+      return "bg-tone-100 text-tone-800 border-tone-300";
   }
 }
 
@@ -117,13 +116,13 @@ function UserAvatar({
   }
   if (isAuthenticated && profile?.firstName) {
     return (
-      <span className={`text-stone-800 font-semibold select-none ${textSize}`}>
+      <span className={`text-warm-800 font-semibold select-none ${textSize}`}>
         {profile.firstName.charAt(0).toUpperCase()}
       </span>
     );
   }
   return (
-    <UserCircle className={`text-stone-500 ${iconSize}`} strokeWidth={1.2} />
+    <UserCircle className={`text-warm-500 ${iconSize}`} strokeWidth={1.2} />
   );
 }
 
@@ -258,9 +257,9 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
   // "#ffffff", así que ese es el valor correcto al que hay que volver.
   useEffect(() => {
     const modalOpen = showPepperChat || showSettingsModal;
-    document.body.style.backgroundColor = modalOpen ? "#F1F1F1" : "#fefeeb";
+    document.body.style.backgroundColor = modalOpen ? "var(--color-overscroll)" : "var(--color-background)";
     return () => {
-      document.body.style.backgroundColor = "#fefeeb";
+      document.body.style.backgroundColor = "var(--color-background)";
     };
   }, [showPepperChat, showSettingsModal]);
 
@@ -438,7 +437,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
             {/* Settings Icon */}
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="bg-white rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-95 size-9 md:size-10 lg:size-12 overflow-hidden flex items-center justify-center"
+              className="bg-white rounded-full shadow-sm hover:bg-tone-50 transition-all active:scale-95 size-9 md:size-10 lg:size-12 overflow-hidden flex items-center justify-center"
             >
               <UserAvatar isAuthenticated={isAuthenticated} profile={profile} />
             </button>
@@ -453,7 +452,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
 
           {/* Name and photo */}
           <div className="flex flex-col items-center">
-            <div className="size-28 md:size-36 lg:size-40 rounded-full bg-gray-200 overflow-hidden border border-gray-400 shadow-sm">
+            <div className="size-28 md:size-36 lg:size-40 rounded-full bg-tone-200 overflow-hidden border border-tone-400 shadow-sm">
               <img
                 src={restaurant.logo_url || DEFAULT_IMAGES.RESTAURANT_LOGO}
                 alt="Profile Pic"
@@ -528,7 +527,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
                 ${
                   activeCat === cat
                     ? "text-white"
-                    : "text-gray-500 hover:bg-gray-100"
+                    : "text-tone-500 hover:bg-tone-100"
                 }`}
               >
                 {cat === "Todo" ? t("filterAll") : cat}
@@ -548,7 +547,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
             ))
           ) : (
             <div className="text-center py-10 md:py-16">
-              <p className="text-gray-500 text-base md:text-lg lg:text-xl">
+              <p className="text-tone-500 text-base md:text-lg lg:text-xl">
                 {searchQuery.trim()
                   ? t("noResultsFor", { query: searchQuery })
                   : t("noItemsAvailable")}
@@ -593,7 +592,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
           {/* Settings */}
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="size-11 md:size-12 rounded-full overflow-hidden flex items-center justify-center bg-white/60 border border-gray-200 hover:bg-white transition-colors active:scale-95"
+            className="size-11 md:size-12 rounded-full overflow-hidden flex items-center justify-center bg-white/60 border border-tone-200 hover:bg-white transition-colors active:scale-95"
           >
             <UserAvatar
               isAuthenticated={isAuthenticated}
@@ -607,10 +606,10 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
           <div className="relative group">
             <button
               onClick={() => navigateWithTable("/cart")}
-              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 hover:bg-white transition-colors active:scale-95"
+              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-tone-200 hover:bg-white transition-colors active:scale-95"
             >
               <ShoppingCart
-                className="size-5 md:size-6 text-stone-700"
+                className="size-5 md:size-6 text-warm-700"
                 strokeWidth={1.5}
               />
             </button>
@@ -625,10 +624,10 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
           <div className="relative group">
             <button
               onClick={() => navigateWithTable("/order")}
-              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 hover:bg-white transition-colors active:scale-95"
+              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-tone-200 hover:bg-white transition-colors active:scale-95"
             >
               <ReceiptText
-                className="size-5 md:size-6 text-stone-700"
+                className="size-5 md:size-6 text-warm-700"
                 strokeWidth={1.5}
               />
             </button>
@@ -677,7 +676,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
             }}
           >
             <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-300/80" />
+              <div className="w-10 h-1 rounded-full bg-tone-300/80" />
             </div>
             <Suspense fallback={null}>
               <ChatView onBack={closePepperChat} />
@@ -806,7 +805,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
                     >
                       {showImages && (
                         <div className="shrink-0">
-                          <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden">
+                          <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm flex items-center justify-center overflow-hidden">
                             {dish.images &&
                             dish.images.length > 0 &&
                             dish.images[0] ? (

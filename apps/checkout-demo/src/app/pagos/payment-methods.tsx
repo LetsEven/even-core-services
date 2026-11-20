@@ -32,17 +32,17 @@ export function PaymentMethods() {
   }, [service]);
 
   if (state.status === "loading") {
-    return <p className="mt-4 text-gray-500">Cargando tarjetas…</p>;
+    return <p className="mt-4 text-tone-500">Cargando tarjetas…</p>;
   }
   if (state.status === "error") {
     return (
-      <p role="alert" className="mt-4 text-red-600">
+      <p role="alert" className="mt-4 text-danger-600">
         {state.message}
       </p>
     );
   }
   if (state.methods.length === 0) {
-    return <p className="mt-4 text-gray-500">No tienes tarjetas guardadas.</p>;
+    return <p className="mt-4 text-tone-500">No tienes tarjetas guardadas.</p>;
   }
 
   return (
@@ -52,7 +52,7 @@ export function PaymentMethods() {
           <span className="capitalize">
             {method.cardBrand} •••• {method.lastFourDigits}
           </span>
-          {method.isDefault && <span className="text-sm text-green-700">Predeterminada</span>}
+          {method.isDefault && <span className="text-sm text-positive-700">Predeterminada</span>}
         </li>
       ))}
     </ul>

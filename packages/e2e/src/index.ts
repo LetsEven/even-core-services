@@ -15,3 +15,10 @@ export {
   type FlowTransitionOptions,
   type FlowTransitionResult,
 } from "./flow-transition";
+export {
+  SCROLL_TOLERANCE,
+  expectNoUnexpectedScroll,
+  measureScroll,
+  type ScrollIssue,
+  type ScrollOptions,
+} from "./scroll";

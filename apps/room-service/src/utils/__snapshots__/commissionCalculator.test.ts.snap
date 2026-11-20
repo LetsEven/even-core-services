@@ -1,0 +1,224 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 0 1`] = `0`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 0.01 1`] = `0.01`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 10 1`] = `10.23`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 40 1`] = `40.93`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 40.01 1`] = `40.94`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 99.99 1`] = `102.31`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 100 1`] = `102.32`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 180 1`] = `184.18`;
+
+exports[`commissionCalculator de Room Service > getItemDisplayPrice: el cliente ve su 2 % + IVA incrustado > precio 1234.56 1`] = `1263.2`;
+
+exports[`commissionCalculator de Room Service > rejilla de oro del breakdown y formatMXN 1`] = `
+[
+  {
+    "baseAmount": 0,
+    "evenClientCharge": 0,
+    "evenCommissionClient": 0,
+    "evenCommissionRestaurant": 0,
+    "evenCommissionTotal": 0,
+    "evenRestaurantCharge": 0,
+    "ivaEvenClient": 0,
+    "ivaEvenRestaurant": 0,
+    "ivaEvenTotal": 0,
+    "ivaTip": 0,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 0,
+    "tipAmount": 0,
+    "totalAmountCharged": 0,
+  },
+  {
+    "baseAmount": 100,
+    "evenClientCharge": 2.55,
+    "evenCommissionClient": 2.2,
+    "evenCommissionRestaurant": 2.2,
+    "evenCommissionTotal": 4.4,
+    "evenRestaurantCharge": 2.55,
+    "ivaEvenClient": 0.35200000000000004,
+    "ivaEvenRestaurant": 0.35200000000000004,
+    "ivaEvenTotal": 0.7040000000000001,
+    "ivaTip": 1.6,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 110,
+    "tipAmount": 10,
+    "totalAmountCharged": 112.55,
+  },
+  {
+    "baseAmount": 85,
+    "evenClientCharge": 3.13,
+    "evenCommissionClient": 2.7,
+    "evenCommissionRestaurant": 2.7,
+    "evenCommissionTotal": 5.4,
+    "evenRestaurantCharge": 3.13,
+    "ivaEvenClient": 0.43200000000000005,
+    "ivaEvenRestaurant": 0.43200000000000005,
+    "ivaEvenTotal": 0.8640000000000001,
+    "ivaTip": 8,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 135,
+    "tipAmount": 50,
+    "totalAmountCharged": 138.13,
+  },
+  {
+    "baseAmount": 33.33,
+    "evenClientCharge": 0.77,
+    "evenCommissionClient": 0.6666,
+    "evenCommissionRestaurant": 0.6666,
+    "evenCommissionTotal": 1.3332,
+    "evenRestaurantCharge": 0.77,
+    "ivaEvenClient": 0.106656,
+    "ivaEvenRestaurant": 0.106656,
+    "ivaEvenTotal": 0.213312,
+    "ivaTip": 0,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 33.33,
+    "tipAmount": 0,
+    "totalAmountCharged": 34.1,
+  },
+  {
+    "baseAmount": 360,
+    "evenClientCharge": 8.35,
+    "evenCommissionClient": 7.2,
+    "evenCommissionRestaurant": 7.2,
+    "evenCommissionTotal": 14.4,
+    "evenRestaurantCharge": 8.35,
+    "ivaEvenClient": 1.1520000000000001,
+    "ivaEvenRestaurant": 1.1520000000000001,
+    "ivaEvenTotal": 2.3040000000000003,
+    "ivaTip": 0,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 360,
+    "tipAmount": 0,
+    "totalAmountCharged": 368.35,
+  },
+  {
+    "baseAmount": 360,
+    "evenClientCharge": 9.19,
+    "evenCommissionClient": 7.92,
+    "evenCommissionRestaurant": 7.92,
+    "evenCommissionTotal": 15.84,
+    "evenRestaurantCharge": 9.19,
+    "ivaEvenClient": 1.2672,
+    "ivaEvenRestaurant": 1.2672,
+    "ivaEvenTotal": 2.5344,
+    "ivaTip": 5.76,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 396,
+    "tipAmount": 36,
+    "totalAmountCharged": 405.19,
+  },
+  {
+    "baseAmount": 1234.56,
+    "evenClientCharge": 31.51,
+    "evenCommissionClient": 27.1602,
+    "evenCommissionRestaurant": 27.1602,
+    "evenCommissionTotal": 54.3204,
+    "evenRestaurantCharge": 31.51,
+    "ivaEvenClient": 4.345632,
+    "ivaEvenRestaurant": 4.345632,
+    "ivaEvenTotal": 8.691264,
+    "ivaTip": 19.752000000000002,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 1358.01,
+    "tipAmount": 123.45,
+    "totalAmountCharged": 1389.52,
+  },
+  {
+    "baseAmount": 199.99,
+    "evenClientCharge": 5.34,
+    "evenCommissionClient": 4.59977,
+    "evenCommissionRestaurant": 4.59977,
+    "evenCommissionTotal": 9.19954,
+    "evenRestaurantCharge": 5.34,
+    "ivaEvenClient": 0.7359632,
+    "ivaEvenRestaurant": 0.7359632,
+    "ivaEvenTotal": 1.4719264,
+    "ivaTip": 4.79976,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 229.98850000000002,
+    "tipAmount": 29.9985,
+    "totalAmountCharged": 235.33,
+  },
+  {
+    "baseAmount": 10.5,
+    "evenClientCharge": 0.28,
+    "evenCommissionClient": 0.2415,
+    "evenCommissionRestaurant": 0.2415,
+    "evenCommissionTotal": 0.483,
+    "evenRestaurantCharge": 0.28,
+    "ivaEvenClient": 0.03864,
+    "ivaEvenRestaurant": 0.03864,
+    "ivaEvenTotal": 0.07728,
+    "ivaTip": 0.252,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 12.075,
+    "tipAmount": 1.575,
+    "totalAmountCharged": 12.35,
+  },
+  {
+    "baseAmount": 0.01,
+    "evenClientCharge": 0,
+    "evenCommissionClient": 0.0002,
+    "evenCommissionRestaurant": 0.0002,
+    "evenCommissionTotal": 0.0004,
+    "evenRestaurantCharge": 0,
+    "ivaEvenClient": 0.000032000000000000005,
+    "ivaEvenRestaurant": 0.000032000000000000005,
+    "ivaEvenTotal": 0.00006400000000000001,
+    "ivaTip": 0,
+    "rates": {
+      "clientPays": 2,
+      "evenTotal": 4,
+      "restaurantPays": 2,
+    },
+    "subtotalForCommission": 0.01,
+    "tipAmount": 0,
+    "totalAmountCharged": 0.01,
+  },
+]
+`;

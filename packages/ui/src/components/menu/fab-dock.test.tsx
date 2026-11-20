@@ -25,7 +25,7 @@ describe("FabDock", () => {
     expect(container.querySelector("#cart-icon")).not.toBeNull();
   });
 
-  it("solo cuenta pendiente: se ilumina con ícono de cuenta, sin número y con la cuenta fijada", () => {
+  it("solo cuenta pendiente: se ilumina con ícono de cuenta, sin número y sin botón extra fijado", () => {
     const bill = { ...base, labels: { ...labels, pendingBill: "Cuenta pendiente" } };
     const { container } = render(
       <FabDock {...bill} open={false} pendingBill items={[item("cuenta", { bill: true, count: 4, countLabel: (n) => `${n} platillos` })]} />,
@@ -34,9 +34,9 @@ describe("FabDock", () => {
     expect(main.className).toContain("bg-even-grass");
     expect(container.querySelector("#cart-badge")).toBeNull();
     expect(screen.getByTestId("bill-dot").textContent).toBe("");
-    // El botón de la cuenta está fijado (visible con el menú cerrado), resaltado y sin contador.
+    // La cuenta no se fija sobre la hamburguesa: queda plegada en el menú, resaltada y sin contador.
     const account = screen.getByRole("button", { name: "cuenta" });
-    expect(account.closest("[inert]")).toBeNull();
+    expect(account.closest("[inert]")).not.toBeNull();
     expect(account.className).toContain("bg-even-grass");
     expect(account.parentElement?.textContent).toBe("");
   });

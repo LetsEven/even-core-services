@@ -31,8 +31,13 @@ test("con la cuenta pendiente, el menú se ilumina sin contador y lleva a la cue
   await expect(fab).toHaveClass(/bg-even-grass/);
   await expect(page.locator("#cart-badge")).toHaveCount(0);
 
-  // El botón de la cuenta queda a la vista, sin número de platillos, y abre la cuenta.
+  // No aparece un botón extra sobre la hamburguesa: la cuenta está dentro del menú, sin número.
   const account = page.getByRole("button", { name: "Cuenta", exact: true });
+  // (plegado = dentro de un contenedor inert de altura 0; Playwright no cuenta el recorte como oculto)
+  await expect(account.locator("xpath=ancestor::*[@inert]")).toHaveCount(1);
+  await page.screenshot({ path: test.info().outputPath("menu-cuenta-pendiente.png") });
+  await fab.click();
+  await expect(account.locator("xpath=ancestor::*[@inert]")).toHaveCount(0);
   await expect(account).toBeVisible();
   await expect(account).toHaveText("");
   await account.click();

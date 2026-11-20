@@ -557,7 +557,7 @@ const MenuView = forwardRef<MenuViewHandle, MenuViewProps>(function MenuView(
             id: "order",
             label: t("accountLabel"),
             hidden: !Array.isArray(tableState.dishOrders) || tableState.dishOrders.length === 0,
-            // Con cuenta pendiente y sin carrito, FabDock lo fija y resalta (sin contador de platillos).
+            // Con cuenta pendiente y sin carrito, FabDock cambia la hamburguesa y resalta esta acción dentro del menú (sin contador).
             bill: true,
             icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
             onClick: () => {

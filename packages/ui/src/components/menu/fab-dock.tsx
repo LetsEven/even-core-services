@@ -95,7 +95,7 @@ export function FabDock({ open, onToggle, onClose, items, count = 0, countLabel,
           ...item,
           count: undefined,
           countLabel: undefined,
-          pinned: item.pinned || indicator === "bill",
+          // La cuenta pendiente se avisa solo en el botón principal; la acción sigue dentro del menú.
           highlight: item.highlight || indicator === "bill",
         }
       : item,

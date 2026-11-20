@@ -615,7 +615,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             id: "account",
             label: t("accountLabel"),
             hidden: activeOrders.length === 0,
-            // Con cuenta pendiente y sin carrito, FabDock lo fija y resalta (sin contador de platillos).
+            // Con cuenta pendiente y sin carrito, FabDock cambia la hamburguesa y resalta esta acción dentro del menú (sin contador).
             bill: true,
             icon: <ReceiptText className="size-5 md:size-6" strokeWidth={1.5} />,
             onClick: () => {

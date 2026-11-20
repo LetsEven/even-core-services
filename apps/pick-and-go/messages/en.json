@@ -112,6 +112,7 @@
     "profileAlt": "Profile"
   },
   "CartView": {
+    "minimumWarning": "The minimum purchase is ${amount}",
     "emptyCartHero": "Your cart is empty, add items and enjoy",
     "confirmYourOrder": "Confirm your order",
     "myCart": "My cart",
@@ -176,6 +177,7 @@
     "addPaymentMethodCta": "Add payment method",
     "processingCta": "Processing...",
     "selectCardCta": "Select card",
+    "minimumNotReachedCta": "Minimum not reached",
     "payAndOrderCta": "Pay and order",
     "paymentOptionsTitle": "Payment options",
     "fullPaymentOption": "Full payment",

@@ -335,6 +335,7 @@
     "continueCta": "Continue"
   },
   "CartView": {
+    "minimumWarning": "The minimum purchase is ${amount}",
     "emptyCartHero": "Your cart is empty, add items and enjoy",
     "confirmYourOrder": "Confirm your order",
     "myCart": "My cart",

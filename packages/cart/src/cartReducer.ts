@@ -22,6 +22,9 @@ export interface CartLine {
   customFields?: CartLineField[];
   specialInstructions?: string | null;
   cartItemId?: string;
+  // Descuento personal de la línea: una línea con descuento y otra sin él del
+  // mismo platillo son líneas distintas (el backend las guarda por separado).
+  userDiscountId?: string | null;
 }
 
 export interface CartState<T extends CartLine = CartLine> {
@@ -90,6 +93,7 @@ export function lineSignature(item: {
   extraPrice?: number;
   customFields?: CartLineField[];
   specialInstructions?: string | null;
+  userDiscountId?: string | null;
 }) {
   const fields = (item.customFields || [])
     .map((f) => ({
@@ -107,6 +111,7 @@ export function lineSignature(item: {
     id: item.id,
     extra: item.extraPrice || 0,
     instructions: item.specialInstructions ?? null,
+    discount: item.userDiscountId ?? null,
     fields,
   });
 }

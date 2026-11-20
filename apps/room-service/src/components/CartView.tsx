@@ -34,6 +34,20 @@ const isProfileComplete = (
 
 export default function CartView() {
   const t = useTranslations("CartView");
+  // Mínimo sobre el subtotal (ya con descuentos); el backend también lo valida
+  const MINIMO_CARRITO = 20;
+
+  // Promos gratis no suben; una línea con descuento personal sube hasta su tope
+  const noPuedeSubir = (item: {
+    isPromoItem?: boolean;
+    userDiscountId?: string | null;
+    discountMaxQuantity?: number | null;
+    quantity: number;
+  }) =>
+    (!!item.isPromoItem && !item.userDiscountId) ||
+    (!!item.userDiscountId &&
+      item.discountMaxQuantity != null &&
+      item.quantity >= item.discountMaxQuantity);
   const tc = useTranslations("Common");
   const params = useParams();
   const restaurantId = params?.restaurantId
@@ -88,6 +102,8 @@ export default function CartView() {
     (item) => !(item.isPromoItem && !item.userDiscountId),
   );
   const isPromoOnlyCart = cartState.items.length > 0 && !hasNonPromoItem;
+  const bajoMinimo =
+    cartState.items.length > 0 && cartState.totalPrice < MINIMO_CARRITO;
 
   // Si el usuario está autenticado pero el perfil no cargó (ej. error de red al
   // volver de fondo en móvil), intentar cargarlo para que el checkout funcione.
@@ -328,7 +344,7 @@ export default function CartView() {
                                   <Plus
                                     onClick={() =>
                                       !(
-                                        item.isPromoItem && !item.userDiscountId
+                                        noPuedeSubir(item)
                                       ) &&
                                       item.cartItemId &&
                                       updateQuantity(
@@ -337,7 +353,7 @@ export default function CartView() {
                                       )
                                     }
                                     className={`size-4 md:size-5 lg:size-6 flex items-center justify-center text-black ${
-                                      item.isPromoItem && !item.userDiscountId
+                                      noPuedeSubir(item)
                                         ? "opacity-20 cursor-not-allowed"
                                         : "cursor-pointer"
                                     }`}
@@ -426,6 +442,13 @@ export default function CartView() {
                   paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
                 }}
               >
+                {bajoMinimo && (
+                  <p className="mt-4 rounded-lg bg-danger-50 px-4 py-2 text-center text-sm md:text-base text-danger-700">
+                    {t("minimumWarning", {
+                      amount: MINIMO_CARRITO.toFixed(2),
+                    })}
+                  </p>
+                )}
                 <div className="w-full flex gap-3 md:gap-4 lg:gap-5 mt-6 md:mt-7 lg:mt-8 justify-between">
                   <div className="flex flex-col justify-center min-w-0">
                     <span className="text-tone-600 text-sm md:text-base lg:text-lg whitespace-nowrap">
@@ -441,12 +464,14 @@ export default function CartView() {
                       isSubmitting ||
                       cartState.isLoading ||
                       isPromoOnlyCart ||
+                      bajoMinimo ||
                       !availabilityReady
                     }
                     className={`py-3 md:py-4 lg:py-5 text-even-evergreen rounded-full cursor-pointer font-normal h-fit shrink-0 flex items-center justify-center text-base md:text-lg lg:text-xl active:scale-95 transition-transform ${
                       isSubmitting ||
                       cartState.isLoading ||
                       isPromoOnlyCart ||
+                      bajoMinimo ||
                       !availabilityReady
                         ? "bg-even-grass opacity-50 cursor-not-allowed px-8 md:px-10 lg:px-12"
                         : "bg-even-grass px-8 md:px-10 lg:px-12 animate-pulse-button"

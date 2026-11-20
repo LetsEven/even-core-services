@@ -1370,9 +1370,11 @@ export default function CardSelectionPage() {
         <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button
             onClick={handleInitiatePayment}
-            disabled={isProcessing || !selectedPaymentMethodId}
+            disabled={
+              isProcessing || !selectedPaymentMethodId || isUnderMinimum
+            }
             className={`py-3 text-even-evergreen rounded-full cursor-pointer font-normal h-fit w-full flex items-center justify-center text-base active:scale-95 transition-transform ${
-              isProcessing || !selectedPaymentMethodId
+              isProcessing || !selectedPaymentMethodId || isUnderMinimum
                 ? "bg-even-grass opacity-50 cursor-not-allowed px-10"
                 : "bg-even-grass px-10 animate-pulse-button"
             }`}
@@ -1384,6 +1386,8 @@ export default function CardSelectionPage() {
               </div>
             ) : !selectedPaymentMethodId ? (
               t("selectCardCta")
+            ) : isUnderMinimum ? (
+              t("minimumNotReachedCta")
             ) : (
               t("payAndOrderCta")
             )}

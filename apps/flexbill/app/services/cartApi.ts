@@ -39,6 +39,7 @@ export interface CartItem {
   promoActivationId?: string | null;
   promoDiscountPercentage?: number | null;
   userDiscountId?: string | null;
+  discountMaxQuantity?: number | null;
 }
 
 export interface Cart {

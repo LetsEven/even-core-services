@@ -129,6 +129,20 @@ function ReorderModal({
     return ids;
   }, [menu]);
 
+  // Precio actual del menú (con su descuento), no el que se pagó en el pedido anterior
+  const preciosMenu = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const section of menu ?? []) {
+      for (const it of section.items ?? []) {
+        const base = Number(it.price);
+        m.set(it.id, it.discount > 0 ? base * (1 - it.discount / 100) : base);
+      }
+    }
+    return m;
+  }, [menu]);
+  const precioDe = (id: number | null | undefined, pagado: number) =>
+    (id != null ? preciosMenu.get(id) : undefined) ?? pagado;
+
   const getCartItem = (menuItemId: number) =>
     cartState.items.find((i) => i.id === menuItemId);
 
@@ -157,7 +171,7 @@ function ReorderModal({
         id: order.menu_item_id!,
         name: order.item,
         description: "",
-        price: order.price,
+        price: precioDe(order.menu_item_id, order.price),
         images: order.images,
         features: [],
         discount: 0,
@@ -210,7 +224,7 @@ function ReorderModal({
       id: order.menu_item_id!,
       name: order.item,
       description: "",
-      price: order.price,
+      price: precioDe(order.menu_item_id, order.price),
       images: order.images,
       features: [],
       discount: 0,
@@ -229,7 +243,7 @@ function ReorderModal({
         const qty = getSelectedQuantity(order.menu_item_id!);
         return (
           sum +
-          qty * getItemDisplayPrice(order.price + (order.extra_price || 0))
+          qty * getItemDisplayPrice(precioDe(order.menu_item_id, order.price) + (order.extra_price || 0))
         );
       }, 0),
     [uniqueItems, cartState.items],
@@ -490,16 +504,16 @@ function ReorderModal({
                           formatPrice={(price) =>
                             price *
                             (getItemDisplayPrice(
-                              order.price + (order.extra_price || 0),
+                              precioDe(order.menu_item_id, order.price) + (order.extra_price || 0),
                             ) /
-                              (order.price + (order.extra_price || 0) || 1))
+                              (precioDe(order.menu_item_id, order.price) + (order.extra_price || 0) || 1))
                           }
                           className="mt-0.5"
                         />
                         <p className="text-xs md:text-sm text-white/60 mt-1">
                           $
                           {getItemDisplayPrice(
-                            order.price + (order.extra_price || 0),
+                            precioDe(order.menu_item_id, order.price) + (order.extra_price || 0),
                           ).toFixed(2)}
                         </p>
                       </div>

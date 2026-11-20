@@ -72,6 +72,20 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
     return ids;
   }, [menu]);
 
+  // Precio actual del menú (con su descuento), no el que se pagó en el pedido anterior
+  const preciosMenu = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const section of menu ?? []) {
+      for (const it of section.items ?? []) {
+        const base = Number(it.price);
+        m.set(it.id, it.discount > 0 ? base * (1 - it.discount / 100) : base);
+      }
+    }
+    return m;
+  }, [menu]);
+  const precioDe = (id: number | null | undefined, pagado: number) =>
+    (id != null ? preciosMenu.get(id) : undefined) ?? pagado;
+
   const getCartItem = (menuItemId: number): CartItem | undefined =>
     cartState.items.find((i) => i.id === menuItemId);
 
@@ -91,7 +105,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
     id: item.menu_item_id,
     name: item.item,
     description: "",
-    price: item.price,
+    price: precioDe(item.menu_item_id, item.price),
     images: item.images,
     features: [],
     discount: 0,
@@ -163,7 +177,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
     () =>
       uniqueItems.reduce((sum, item) => {
         const qty = getCartItem(item.menu_item_id)?.quantity ?? 0;
-        return sum + qty * (item.price + (item.extra_price || 0));
+        return sum + qty * (precioDe(item.menu_item_id, item.price) + (item.extra_price || 0));
       }, 0),
     [uniqueItems, cartState.items],
   );
@@ -320,7 +334,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                           className="mt-0.5"
                         />
                         <p className="text-xs md:text-sm text-white/60 mt-1">
-                          ${(item.price + (item.extra_price || 0)).toFixed(2)}
+                          ${(precioDe(item.menu_item_id, item.price) + (item.extra_price || 0)).toFixed(2)}
                         </p>
                       </div>
 

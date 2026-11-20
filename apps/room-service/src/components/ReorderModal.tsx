@@ -45,6 +45,10 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
     }
   }, [isOpen]);
 
+  // Precio actual del menú con su descuento
+  const precioActual = (m: MenuItem) =>
+    m.discount > 0 ? Number(m.price) * (1 - m.discount / 100) : Number(m.price);
+
   // Busca el item del menú actual por nombre (case-insensitive)
   const getMenuItemByName = (name: string): MenuItem | undefined => {
     if (!name) return undefined;
@@ -100,7 +104,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
         id: menuItem.id,
         name: menuItem.name,
         description: menuItem.description || "",
-        price: menuItem.price,
+        price: precioActual(menuItem),
         images: menuItem.image_url ? [menuItem.image_url] : item.images || [],
         features: [],
         discount: menuItem.discount,
@@ -169,7 +173,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
         const menuItem = getMenuItemByName(item.item);
         if (!menuItem) return sum;
         const qty = getCartItem(menuItem.id)?.quantity ?? 0;
-        return sum + qty * (menuItem.price + (item.extra_price || 0));
+        return sum + qty * (precioActual(menuItem) + (item.extra_price || 0));
       }, 0),
     [uniqueItems, cartState.items, menu],
   );
@@ -324,7 +328,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                         <p className="text-xs md:text-sm text-white/60 mt-1">
                           $
                           {(
-                            (menuItem?.price ?? item.price) +
+                            (menuItem ? precioActual(menuItem) : item.price) +
                             (item.extra_price || 0)
                           ).toFixed(2)}
                         </p>

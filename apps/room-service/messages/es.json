@@ -47,6 +47,7 @@
     "viewCart": "Ver el carrito • {count}"
   },
   "CartView": {
+    "minimumWarning": "El mínimo de compra es de ${amount}",
     "emptyCartHero": "El carrito está vacío, agrega items y disfruta",
     "confirmYourOrder": "Confirma tu pedido",
     "myCart": "Mi carrito",

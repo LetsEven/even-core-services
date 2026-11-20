@@ -29,7 +29,7 @@ import {
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import { tapOrderService } from "@/services/taporders.service";
 import type { TapOrder, LastOrderDish } from "@/services/taporders.service";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");

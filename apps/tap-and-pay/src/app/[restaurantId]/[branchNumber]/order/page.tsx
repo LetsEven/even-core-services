@@ -20,7 +20,7 @@ import { useRestaurant } from "@/app/context/RestaurantContext";
 import MenuHeader from "@/app/components/headers/MenuHeader";
 import { useSearchParams, useParams } from "next/navigation";
 import { orderService, type POSStatus } from "@/app/services/order.service";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 // Perfil completo = tiene nombre Y fecha de nacimiento (igual que en
 // pick-and-go/auth-selection). Si falta el nombre, addActiveUser terminaría

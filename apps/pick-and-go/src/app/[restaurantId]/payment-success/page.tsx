@@ -36,7 +36,7 @@ import OrderNotificationModal from "@/components/modals/OrderNotificationModal";
 import { invoiceService } from "../../../services/invoice.service";
 import { ticketService } from "../../../services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 const ReorderModal = lazy(
   () => import("../../../components/modals/ReorderModal"),

@@ -20,7 +20,7 @@ import InvoiceModal from "@/components/modals/InvoiceModal";
 import { invoiceService } from "@/services/invoice.service";
 import { ticketService } from "@/services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 import { useRestaurant } from "@/context/RestaurantContext";
 
 interface OrderHistoryItem {

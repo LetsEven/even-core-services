@@ -29,7 +29,7 @@ import { ticketService } from "@/app/services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
 import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");

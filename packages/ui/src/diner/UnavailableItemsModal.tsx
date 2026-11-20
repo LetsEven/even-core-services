@@ -38,7 +38,12 @@ interface UnavailableItemsModalProps {
   items: UnavailableModalItem[];
   onRemove: () => Promise<void>;
   showImages?: boolean;
+  /** Clases del botón principal (por defecto el verde de marca; FlexBill lo usa negro). */
+  removeButtonClassName?: string;
 }
+
+const DEFAULT_REMOVE_BUTTON_CLASS =
+  "w-full mt-6 md:mt-8 flex items-center justify-center gap-2 bg-even-grass text-even-evergreen hover:opacity-90 text-base md:text-lg lg:text-xl py-3 md:py-4 rounded-full transition-opacity disabled:opacity-50";
 
 export default function UnavailableItemsModal({
   isOpen,
@@ -46,6 +51,7 @@ export default function UnavailableItemsModal({
   items,
   onRemove,
   showImages = true,
+  removeButtonClassName = DEFAULT_REMOVE_BUTTON_CLASS,
 }: UnavailableItemsModalProps) {
   const t = useTranslations("UnavailableItemsModal");
   const [removing, setRemoving] = useState(false);
@@ -124,7 +130,7 @@ export default function UnavailableItemsModal({
           <button
             onClick={handleRemove}
             disabled={removing}
-            className="w-full mt-6 md:mt-8 flex items-center justify-center gap-2 bg-even-grass text-even-evergreen hover:opacity-90 text-base md:text-lg lg:text-xl py-3 md:py-4 rounded-full transition-opacity disabled:opacity-50"
+            className={removeButtonClassName}
           >
             {removing && <Loader2 className="size-5 animate-spin" />}
             {t("remove", { count: items.length })}

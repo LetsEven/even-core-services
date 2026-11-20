@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
+import { lockScroll, unlockScroll } from "../lib/scroll-lock";
 
 interface POSBlockedModalProps {
   isOpen: boolean;
@@ -23,13 +24,9 @@ export default function POSBlockedModal({
   const tc = useTranslations("Common");
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
+      lockScroll();
+      return unlockScroll;
     }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
   }, [isOpen]);
 
   if (!isOpen) return null;

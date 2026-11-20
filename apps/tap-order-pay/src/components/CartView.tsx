@@ -11,15 +11,16 @@ import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "../context/AuthContext";
 import { useAgentStatus } from "../hooks/useAgentStatus";
 import { useRestaurant } from "../context/RestaurantContext";
-import POSBlockedModal from "./POSBlockedModal";
+import {
+  POSBlockedModal,
+  ItemCustomizations,
+  UnavailableItemsModal,
+  toUnavailableModalItems,
+  UnavailableCartRow,
+} from "@even/ui/diner";
 import { isProfileComplete } from "@/utils/profile";
-import ItemCustomizations from "@/components/ItemCustomizations";
 import { getBackendOrigin } from "@even/api-client";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
-import UnavailableItemsModal, {
-  toUnavailableModalItems,
-} from "@/components/UnavailableItemsModal";
-import UnavailableCartRow from "@/components/UnavailableCartRow";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
 
 const API_BASE_URL = getBackendOrigin(

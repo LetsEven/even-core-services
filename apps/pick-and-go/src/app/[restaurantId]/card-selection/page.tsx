@@ -12,7 +12,12 @@ import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { useGuest, useIsGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import HighDemandBanner from "@/components/modals/HighDemandBanner";
+import {
+  HighDemandBanner,
+  POSBlockedModal,
+  UnavailableItemsModal,
+  toUnavailableModalItems,
+} from "@even/ui/diner";
 import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import { useBranch } from "@/context/BranchContext";
@@ -28,11 +33,7 @@ import { USER_DISCOUNT_SERVICE } from "@/services/userDiscounts.service";
 import { usePaymentProvider } from "@/hooks/usePaymentProvider";
 import { useAgentStatus } from "@/hooks/useAgentStatus";
 import { useMsiConfig } from "@/hooks/useMsiConfig";
-import POSBlockedModal from "@/components/POSBlockedModal";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
-import UnavailableItemsModal, {
-  toUnavailableModalItems,
-} from "@/components/UnavailableItemsModal";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
 import {
   ensurePaymentIntent,

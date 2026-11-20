@@ -28,7 +28,7 @@ import {
 } from "@/app/services/payment.service";
 import { useAgentStatus } from "@/app/hooks/useAgentStatus";
 import { useRestaurant } from "@/app/context/RestaurantContext";
-import POSBlockedModal from "@/app/components/POSBlockedModal";
+import { POSBlockedModal } from "@even/ui/diner";
 import {
   ensurePaymentIntent,
   clearStoredPaymentIntent,

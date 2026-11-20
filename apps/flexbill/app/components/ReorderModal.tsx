@@ -15,7 +15,7 @@ import OrderAnimation from "@/app/components/UI/OrderAnimation";
 import RestaurantClosedModal from "@/app/components/RestaurantClosedModal";
 import OutOfStockModal from "@/app/components/OutOfStockModal";
 import { getItemDisplayPrice } from "@/app/utils/commissionCalculator";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 interface ReorderModalProps {
   isOpen: boolean;

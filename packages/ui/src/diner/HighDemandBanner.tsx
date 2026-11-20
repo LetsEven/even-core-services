@@ -4,11 +4,25 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+const DEFAULT_ICON_SRC = "/even/even-asterisk-white.svg";
+const DEFAULT_ICON_CLASS = "size-16";
+const DEFAULT_BUTTON_CLASS =
+  "mt-2 w-full bg-white text-tone-900 font-semibold py-3.5 rounded-full text-sm hover:bg-white/90 transition-colors active:scale-95";
+
 interface Props {
   onDismiss: () => void;
+  /** Isotipo del banner (por defecto el blanco; RS, TOP y FB usan el verde). */
+  iconSrc?: string;
+  iconClassName?: string;
+  buttonClassName?: string;
 }
 
-export default function HighDemandBanner({ onDismiss }: Props) {
+export default function HighDemandBanner({
+  onDismiss,
+  iconSrc = DEFAULT_ICON_SRC,
+  iconClassName = DEFAULT_ICON_CLASS,
+  buttonClassName = DEFAULT_BUTTON_CLASS,
+}: Props) {
   const t = useTranslations("HighDemandBanner");
   const tc = useTranslations("Common");
   return createPortal(
@@ -31,9 +45,9 @@ export default function HighDemandBanner({ onDismiss }: Props) {
         <div className="flex flex-col items-center px-8 pt-10 pb-8 gap-5">
           {/* Logo */}
           <img
-            src="/even/even-asterisk-white.svg"
+            src={iconSrc}
             alt="Even"
-            className="size-16"
+            className={iconClassName}
           />
 
           {/* Text */}
@@ -47,7 +61,7 @@ export default function HighDemandBanner({ onDismiss }: Props) {
           {/* Button */}
           <button
             onClick={onDismiss}
-            className="mt-2 w-full bg-white text-tone-900 font-semibold py-3.5 rounded-full text-sm hover:bg-white/90 transition-colors active:scale-95"
+            className={buttonClassName}
           >
             {tc("understood")}
           </button>

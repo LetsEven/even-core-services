@@ -29,7 +29,7 @@ import { roomOrderService } from "@/services/roomorders.service";
 import type { RoomOrder } from "@/services/roomorders.service";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");

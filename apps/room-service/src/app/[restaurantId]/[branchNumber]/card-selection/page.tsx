@@ -26,11 +26,8 @@ import { useAccountDiscount } from "@/hooks/useAccountDiscount";
 import { USER_DISCOUNT_SERVICE } from "@/services/userDiscounts.service";
 import { useAgentStatus } from "@/hooks/useAgentStatus";
 import { useRestaurant } from "@/context/RestaurantContext";
-import POSBlockedModal from "@/components/POSBlockedModal";
+import { POSBlockedModal, UnavailableItemsModal, toUnavailableModalItems } from "@even/ui/diner";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
-import UnavailableItemsModal, {
-  toUnavailableModalItems,
-} from "@/components/UnavailableItemsModal";
 import { useCartAvailability } from "@/hooks/useCartAvailability";
 import {
   ensurePaymentIntent,

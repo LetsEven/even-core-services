@@ -65,6 +65,8 @@ export interface ProcessPaymentRequest {
   id_table_order?: string | null;
   payment_type?: string;
   selected_item_ids?: string[];
+  // Tap & Pay: nombre del recibo que el backend registra al confirmar el cobro.
+  payerName?: string;
   // Idempotencia de cobro. Ambos opcionales — sin ellos,
   // /payments se comporta exactamente igual que antes.
   intentKey?: string;

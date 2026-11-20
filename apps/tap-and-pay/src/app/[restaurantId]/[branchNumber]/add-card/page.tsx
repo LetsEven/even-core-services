@@ -144,7 +144,9 @@ function AddCardContent() {
 
         const fromSavedCards = document.referrer.includes("/saved-cards");
 
-        if (fromSavedCards) {
+        if (searchParams.get("returnTo") === "cards") {
+          navigateWithTable("/order?dashboard=cards");
+        } else if (fromSavedCards) {
           navigateWithTable("/saved-cards");
         } else {
           router.back();

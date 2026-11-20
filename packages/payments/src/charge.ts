@@ -28,6 +28,7 @@ export type ChargeOutcome =
       status: "retryable";
       reason:
         | "intent_mismatch"
+        | "order_changed"
         | "idempotency_unavailable"
         | "payment_rejected"
         | "declined"
@@ -127,6 +128,17 @@ export async function chargeSavedCard({
       // estos datos. Se regenera la clave y se deja reintentar.
       store.clear();
       return { status: "retryable", reason: "intent_mismatch" };
+
+    case "order_changed":
+      // Tap & Pay / FlexBill: el backend trajo del POS platillos nuevos antes
+      // del cargo — no se cobró y los montos de la pantalla ya no valen. Se
+      // descarta el intento: el siguiente cobro es con otro carrito.
+      store.clear();
+      return {
+        status: "retryable",
+        reason: "order_changed",
+        message: getErrorMessage(paymentResult),
+      };
 
     case "idempotency_unavailable":
       // 503 — no hubo cobro, sí es seguro reintentar en unos segundos.

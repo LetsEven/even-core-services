@@ -31,12 +31,11 @@ import {
   type PickAndGoItem,
   type PickAndGoOrder,
 } from "../../../services/pickandgo.service";
-import InvoiceModal from "../../../components/modals/InvoiceModal";
 import OrderNotificationModal from "@/components/modals/OrderNotificationModal";
 import { invoiceService } from "../../../services/invoice.service";
 import { ticketService } from "../../../services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
 
 const ReorderModal = lazy(
   () => import("../../../components/modals/ReorderModal"),
@@ -673,6 +672,7 @@ export default function PaymentSuccessPage() {
       </div>
 
       <InvoiceModal
+        invoiceService={invoiceService}
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         transactionId={

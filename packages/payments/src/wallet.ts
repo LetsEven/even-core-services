@@ -25,3 +25,21 @@ export function isDefinitiveWalletRejection(result: {
 export function classifyGooglePayError(buttonReady: boolean): "init" | "payment" {
   return buttonReady ? "payment" : "init";
 }
+
+/** Estados de una orden de EcartPay que el backend acepta como pagada (confirmOrder). */
+export const WALLET_PAID_STATUSES = ["paid", "completed", "succeeded", "approved"];
+
+/**
+ * Apple Pay solo funciona sobre HTTPS (ni siquiera localhost sirve): en un
+ * documento inseguro el SDK lanza "InvalidAccessError: Trying to start an Apple
+ * Pay session from an insecure document". Guard tomado de redesign (Pick & Go).
+ *
+ * `NEXT_PUBLIC_WALLET_ALLOW_INSECURE=1` lo desactiva y existe solo para los
+ * e2e, que corren sobre http://localhost con un SDK de mentira; no debe
+ * definirse en ningún entorno real.
+ */
+export function isWalletDocumentSecure(): boolean {
+  if (typeof window === "undefined") return false;
+  if (process.env.NEXT_PUBLIC_WALLET_ALLOW_INSECURE === "1") return true;
+  return window.location.protocol === "https:";
+}

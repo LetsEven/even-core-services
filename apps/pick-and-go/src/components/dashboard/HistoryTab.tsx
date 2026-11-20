@@ -16,11 +16,10 @@ import {
   CircleAlert,
 } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
-import InvoiceModal from "@/components/modals/InvoiceModal";
 import { invoiceService } from "@/services/invoice.service";
 import { ticketService } from "@/services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
 import { useRestaurant } from "@/context/RestaurantContext";
 
 interface OrderHistoryItem {
@@ -756,6 +755,7 @@ export default function HistoryTab() {
       {invoiceModalOrder &&
         createPortal(
           <InvoiceModal
+            invoiceService={invoiceService}
             isOpen={true}
             onClose={() => setInvoiceModalOrder(null)}
             transactionId={invoiceModalOrder.transactionId || ""}

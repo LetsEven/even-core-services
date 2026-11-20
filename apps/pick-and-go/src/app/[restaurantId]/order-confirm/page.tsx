@@ -14,6 +14,7 @@ import BranchSelectionModal from "@/components/modals/BranchSelectionModal";
 import { calculateCommissions } from "@/utils/commissionCalculator";
 import { restaurantService } from "@/services/restaurant.service";
 import { cartService } from "@/services/cart.service";
+import { computeTipAmount, MINIMUM_AMOUNT, TIP_PRESETS } from "@even/payments";
 
 export default function OrderConfirmPage() {
   const t = useTranslations("OrderConfirmPage");
@@ -33,7 +34,6 @@ export default function OrderConfirmPage() {
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
 
   const baseAmount = cartState.totalPrice;
-  const MINIMUM_AMOUNT = 20;
 
   const [tipPercentage, setTipPercentage] = useState(10);
   const [customTip, setCustomTip] = useState("");
@@ -58,7 +58,7 @@ export default function OrderConfirmPage() {
     if (customTip && parseFloat(customTip) > 0) {
       return parseFloat(customTip);
     }
-    return (baseAmount * tipPercentage) / 100;
+    return computeTipAmount(baseAmount, tipPercentage);
   };
 
   const tipAmount = calculateTipAmount();
@@ -291,7 +291,7 @@ export default function OrderConfirmPage() {
                   {tc("tip")}
                 </span>
                 <div className="grid grid-cols-5 gap-2 flex-1">
-                  {[0, 10, 15, 20].map((percentage) => (
+                  {TIP_PRESETS.map((percentage) => (
                     <button
                       key={percentage}
                       onClick={() => {

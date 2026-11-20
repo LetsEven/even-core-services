@@ -11,24 +11,14 @@ import { useAuth } from "@/context/AuthContext";
 import TermsCheckbox from "@/components/TermsCheckbox";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
 import { useGuest } from "@/context/GuestContext";
-import { isProfileComplete, ageFromBirthDate } from "@/utils/profile";
+import {
+  COUNTRIES,
+  formatPhoneNumber,
+  unwrapProfile,
+  usePhoneAuth,
+} from "@even/ui/diner";
 
-type Step = "phone" | "verify" | "profile";
-
-interface Country {
-  code: string;
-  flag: string;
-  name: string;
-}
-
-const countries: Country[] = [
-  { code: "+52", flag: "MX", name: "México" },
-  { code: "+1", flag: "US", name: "Estados Unidos" },
-  { code: "+34", flag: "ES", name: "España" },
-  { code: "+54", flag: "AR", name: "Argentina" },
-  { code: "+57", flag: "CO", name: "Colombia" },
-  { code: "+58", flag: "VE", name: "Venezuela" },
-];
+const countries = COUNTRIES;
 
 export default function AuthPage() {
   const t = useTranslations("Auth");
@@ -51,61 +41,57 @@ export default function AuthPage() {
   const branchNumber = params?.branchNumber as string;
   const tableNumber = searchParams.get("table");
 
-  const [step, setStep] = useState<Step>("phone");
-  const [countryCode, setCountryCode] = useState("+52");
-  const [phoneNumber, setPhoneNumber] = useState(""); // Solo números sin formato
-  const [phoneNumberDisplay, setPhoneNumberDisplay] = useState(""); // Con formato para mostrar
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState<number | "">("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // Envío del SMS en curso: el paso de código se muestra de inmediato
-  const [sendingCode, setSendingCode] = useState(false);
-  const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(0);
+  const auth = usePhoneAuth({
+    sendOtp: (fullPhone) => authService.sendPhoneOTP(fullPhone),
+    verifyOtp: verifyOTP,
+    saveProfile: updateProfile,
+    refreshProfile,
+    // Tras verificar el código se pide el perfil aparte: con nombre sigue el flujo, sin él pide el perfil.
+    hasProfile: async () => {
+      const profileResponse = await authService.getMyProfile();
+      if (!profileResponse.success || !profileResponse.data) return false;
+      const found = unwrapProfile(profileResponse.data);
+      return { firstName: found?.firstName, lastName: found?.lastName };
+    },
+    // Con sesión activa pero perfil incompleto salta directo al step de perfil (solo desde el step "phone":
+    // tras verificar el código lo decide hasProfile).
+    session: {
+      isAuthenticated,
+      isLoading: isAuthLoading,
+      profile,
+      decideAfterVerify: false,
+    },
+    onAuthenticated: () => handleAuthRedirect(),
+  });
+  const {
+    step,
+    phone,
+    countryCode,
+    setCountryCode,
+    phoneNumber,
+    phoneDisplay: phoneNumberDisplay,
+    otp,
+    setOtp,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    age,
+    setAge,
+    acceptedTerms,
+    setAcceptedTerms,
+    loading,
+    sendingCode,
+    error,
+    countdown,
+    changeNumber,
+  } = auth;
+  const handleSendOTP = auth.sendCode;
+  const handleVerifyOTP = auth.verifyCode;
+  const handleResendOTP = auth.resendCode;
+  const handleProfileSubmit = auth.submitProfile;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const authCompletedRef = useRef(false);
-
-  // Formatear número de teléfono para mostrar
-  const formatPhoneNumber = (phoneNumber: string) => {
-    if (!phoneNumber) return "";
-
-    const cleaned = phoneNumber.replace(/\D/g, "");
-
-    // Sin código de país - solo 10 dígitos
-    if (cleaned.length === 10) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-
-    // Con código de país
-    if (cleaned.length > 10) {
-      const countryCode = cleaned.slice(0, cleaned.length - 10);
-      const areaCode = cleaned.slice(-10, -7);
-      const firstPart = cleaned.slice(-7, -4);
-      const lastPart = cleaned.slice(-4);
-      return `+${countryCode} (${areaCode}) ${firstPart}-${lastPart}`;
-    }
-
-    return phoneNumber;
-  };
-
-  // Formatear número mientras se escribe (para el input)
-  const formatPhoneInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
-
-    if (cleaned.length <= 3) {
-      return cleaned;
-    } else if (cleaned.length <= 6) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    } else if (cleaned.length <= 10) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
-  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -145,29 +131,6 @@ export default function AuthPage() {
     setBranchNumber,
   ]);
 
-  // Countdown timer
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  // Si ya hay una sesión activa (token/perfil de antes) y el usuario llega
-  // directo a esta pantalla, no tiene sentido pedirle teléfono/OTP de nuevo:
-  // saltar directo al step de perfil si falta el nombre o la fecha de
-  // nacimiento, precargando lo que ya exista.
-  // Solo en el step "phone": tras verificar OTP lo decide handleVerifyOTP.
-  useEffect(() => {
-    if (isAuthLoading || !isAuthenticated || step !== "phone") return;
-    if (!isProfileComplete(profile)) {
-      setFirstName(profile?.firstName || "");
-      setLastName(profile?.lastName || "");
-      setAge(ageFromBirthDate(profile?.birthDate));
-      setStep("profile");
-    }
-  }, [isAuthLoading, isAuthenticated, profile, step]);
-
   // Limpia el contexto de auth pendiente en sessionStorage (usado tanto en
   // el cierre real de la página como en el cierre de pestaña/refresh).
   const cleanupAuthSession = () => {
@@ -202,9 +165,7 @@ export default function AuthPage() {
       }
       if (step === "verify") {
         // Absorbe el back como un paso atrás (verify -> phone), sin salir.
-        setStep("phone");
-        setOtp("");
-        setError("");
+        changeNumber();
         window.history.pushState({ evenAuthGuard: true }, "");
         return;
       }
@@ -218,7 +179,7 @@ export default function AuthPage() {
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("beforeunload", cleanupAuthSession);
     };
-  }, [step]);
+  }, [step, changeNumber]);
 
   // Helper function to handle post-auth redirects
   const handleAuthRedirect = () => {
@@ -255,134 +216,6 @@ export default function AuthPage() {
     } else {
       // Default redirect to menu
       navigateWithTable("/order", true);
-    }
-  };
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSendingCode(true);
-
-    try {
-      const fullPhone = countryCode + phoneNumber;
-      setPhone(fullPhone);
-      setStep("verify");
-
-      const response = await authService.sendPhoneOTP(fullPhone);
-
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setStep("phone");
-        setError(response.error || t("errorSendCode"));
-      }
-    } catch (err) {
-      setStep("phone");
-      setError(t("errorSendCodeGeneric"));
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    if (otp.length !== 6) {
-      setError(t("errorInvalidCodeLength"));
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await verifyOTP(phone, otp);
-
-      if (response.success) {
-        // Check if profile exists
-        const profileResponse = await authService.getMyProfile();
-
-        if (profileResponse.success && profileResponse.data) {
-          // Handle nested data structure: data.data.profile or data.profile or data
-          const responseData = profileResponse.data as any;
-          const profile =
-            responseData.data?.profile ||
-            responseData.profile ||
-            responseData.data ||
-            responseData;
-
-          console.log("👤 profile object:", profile);
-          console.log("👤 profile.firstName:", profile.firstName);
-
-          // If profile has firstName, redirect based on context
-          if (profile.firstName) {
-            await refreshProfile();
-            handleAuthRedirect();
-          } else {
-            // Profile exists but incomplete, go to profile step
-            setStep("profile");
-          }
-        } else {
-          // No profile, go to profile step
-          setStep("profile");
-        }
-      } else {
-        setError(response.error || t("errorInvalidCode"));
-      }
-    } catch (err) {
-      console.error("❌ Error in handleVerifyOTP:", err);
-      setError(t("errorVerifyCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-
-    setError("");
-    setLoading(true);
-
-    try {
-      const response = await authService.sendPhoneOTP(phone);
-
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setError(response.error || t("errorResendCode"));
-      }
-    } catch (err) {
-      setError(t("errorResendCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (age === "" || !acceptedTerms) return;
-    setError("");
-    setLoading(true);
-
-    try {
-      const birthYear = new Date().getUTCFullYear() - Number(age);
-      const response = await updateProfile({
-        firstName,
-        lastName,
-        birthDate: `${birthYear}-01-01`,
-        acceptedTerms: true,
-      });
-
-      if (response.success) {
-        await refreshProfile();
-        handleAuthRedirect();
-      } else {
-        setError(response.error || t("errorSaveProfile"));
-      }
-    } catch (err) {
-      setError(t("errorSaveProfile"));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -504,12 +337,7 @@ export default function AuthPage() {
                     required
                     type="tel"
                     value={phoneNumberDisplay}
-                    onChange={(e) => {
-                      // Only allow numbers
-                      const value = e.target.value.replace(/\D/g, "");
-                      setPhoneNumber(value);
-                      setPhoneNumberDisplay(formatPhoneInput(value));
-                    }}
+                    onChange={(e) => auth.changePhone(e.target.value)}
                     className="h-12 w-full pl-10 pr-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen focus:border-transparent"
                     placeholder={t("phonePlaceholder")}
                     disabled={loading}

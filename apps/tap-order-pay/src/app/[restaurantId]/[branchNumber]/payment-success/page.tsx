@@ -6,7 +6,6 @@ import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 const ReorderModal = lazy(() => import("@/components/modals/ReorderModal"));
-import InvoiceModal from "@/components/modals/InvoiceModal";
 import { invoiceService } from "@/services/invoice.service";
 import { ticketService } from "@/services/ticket.service";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
@@ -29,7 +28,7 @@ import {
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import { tapOrderService } from "@/services/taporders.service";
 import type { TapOrder, LastOrderDish } from "@/services/taporders.service";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");
@@ -1079,6 +1078,7 @@ export default function PaymentSuccessPage() {
 
       {/* Invoice Modal */}
       <InvoiceModal
+        invoiceService={invoiceService}
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         transactionId={

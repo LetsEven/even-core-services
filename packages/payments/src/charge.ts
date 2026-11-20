@@ -6,7 +6,7 @@ import type {
 } from "./idempotency";
 import type { PaymentService } from "./payment-service";
 import { waitForChargedIntent, type PollOptions } from "./polling";
-import type { ProcessPaymentRequest } from "./types";
+import type { ProcessPaymentRequest, ProcessPaymentResult } from "./types";
 
 /**
  * Resultado de intentar cobrar una tarjeta guardada.
@@ -61,7 +61,15 @@ export interface ChargeSavedCardParams {
   /** Se llama al entrar al polling de "Verificando tu pago…". */
   onVerifying?: () => void;
   poll?: PollOptions;
+  /**
+   * Saca el id de la orden de EcartPay de un 2xx de /payments. Por defecto
+   * `payment.id`; una app con otra forma de respuesta lo inyecta.
+   */
+  extractOrderId?: (result: ApiResponse<ProcessPaymentResult> & ProcessPaymentResult) => string | null | undefined;
 }
+
+const defaultExtractOrderId: NonNullable<ChargeSavedCardParams["extractOrderId"]> = (result) =>
+  result.payment?.id;
 
 /**
  * Cobro con tarjeta guardada con idempotencia. Extraído del checkout de
@@ -76,6 +84,7 @@ export async function chargeSavedCard({
   request,
   onVerifying,
   poll,
+  extractOrderId = defaultExtractOrderId,
 }: ChargeSavedCardParams): Promise<ChargeOutcome> {
   const intent = await store.ensure(fingerprintInput);
 
@@ -97,7 +106,7 @@ export async function chargeSavedCard({
 
   if (paymentResult.success) {
     // Éxito directo o replay de un intento anterior — misma forma.
-    const ecartpayOrderId = paymentResult.payment?.id ?? null;
+    const ecartpayOrderId = extractOrderId(paymentResult) ?? null;
     if (!ecartpayOrderId) {
       return { status: "retryable", reason: "missing_order_id" };
     }

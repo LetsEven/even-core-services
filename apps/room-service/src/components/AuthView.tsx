@@ -7,48 +7,9 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
 import TermsCheckbox from "@/components/TermsCheckbox";
 import { useModalBackClose } from "@even/ui";
+import { COUNTRIES, formatPhoneNumber, usePhoneAuth } from "@even/ui/diner";
 
-type Step = "phone" | "verify" | "profile";
-
-interface Country {
-  code: string;
-  flag: string;
-  name: string;
-}
-
-const countries: Country[] = [
-  { code: "+52", flag: "MX", name: "México" },
-  { code: "+1", flag: "US", name: "Estados Unidos" },
-  { code: "+34", flag: "ES", name: "España" },
-  { code: "+54", flag: "AR", name: "Argentina" },
-  { code: "+57", flag: "CO", name: "Colombia" },
-  { code: "+58", flag: "VE", name: "Venezuela" },
-];
-
-function formatPhoneNumber(phoneNumber: string) {
-  if (!phoneNumber) return "";
-  const cleaned = phoneNumber.replace(/\D/g, "");
-  if (cleaned.length === 10) {
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-  }
-  if (cleaned.length > 10) {
-    const cc = cleaned.slice(0, cleaned.length - 10);
-    const areaCode = cleaned.slice(-10, -7);
-    const firstPart = cleaned.slice(-7, -4);
-    const lastPart = cleaned.slice(-4);
-    return `+${cc} (${areaCode}) ${firstPart}-${lastPart}`;
-  }
-  return phoneNumber;
-}
-
-function formatPhoneInput(value: string) {
-  const cleaned = value.replace(/\D/g, "");
-  if (cleaned.length <= 3) return cleaned;
-  if (cleaned.length <= 6) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-  if (cleaned.length <= 10)
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-  return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
-}
+const countries = COUNTRIES;
 
 interface AuthViewProps {
   onClose: () => void;
@@ -65,22 +26,51 @@ export default function AuthView({ onClose }: AuthViewProps) {
     profile: authProfile,
   } = useAuth();
 
-  const [step, setStep] = useState<Step>("phone");
-  const [selectedCountry, setSelectedCountry] = useState(countries[0]);
+  const auth = usePhoneAuth({
+    sendOtp: sendOTP,
+    // Tras verificar el código se recarga el perfil; el efecto [user, authProfile] decide el siguiente paso
+    // (con nombre el modal cambia a DashboardView; sin él, al paso del perfil).
+    verifyOtp: async (fullPhone, code) => {
+      const response = await verifyOTP(fullPhone, code);
+      if (response.success) await refreshProfile();
+      return response;
+    },
+    saveProfile: updateProfile,
+    refreshProfile,
+    onAuthenticated: () => undefined,
+  });
+  const {
+    step,
+    phone,
+    countryCode,
+    setCountryCode,
+    phoneNumber,
+    phoneDisplay: phoneNumberDisplay,
+    otp,
+    setOtp,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    age,
+    setAge,
+    acceptedTerms,
+    setAcceptedTerms,
+    loading,
+    sendingCode,
+    error,
+    countdown,
+    changeNumber,
+    goToProfile,
+  } = auth;
+  const handleSendOTP = auth.sendCode;
+  const handleVerifyOTP = auth.verifyCode;
+  const handleResendOTP = auth.resendCode;
+  const handleProfileSubmit = auth.submitProfile;
+  const selectedCountry =
+    countries.find((c) => c.code === countryCode) ?? countries[0];
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [phoneNumberDisplay, setPhoneNumberDisplay] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState<number | "">("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // Envío del SMS en curso: el paso de código se muestra de inmediato
-  const [sendingCode, setSendingCode] = useState(false);
-  const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -92,109 +82,12 @@ export default function AuthView({ onClose }: AuthViewProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isDropdownOpen]);
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
   // Si ya autenticado pero sin nombre, ir directo a perfil
   useEffect(() => {
-    if (user && !authProfile?.firstName && !loading) {
-      setStep("profile");
+    if (user && !authProfile?.firstName && !loading && step !== "profile") {
+      goToProfile();
     }
-  }, [user, authProfile, loading]);
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSendingCode(true);
-    try {
-      const fullPhone = selectedCountry.code + phoneNumber;
-      setPhone(fullPhone);
-      setStep("verify");
-      const response = await sendOTP(fullPhone);
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setStep("phone");
-        setError(response.error || t("errorSendCode"));
-      }
-    } catch {
-      setStep("phone");
-      setError(t("errorSendCodeGeneric"));
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    if (otp.length !== 6) {
-      setError(t("errorInvalidCodeLength"));
-      setLoading(false);
-      return;
-    }
-    try {
-      const response = await verifyOTP(phone, otp);
-      if (response.success) {
-        await refreshProfile();
-        // El useEffect [user, authProfile] maneja la transición:
-        // si authProfile.firstName existe → MenuView muestra DashboardView
-        // si no → setStep("profile")
-      } else {
-        setError(response.error || t("errorInvalidCode"));
-      }
-    } catch {
-      setError(t("errorVerifyCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-    setError("");
-    setLoading(true);
-    try {
-      const response = await sendOTP(phone);
-      if (response.success) setCountdown(60);
-      else setError(response.error || t("errorResendCode"));
-    } catch {
-      setError(t("errorResendCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (age === "" || !acceptedTerms) return;
-    setError("");
-    setLoading(true);
-    try {
-      const birthYear = new Date().getUTCFullYear() - Number(age);
-      const response = await updateProfile({
-        firstName,
-        lastName,
-        birthDate: `${birthYear}-01-01`,
-        acceptedTerms: true,
-      });
-      if (response.success) {
-        await refreshProfile();
-        // isAuthenticated → true, modal auto-cambia a DashboardView
-      } else {
-        setError(response.error || t("errorSaveProfile"));
-      }
-    } catch {
-      setError(t("errorSaveProfile"));
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, authProfile, loading, step, goToProfile]);
 
   // Un solo handler para el click del botón y para el gesto/botón atrás
   // del dispositivo (vía useModalBackClose). `rearm` solo lo pasa el
@@ -203,9 +96,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
   // dejar que cierre el modal completo.
   const handleBack = (rearm?: () => void) => {
     if (step === "verify") {
-      setStep("phone");
-      setOtp("");
-      setError("");
+      changeNumber();
       rearm?.();
     } else if (step === "profile") {
       // no se puede regresar, usuario ya autenticado
@@ -308,7 +199,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                             key={country.code}
                             type="button"
                             onClick={() => {
-                              setSelectedCountry(country);
+                              setCountryCode(country.code);
                               setIsDropdownOpen(false);
                             }}
                             className="w-full px-3 py-2 flex items-center gap-2 hover:bg-tone-100 transition-colors text-left"
@@ -331,11 +222,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
                       required
                       type="tel"
                       value={phoneNumberDisplay}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "");
-                        setPhoneNumber(value);
-                        setPhoneNumberDisplay(formatPhoneInput(value));
-                      }}
+                      onChange={(e) => auth.changePhone(e.target.value)}
                       className="h-12 w-full pl-10 pr-3 text-tone-700 bg-white/70 border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                       placeholder={t("phonePlaceholder")}
                       disabled={loading}

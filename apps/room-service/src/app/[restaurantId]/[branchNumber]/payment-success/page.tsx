@@ -6,7 +6,6 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useRoomNavigation } from "@/hooks/useRoomNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 const ReorderModal = lazy(() => import("@/components/ReorderModal"));
-import InvoiceModal from "@/components/modals/InvoiceModal";
 import { invoiceService } from "@/services/invoice.service";
 import { ticketService } from "@/services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
@@ -29,7 +28,7 @@ import { roomOrderService } from "@/services/roomorders.service";
 import type { RoomOrder } from "@/services/roomorders.service";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");
@@ -1087,6 +1086,7 @@ export default function PaymentSuccessPage() {
       )}
 
       <InvoiceModal
+        invoiceService={invoiceService}
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         transactionId={

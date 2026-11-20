@@ -19,12 +19,12 @@ import {
 } from "lucide-react";
 import { getCardTypeIcon } from "@/app/utils/cardIcons";
 import { useAuth } from "@/app/context/AuthContext";
-import InvoiceModal from "@/app/components/modals/InvoiceModal";
 import { invoiceService } from "@/app/services/invoice.service";
 import { ticketService } from "@/app/services/ticket.service";
 import { lockScroll, unlockScroll } from "@/app/utils/scrollLock";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { useFormatter, useTranslations } from "next-intl";
+import { InvoiceModal } from "@even/ui/diner";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");
@@ -480,6 +480,7 @@ export default function PaymentSuccessPage() {
       </div>
 
       <InvoiceModal
+        invoiceService={invoiceService}
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         transactionId={

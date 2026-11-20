@@ -45,6 +45,12 @@ export type CommissionService =
   | "tap-and-pay"
   | "flex-bill";
 
+/** IVA vigente en México (16 %) como fracción. Espejo de even-backend/src/config/fiscal.js. */
+export const IVA_RATE = 0.16;
+
+/** Factor para pasar una comisión sin IVA a con IVA (1 + IVA_RATE). */
+export const IVA_FACTOR = 1 + IVA_RATE;
+
 /** Tarifa por defecto: Even 4% = 2% cliente + 2% restaurante. */
 export const DEFAULT_COMMISSION_RATES: CommissionRates = {
   evenTotal: 4.0,

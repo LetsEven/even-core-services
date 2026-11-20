@@ -97,3 +97,11 @@ export {
   type TicketService,
 } from "./billing";
 export { clearCachedWalletOrder, getOrCreateWalletOrderId } from "./wallet-order-cache";
+export {
+  createWalletCardService,
+  esIOS,
+  type DisponibilidadDeTarjeta,
+  type MotivoSinTarjeta,
+  type TarjetaEmitida,
+  type WalletCardService,
+} from "./loyalty-wallet";

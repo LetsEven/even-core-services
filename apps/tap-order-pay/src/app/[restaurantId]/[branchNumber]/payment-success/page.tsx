@@ -28,7 +28,8 @@ import {
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import { tapOrderService } from "@/services/taporders.service";
 import type { TapOrder, LastOrderDish } from "@/services/taporders.service";
-import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
+import { AddLoyaltyCardButton, ItemCustomizations, InvoiceModal } from "@even/ui/diner";
+import { walletCardService } from "@/services/walletCard.service";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");
@@ -481,6 +482,15 @@ export default function PaymentSuccessPage() {
               >
                 Ir al menú
               </button>
+
+              {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene
+                  programa activo. Va junto a Facturar y Ver ticket porque
+                  es el momento en que el comensal ya se identifico para
+                  pagar: la tarjeta nace ligada a su cuenta. */}
+              <AddLoyaltyCardButton
+                restaurantId={parseInt(restaurantId as string, 10)}
+                walletCardService={walletCardService}
+              />
 
               {/* Ticket btn */}
               <button

@@ -47,6 +47,20 @@ function baseAvailable(): boolean {
 
 const hasBase = baseAvailable();
 
+/** `value` recortado a las claves de `shape` (recursivo), para comparar sin las claves nuevas. */
+function pick(value: unknown, shape: unknown): unknown {
+  if (typeof shape !== "object" || shape === null || typeof value !== "object" || value === null) {
+    return value;
+  }
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(shape)) {
+    if (key in value) {
+      out[key] = pick((value as Record<string, unknown>)[key], (shape as Record<string, unknown>)[key]);
+    }
+  }
+  return out;
+}
+
 describe.each(LOCALES)("mensajes compartidos (%s)", (locale) => {
   describe.each(Object.keys(APPS))("%s", (app) => {
     it("los namespaces propios no repiten los compartidos", async () => {
@@ -60,9 +74,10 @@ describe.each(LOCALES)("mensajes compartidos (%s)", (locale) => {
       const base = readBase(app, locale);
       const merged = mergeMessages(shared, readOwn(app, locale));
 
-      // Cada namespace que la app tenía llega idéntico (mismos textos).
+      // Cada texto que la app tenía llega idéntico. Se permiten claves nuevas (funciones que llegaron
+      // después de la migración), pero no perder ni cambiar las que ya existían.
       for (const [ns, value] of Object.entries(base)) {
-        expect(merged[ns], `${app}/${locale}: ${ns}`).toEqual(value);
+        expect(pick(merged[ns], value), `${app}/${locale}: ${ns}`).toEqual(value);
       }
       // Lo único extra son namespaces compartidos que esa app no tenía (nadie los lee ahí).
       const extras = Object.keys(merged).filter((ns) => !(ns in base));

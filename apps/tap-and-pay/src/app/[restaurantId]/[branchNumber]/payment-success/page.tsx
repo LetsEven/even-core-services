@@ -24,7 +24,8 @@ import { ticketService } from "@/app/services/ticket.service";
 import { lockScroll, unlockScroll } from "@/app/utils/scrollLock";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { useFormatter, useTranslations } from "next-intl";
-import { InvoiceModal } from "@even/ui/diner";
+import { AddLoyaltyCardButton, InvoiceModal } from "@even/ui/diner";
+import { walletCardService } from "@/app/services/walletCard.service";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");
@@ -462,6 +463,15 @@ export default function PaymentSuccessPage() {
                   {existingInvoiceId ? t("viewInvoiceCta") : t("invoiceCta")}
                 </button>
               )}
+
+              {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene
+                  programa activo. Va junto a Facturar y Ver ticket porque
+                  es el momento en que el comensal ya se identifico para
+                  pagar: la tarjeta nace ligada a su cuenta. */}
+              <AddLoyaltyCardButton
+                restaurantId={parseInt(params?.restaurantId as string, 10)}
+                walletCardService={walletCardService}
+              />
 
               {/* Ticket btn */}
               <button

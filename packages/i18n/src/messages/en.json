@@ -66,6 +66,13 @@
     "continueCta": "Continue",
     "issueInvoiceCta": "Issue invoice"
   },
+  "LoyaltyCard": {
+    "ctaApple": "Add to Apple Wallet",
+    "ctaGoogle": "Add to Google Wallet",
+    "adding": "Preparing your card…",
+    "needsAccount": "Sign up to save your loyalty card.",
+    "failed": "We couldn't create your card. Please try again."
+  },
   "MenuCategory": {
     "noItemsInSection": "No items in this section"
   },

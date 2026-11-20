@@ -66,6 +66,13 @@
     "continueCta": "Continuar",
     "issueInvoiceCta": "Emitir factura"
   },
+  "LoyaltyCard": {
+    "ctaApple": "Agregar a Apple Wallet",
+    "ctaGoogle": "Agregar a Google Wallet",
+    "adding": "Preparando tu tarjeta…",
+    "needsAccount": "Regístrate para guardar tu tarjeta de lealtad.",
+    "failed": "No se pudo crear tu tarjeta. Intenta de nuevo."
+  },
   "MenuCategory": {
     "noItemsInSection": "No hay items en esta sección"
   },

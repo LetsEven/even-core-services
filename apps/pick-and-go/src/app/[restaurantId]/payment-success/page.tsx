@@ -36,6 +36,8 @@ import { invoiceService } from "../../../services/invoice.service";
 import { ticketService } from "../../../services/ticket.service";
 import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
 import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
+import { AddLoyaltyCardButton } from "@even/ui/diner";
+import { walletCardService } from "@/services/walletCard.service";
 
 const ReorderModal = lazy(
   () => import("../../../components/modals/ReorderModal"),
@@ -278,7 +280,6 @@ export default function PaymentSuccessPage() {
             localStorage.removeItem("even-payment-intent");
             localStorage.removeItem("even-completed-payment");
 
-            // Clear all session data after successful payment
             clearGuestSession();
           }
         } catch (e) {
@@ -297,8 +298,10 @@ export default function PaymentSuccessPage() {
 
   const clearGuestSession = async () => {
     if (typeof window !== "undefined") {
-      // Use authService to clear all session data (auth + guest)
-      authService.clearAllSessionData();
+      // Solo invitados: con token hay cuenta y borrarla obligaba a re-login en el siguiente pedido.
+      if (!authService.getAccessToken()) {
+        authService.clearAllSessionData();
+      }
 
       // Also clear any additional payment-related data
       localStorage.removeItem("even-pending-payment");
@@ -642,6 +645,21 @@ export default function PaymentSuccessPage() {
                   {existingInvoiceId ? t("viewInvoiceCta") : tc("invoiceCta")}
                 </button>
               )}
+
+              {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene
+                  programa activo. Va junto a Facturar y Ver ticket porque
+                  es el momento en que el comensal ya se identifico para
+                  pagar: la tarjeta nace ligada a su cuenta.
+
+                  El id sale de la URL y NO de `restaurant?.id`: ese objeto
+                  lo llena un contexto asincrono y vale null hasta que
+                  responde. Con null el boton no consultaba nada y se
+                  escondia en silencio — sin error, sin rastro. La ruta
+                  siempre trae el id. */}
+              <AddLoyaltyCardButton
+                restaurantId={parseInt(restaurantId, 10)}
+                walletCardService={walletCardService}
+              />
 
               {/* Ticket btn */}
               <button

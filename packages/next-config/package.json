@@ -5,12 +5,16 @@
   "description": "Infraestructura común de las apps Next: next.config (transpilePackages), opengraph-image, fuentes, metadata raíz y ruta .well-known.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./opengraph": "./src/opengraph.tsx"
   },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@even/ui": "*"
   },
   "peerDependencies": {
     "next": "*"
@@ -19,8 +23,10 @@
     "@even/eslint-config": "*",
     "@even/tsconfig": "*",
     "@types/node": "^22",
+    "@types/react": "^19",
     "eslint": "^9",
     "next": "16.4.2",
+    "react": "19.2.9",
     "typescript": "^5.9.3",
     "vitest": "^5.0.4"
   }

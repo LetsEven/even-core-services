@@ -26,3 +26,4 @@ export {
   type ChatStatus,
 } from "./PepperMascots";
 export { default as SupportTab } from "./SupportTab";
+export { useOrderAnimation, type OrderAnimationState, type UseOrderAnimationOptions } from "./useOrderAnimation";

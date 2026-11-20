@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useOrderAnimation } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import { CartItem } from "../../context/CartContext";
 import { useTable } from "../../context/TableContext";
@@ -43,29 +43,6 @@ const OrderAnimation = ({
   const { restaurant, loading } = useRestaurant();
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
   const { profile, user, isLoading: authLoading } = useAuth();
-  const [animationState, setAnimationState] = useState<
-    "circle" | "content" | "greenCircle" | "success"
-  >("circle");
-  const [logoColorful, setLogoColorful] = useState(false);
-  const [showCancelButton, setShowCancelButton] = useState(true);
-
-  // Siempre apuntan a la versión más reciente de los callbacks para evitar
-  // closures obsoletos dentro de los timers de abajo.
-  const onConfirmRef = useRef(onConfirm);
-  useEffect(() => {
-    onConfirmRef.current = onConfirm;
-  }, [onConfirm]);
-
-  const onContinueRef = useRef(onContinue);
-  useEffect(() => {
-    onContinueRef.current = onContinue;
-  }, [onContinue]);
-
-  const onTimeoutRef = useRef(onTimeout);
-  useEffect(() => {
-    onTimeoutRef.current = onTimeout;
-  }, [onTimeout]);
-
   // Si está autenticado, SIEMPRE usar el nombre del perfil (nunca el nombre de invitado anterior)
   const isAuthenticated = !authLoading && !!user;
   const isProfileLoading = isAuthenticated && !profile?.firstName;
@@ -80,137 +57,14 @@ const OrderAnimation = ({
   const userImage = profile?.photoUrl;
   const hasUserImage = !!userImage && !isProfileLoading;
 
-  // Prevenir recarga de página durante la animación
-  useEffect(() => {
-    // Bloquear atajos de teclado (F5, Ctrl+R, Cmd+R)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === "F5" ||
-        (e.ctrlKey && e.key === "r") ||
-        (e.metaKey && e.key === "r")
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    // Mostrar diálogo de confirmación al intentar recargar/cerrar
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-      return "";
-    };
-
-    // Prevenir pull-to-refresh en Safari/iOS
-    const handleTouchMove = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        e.preventDefault();
-      }
-    };
-
-    // Aplicar estilos al body para prevenir overscroll
-    const originalOverscrollBehavior = document.body.style.overscrollBehavior;
-    document.body.style.overscrollBehavior = "none";
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.body.style.overscrollBehavior = originalOverscrollBehavior;
-    };
-  }, []);
-
-  // Coreografía cosmética (circle -> content -> greenCircle): esto solo
-  // controla ritmo visual y dispara la creación real de la orden vía
-  // onConfirm — no depende de si esa creación ya terminó, así que es seguro
-  // que corra en tiempos fijos.
-  useEffect(() => {
-    const contentTimer = setTimeout(() => {
-      setAnimationState("content");
-    }, 1500);
-
-    const cancelButtonTimer = setTimeout(() => {
-      setShowCancelButton(false);
-      // Confirmar la orden después de que expire el tiempo de cancelación.
-      // Usamos el ref para siempre llamar la versión más reciente.
-      if (onConfirmRef.current) {
-        onConfirmRef.current();
-      }
-    }, 4000);
-
-    const logoTimer = setTimeout(() => {
-      setLogoColorful(true);
-    }, 3500);
-
-    const greenCircleTimer = setTimeout(() => {
-      setAnimationState("greenCircle");
-    }, 5500);
-
-    return () => {
-      clearTimeout(contentTimer);
-      clearTimeout(cancelButtonTimer);
-      clearTimeout(logoTimer);
-      clearTimeout(greenCircleTimer);
-    };
-  }, []);
-
-  // A partir de "greenCircle" SÍ importa si la orden ya se confirmó de
-  // verdad: antes se navegaba con un timer fijo (9s) sin importar si
-  // handleConfirmOrder ya había terminado — si esa llamada tardaba más que
-  // eso, el usuario era navegado a /order antes de que el pedido existiera
-  // de verdad (o aunque hubiera fallado en silencio). Ahora se espera a que
-  // "orderConfirmed" llegue antes de mostrar el check y navegar.
-  useEffect(() => {
-    if (animationState !== "greenCircle" || !orderConfirmed) return;
-
-    // Dejar que la animación del círculo verde (1.5s) termine de expandirse
-    // antes de mostrar el check, para que no se sienta un salto brusco.
-    const successTimer = setTimeout(() => {
-      setAnimationState("success");
-    }, 1500);
-
-    return () => clearTimeout(successTimer);
-  }, [animationState, orderConfirmed]);
-
-  useEffect(() => {
-    if (animationState !== "success") return;
-
-    // Mantener el check visible un momento antes de navegar.
-    const continueTimer = setTimeout(() => {
-      handleContinue();
-    }, 1800);
-
-    return () => clearTimeout(continueTimer);
-  }, [animationState]);
-
-  // Red de seguridad: si la orden nunca se confirma (ni éxito ni error)
-  // dentro de un tiempo razonable, no dejar al usuario congelado esperando
-  // — se avisa y se sale de la animación.
-  useEffect(() => {
-    if (animationState !== "greenCircle" || orderConfirmed) return;
-
-    const timeoutTimer = setTimeout(() => {
-      if (onTimeoutRef.current) {
-        onTimeoutRef.current();
-      } else {
-        handleContinue();
-      }
-    }, 20000);
-
-    return () => clearTimeout(timeoutTimer);
-  }, [animationState, orderConfirmed]);
-
-  const handleContinue = () => {
-    if (onContinueRef.current) {
-      onContinueRef.current();
-    } else {
-      navigateWithTable("/order");
-    }
-  };
+  const { animationState, logoColorful, showCancelButton, handleContinue } =
+    useOrderAnimation({
+      confirmed: !!orderConfirmed,
+      onConfirm,
+      onContinue,
+      onTimeout,
+      fallbackContinue: () => navigateWithTable("/order"),
+    });
 
   const handleCancel = () => {
     if (onCancel) {

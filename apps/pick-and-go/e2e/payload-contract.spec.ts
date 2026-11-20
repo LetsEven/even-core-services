@@ -44,7 +44,7 @@ async function mockConfirm(page: Page, replies: Reply[]) {
 async function pay(page: Page, url: string) {
   await page.goto(url);
   await expect(page.getByText("•••• 4242")).toBeVisible();
-  await page.getByRole("button", { name: "Pagar y ordenar" }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
 }
 
 const charges = (api: Awaited<ReturnType<typeof mockPickAndGoApi>>) =>
@@ -149,7 +149,7 @@ test("MSI: /payments manda el monto SIN financiamiento, sin items y con installm
   await expect(page.getByText("Total $443.80 MXN")).toBeVisible();
   await page.getByText("x 6 meses").click();
   await page.getByRole("button", { name: "Confirmar" }).click();
-  await page.getByRole("button", { name: "Pagar y ordenar" }).click();
+  await page.getByRole("button", { name: /^Pagar \$/ }).click();
   await expect.poll(() => confirmBodies.length, { timeout: 30_000 }).toBe(1);
 
   const body = charges(api)[0].body as Record<string, unknown>;
@@ -304,7 +304,7 @@ test.describe("propina de Pick & Go: no se redondea antes de calcular", () => {
     await page.goto("/4/order-confirm?branch=1");
     await page.getByRole("button", { name: "15%", exact: true }).click();
     await expect(page.locator("body")).toContainText("$24.59");
-    await page.getByRole("button", { name: "Continuar" }).click();
+    await page.getByRole("button", { name: /^Pagar \$/ }).click();
     await expect(page).toHaveURL(/card-selection\?tipAmount=3.13&/);
   });
 });

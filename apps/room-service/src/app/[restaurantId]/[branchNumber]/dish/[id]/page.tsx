@@ -20,7 +20,7 @@ import {
 } from "@/interfaces/menuItemData";
 import { reviewsApi, Review, ReviewStats } from "@/services/reviews.service";
 import { useAuth } from "@/context/AuthContext";
-import { usePersonalItemDiscounts } from "@/hooks/usePersonalItemDiscounts";
+import { usePersonalItemDiscounts, conCarrito } from "@/hooks/usePersonalItemDiscounts";
 
 // Pure helpers — defined outside component to avoid recreation on every render
 
@@ -314,9 +314,22 @@ export default function DishDetailPage() {
   // Descuento personal de este producto para el usuario actual.
   // Si el producto también tiene descuento de admin-portal, gana el %
   // mayor entre los dos — nunca se suman.
-  const personalDiscount = dishData
-    ? personalDiscounts.get(dishData.dish.id)
+  const lineaEditada = editCartItemId
+    ? cartState.items.find((ci) => ci.cartItemId === editCartItemId)
     : undefined;
+  // Editando: el descuento es el de esa línea (su pieza ya está apartada, el menú la ve en 0);
+  // una línea sin descuento se edita a precio normal
+  const personalDiscount = !dishData
+    ? undefined
+    : lineaEditada
+      ? lineaEditada.userDiscountId
+        ? {
+            id: lineaEditada.userDiscountId,
+            percentage: lineaEditada.promoDiscountPercentage ?? 0,
+            piezas: lineaEditada.discountMaxQuantity ?? null,
+          }
+        : undefined
+      : conCarrito(personalDiscounts.get(dishData.dish.id), cartState.items);
   const effectiveDiscount = dishData
     ? Math.max(dishData.dish.discount || 0, personalDiscount?.percentage || 0)
     : 0;
@@ -354,6 +367,22 @@ export default function DishDetailPage() {
     return basePrice + extraPrice;
   }, [dishData, customFieldSelections, effectiveDiscount]);
 
+  // El descuento personal cubre una pieza por uso: las demás van a precio normal
+  const piezasConDescuento =
+    personalDiscount &&
+    personalDiscount.percentage > (dishData?.dish.discount || 0) &&
+    personalDiscount.piezas != null
+      ? Math.min(dishQuantity, personalDiscount.piezas)
+      : dishQuantity;
+  const precioNormalUnidad = dishData
+    ? totalPrice -
+      dishData.dish.price * (1 - effectiveDiscount / 100) +
+      dishData.dish.price * (1 - (dishData.dish.discount || 0) / 100)
+    : 0;
+  const importeTotal =
+    totalPrice * piezasConDescuento +
+    precioNormalUnidad * (dishQuantity - piezasConDescuento);
+
   // Validación de campos obligatorios — memoizada
   const isFormValid = useMemo(() => {
     if (!dishData?.customFields) return true;
@@ -372,6 +401,13 @@ export default function DishDetailPage() {
   const editingItem = editCartItemId
     ? cartState.items.find((ci) => ci.cartItemId === editCartItemId)
     : undefined;
+
+  // Editando una línea con descuento: no pasa de su tope
+  const topeEdicion =
+    editingItem?.userDiscountId && editingItem.discountMaxQuantity != null
+      ? editingItem.discountMaxQuantity
+      : null;
+
   const isEditMode = !!editCartItemId;
 
   const returnToCart = useCallback(() => {
@@ -674,7 +710,7 @@ export default function DishDetailPage() {
                 alt="Even Logo"
                 className="size-16 md:size-20 lg:size-24 mx-auto mb-4 md:mb-5 lg:mb-6"
               />
-              <div className="bg-red-500/20 p-3 md:p-4 lg:p-5 rounded-full w-fit mx-auto mb-4 md:mb-5 lg:mb-6">
+              <div className="bg-danger-500/20 p-3 md:p-4 lg:p-5 rounded-full w-fit mx-auto mb-4 md:mb-5 lg:mb-6">
                 <AlertCircle className="size-10 md:size-12 lg:size-14 text-white" />
               </div>
               <h1 className="text-white text-xl md:text-2xl lg:text-3xl font-medium mb-2 md:mb-3 lg:mb-4">
@@ -687,7 +723,7 @@ export default function DishDetailPage() {
             <div className="space-y-3 md:space-y-4 lg:space-y-5">
               <button
                 onClick={() => router.push("/")}
-                className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
+                className="w-full bg-white hover:bg-tone-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
               >
                 <div className="bg-even-grass p-2 md:p-2.5 lg:p-3 rounded-full">
                   <Home className="size-5 md:size-6 lg:size-7 text-even-evergreen" />
@@ -696,7 +732,7 @@ export default function DishDetailPage() {
                   <h2 className="text-base md:text-lg lg:text-xl font-medium mb-0.5 md:mb-1">
                     {tc("backToHome")}
                   </h2>
-                  <p className="text-xs md:text-sm lg:text-base text-gray-600">
+                  <p className="text-xs md:text-sm lg:text-base text-tone-600">
                     {t("backToHomeSubtitle")}
                   </p>
                 </div>
@@ -734,7 +770,7 @@ export default function DishDetailPage() {
             <div className="space-y-3 md:space-y-4 lg:space-y-5">
               <button
                 onClick={() => navigateWithRoom("/menu")}
-                className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
+                className="w-full bg-white hover:bg-tone-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
               >
                 <div className="bg-even-grass p-2 md:p-2.5 lg:p-3 rounded-full">
                   <Home className="size-5 md:size-6 lg:size-7 text-even-evergreen" />
@@ -743,7 +779,7 @@ export default function DishDetailPage() {
                   <h2 className="text-base md:text-lg lg:text-xl font-medium mb-0.5 md:mb-1">
                     {t("backToMenu")}
                   </h2>
-                  <p className="text-xs md:text-sm lg:text-base text-gray-600">
+                  <p className="text-xs md:text-sm lg:text-base text-tone-600">
                     {t("viewAvailableDishes")}
                   </p>
                 </div>
@@ -798,7 +834,7 @@ export default function DishDetailPage() {
                 />
               ))
             ) : (
-              <div className="absolute top-0 left-0 w-full h-full bg-gray-300 flex items-center justify-center">
+              <div className="absolute top-0 left-0 w-full h-full bg-tone-300 flex items-center justify-center">
                 <img
                   src="/even/even-asterisk-evergreen.svg"
                   alt="Logo"
@@ -808,7 +844,7 @@ export default function DishDetailPage() {
             )}
             {dishData?.isOutOfStock && (
               <div className="absolute bottom-22 z-10">
-                <span className="bg-red-600 text-white text-xs md:text-sm font-bold px-3 py-1 tracking-wide">
+                <span className="bg-danger-600 text-white text-xs md:text-sm font-bold px-3 py-1 tracking-wide">
                   {tc("outOfStockBadge")}
                 </span>
               </div>
@@ -846,10 +882,10 @@ export default function DishDetailPage() {
               {isLoadingReviews ? (
                 <>
                   <div className="flex items-center gap-1.5 md:gap-2 lg:gap-2.5">
-                    <div className="size-6 md:size-7 lg:size-8 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-5 md:h-6 lg:h-7 w-8 md:w-10 lg:w-12 bg-gray-200 rounded animate-pulse" />
+                    <div className="size-6 md:size-7 lg:size-8 bg-tone-200 rounded animate-pulse" />
+                    <div className="h-5 md:h-6 lg:h-7 w-8 md:w-10 lg:w-12 bg-tone-200 rounded animate-pulse" />
                   </div>
-                  <div className="h-5 md:h-6 lg:h-7 w-32 md:w-36 lg:w-40 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-5 md:h-6 lg:h-7 w-32 md:w-36 lg:w-40 bg-tone-200 rounded animate-pulse" />
                 </>
               ) : (
                 <>
@@ -866,12 +902,12 @@ export default function DishDetailPage() {
                         <span className="text-lg md:text-xl lg:text-2xl">
                           {dishStats.average_rating.toFixed(1)}
                         </span>
-                        <span className="text-xs md:text-sm lg:text-base text-gray-600">
+                        <span className="text-xs md:text-sm lg:text-base text-tone-600">
                           ({dishStats.total_reviews})
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm md:text-base lg:text-lg text-gray-600">
+                      <span className="text-sm md:text-base lg:text-lg text-tone-600">
                         {t("noReviews")}
                       </span>
                     )}
@@ -895,7 +931,7 @@ export default function DishDetailPage() {
                 {dish.name}
               </h2>
               {!showImages && dishData?.isOutOfStock && (
-                <span className="bg-red-600 text-white text-xs md:text-sm font-bold px-3 py-1 tracking-wide mt-2">
+                <span className="bg-danger-600 text-white text-xs md:text-sm font-bold px-3 py-1 tracking-wide mt-2">
                   {tc("outOfStockBadge")}
                 </span>
               )}
@@ -956,10 +992,10 @@ export default function DishDetailPage() {
                                 !!sel && sel.length >= minSelectionsOf(field);
                               return (
                                 <div
-                                  className={`rounded px-2 py-1 ${has ? "bg-gray-100" : "bg-green-100"}`}
+                                  className={`rounded px-2 py-1 ${has ? "bg-tone-100" : "bg-positive-100"}`}
                                 >
                                   <span
-                                    className={`text-sm md:text-base lg:text-lg font-normal ${has ? "text-gray-500" : "text-green-600"}`}
+                                    className={`text-sm md:text-base lg:text-lg font-normal ${has ? "text-tone-500" : "text-positive-600"}`}
                                   >
                                     {t("required")}
                                   </span>
@@ -1049,7 +1085,7 @@ export default function DishDetailPage() {
                                     })}
                                   </span>
                                 ) : (
-                                  <span className="text-gray-600 text-sm md:text-base mt-1">
+                                  <span className="text-tone-600 text-sm md:text-base mt-1">
                                     {min > 0 && min >= max
                                       ? t("selectExactly", { count: max })
                                       : min > 0
@@ -1098,7 +1134,7 @@ export default function DishDetailPage() {
                                       {option.name}
                                     </span>
                                     {option.agotado ? (
-                                      <span className="text-red-600 font-medium text-[10px] md:text-xs uppercase tracking-wider">
+                                      <span className="text-danger-600 font-medium text-[10px] md:text-xs uppercase tracking-wider">
                                         Agotado
                                       </span>
                                     ) : (
@@ -1149,7 +1185,7 @@ export default function DishDetailPage() {
                                         {option.name}
                                       </span>
                                       {option.agotado ? (
-                                        <span className="text-red-600 font-medium text-[10px] md:text-xs uppercase tracking-wider">
+                                        <span className="text-danger-600 font-medium text-[10px] md:text-xs uppercase tracking-wider">
                                           Agotado
                                         </span>
                                       ) : (
@@ -1225,7 +1261,7 @@ export default function DishDetailPage() {
                                       {option.name}
                                     </span>
                                     {option.agotado ? (
-                                      <span className="text-red-600 font-medium text-[10px] md:text-xs uppercase tracking-wider">
+                                      <span className="text-danger-600 font-medium text-[10px] md:text-xs uppercase tracking-wider">
                                         Agotado
                                       </span>
                                     ) : (
@@ -1295,7 +1331,7 @@ export default function DishDetailPage() {
                       }
                     }}
                   />
-                  <p className="text-right text-sm text-gray-400 mt-1">
+                  <p className="text-right text-sm text-tone-400 mt-1">
                     {specialInstructions.length}/60
                   </p>
                 </div>
@@ -1312,7 +1348,7 @@ export default function DishDetailPage() {
                 WebkitBackdropFilter: "blur(20px)",
               }}
             >
-              <div className="flex items-center bg-white border border-gray-300 rounded-2xl shadow-sm shrink-0">
+              <div className="flex items-center bg-white border border-tone-300 rounded-2xl shadow-sm shrink-0">
                 <button
                   onClick={() =>
                     isEditMode && dishQuantity === 1
@@ -1322,7 +1358,7 @@ export default function DishDetailPage() {
                   className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light active:scale-90 transition-transform"
                 >
                   {isEditMode && dishQuantity === 1 ? (
-                    <Trash2 className="size-5 md:size-6 text-red-500" />
+                    <Trash2 className="size-5 md:size-6 text-danger-500" />
                   ) : (
                     "−"
                   )}
@@ -1331,8 +1367,13 @@ export default function DishDetailPage() {
                   {dishQuantity}
                 </span>
                 <button
-                  onClick={() => setDishQuantity((q) => q + 1)}
-                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light active:scale-90 transition-transform"
+                  disabled={topeEdicion != null && dishQuantity >= topeEdicion}
+                  onClick={() =>
+                    setDishQuantity((q) =>
+                      topeEdicion != null && q >= topeEdicion ? q : q + 1,
+                    )
+                  }
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light active:scale-90 transition-transform disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
                   +
                 </button>
@@ -1345,17 +1386,17 @@ export default function DishDetailPage() {
                 disabled={!isFormValid}
                 className={`flex-1 py-3.5 md:py-4 lg:py-5 rounded-2xl flex items-center justify-center ${
                   dishData?.isOutOfStock
-                    ? "bg-gray-400 text-white cursor-not-allowed opacity-60"
+                    ? "bg-tone-400 text-white cursor-not-allowed opacity-60"
                     : isFormValid
                       ? "bg-even-grass text-even-evergreen active:scale-95 transition-transform"
-                      : "bg-gray-400 text-white cursor-not-allowed opacity-60"
+                      : "bg-tone-400 text-white cursor-not-allowed opacity-60"
                 }`}
               >
                 <span className="text-base md:text-lg font-medium">
                   {dishData?.isOutOfStock
                     ? tc("productOutOfStock")
                     : t(isEditMode ? "updateCartCta" : "addToCartCta", {
-                        amount: (totalPrice * dishQuantity).toFixed(2),
+                        amount: importeTotal.toFixed(2),
                       })}
                 </span>
               </button>
@@ -1377,9 +1418,9 @@ export default function DishDetailPage() {
             <div className="w-full flex justify-end">
               <button
                 onClick={() => setIsReviewModalOpen(false)}
-                className="p-2 md:p-2.5 lg:p-3 hover:bg-gray-100 rounded-lg md:rounded-xl transition-colors flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
+                className="p-2 md:p-2.5 lg:p-3 hover:bg-tone-100 rounded-lg md:rounded-xl transition-colors flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
               >
-                <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-600" />
+                <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-tone-600" />
               </button>
             </div>
 
@@ -1392,7 +1433,7 @@ export default function DishDetailPage() {
                     className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
                   />
                 ) : (
-                  <div className="size-20 md:size-24 lg:size-28 bg-gray-300 rounded-lg md:rounded-xl flex items-center justify-center">
+                  <div className="size-20 md:size-24 lg:size-28 bg-tone-300 rounded-lg md:rounded-xl flex items-center justify-center">
                     <img
                       src="/even/even-asterisk-evergreen.svg"
                       alt="Logo"
@@ -1404,7 +1445,7 @@ export default function DishDetailPage() {
                   <h2 className="text-xl md:text-2xl lg:text-3xl text-black capitalize">
                     {dish.name}
                   </h2>
-                  <p className="text-sm md:text-base lg:text-lg text-gray-600">
+                  <p className="text-sm md:text-base lg:text-lg text-tone-600">
                     {section}
                   </p>
                 </div>
@@ -1429,10 +1470,10 @@ export default function DishDetailPage() {
                       >
                         <svg
                           className={`size-8 md:size-10 lg:size-12 ${
-                            isFilled ? "text-yellow-400" : "text-white"
+                            isFilled ? "text-caution-400" : "text-white"
                           }`}
                           fill="currentColor"
-                          stroke={isFilled ? "#facc15" : "black"}
+                          stroke={isFilled ? "var(--color-star)" : "black"}
                           strokeWidth="1"
                           viewBox="0 0 24 24"
                         >
@@ -1478,14 +1519,14 @@ export default function DishDetailPage() {
           >
             <div className="p-6 max-w-2xl mx-auto">
               <div className="flex flex-col items-center mb-4">
-                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                  <Trash2 className="size-7 text-red-500" strokeWidth={2} />
+                <div className="w-14 h-14 rounded-full bg-danger-100 flex items-center justify-center mb-4">
+                  <Trash2 className="size-7 text-danger-500" strokeWidth={2} />
                 </div>
                 <h2 className="text-xl font-semibold text-black text-center">
                   {t("removeItemTitle")}
                 </h2>
               </div>
-              <p className="text-gray-700 text-sm text-center mb-6">
+              <p className="text-tone-700 text-sm text-center mb-6">
                 {t("removeItemMessage", { name: dish.name })}
               </p>
               <div className="flex gap-3">
@@ -1497,7 +1538,7 @@ export default function DishDetailPage() {
                 </button>
                 <button
                   onClick={handleConfirmRemove}
-                  className="flex-1 bg-red-500 text-white py-3 rounded-full text-base"
+                  className="flex-1 bg-danger-500 text-white py-3 rounded-full text-base"
                 >
                   {t("removeItemConfirm")}
                 </button>
@@ -1518,9 +1559,9 @@ export default function DishDetailPage() {
           >
             <div className="p-6 max-w-2xl mx-auto">
               <div className="flex flex-col items-center mb-4">
-                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <div className="w-14 h-14 rounded-full bg-danger-100 flex items-center justify-center mb-4">
                   <CircleAlert
-                    className="size-7 text-red-500"
+                    className="size-7 text-danger-500"
                     strokeWidth={2}
                   />
                 </div>
@@ -1529,7 +1570,7 @@ export default function DishDetailPage() {
                 </h2>
               </div>
               <div className="bg-surface border border-stroke-soft/50 rounded-xl p-4 mb-6">
-                <p className="text-gray-700 text-sm text-center">
+                <p className="text-tone-700 text-sm text-center">
                   {errorMessage}
                 </p>
               </div>

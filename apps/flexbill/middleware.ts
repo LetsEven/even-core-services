@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { LOCALE_COOKIE, negotiateLocale } from "@/i18n/locale";
+import { LOCALE_COOKIE, negotiateLocale } from "@even/i18n/locale";
 import { getBackendOrigin } from "@even/api-client";
+import { applySecurityHeaders, buildCsp } from "@even/security";
+
+// Flex Bill usa otro orden en frame-src y agrega 3DS (cardinalcommerce).
+const FRAME_SRC = [
+  "https://ecartpay.com",
+  "https://checkout.ecartpay.com",
+  "https://pay.ecart.com",
+  "https://app.ecart.com",
+  "https://applepay.cdn-apple.com",
+  "https://*.apple.com",
+  "https://pay.google.com",
+  "https://*.cardinalcommerce.com",
+];
 
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -11,26 +24,14 @@ export function middleware(request: NextRequest) {
     "https://even-backend-production.up.railway.app",
   );
   const isDev = process.env.NODE_ENV === "development";
-  const devUrls = isDev ? " http://localhost:5000 ws://localhost:5000" : "";
-  const backendHost = backendUrl.replace(/https?:\/\//, "");
-  const wsProtocol = isDev ? "ws" : "wss";
 
-  const cspHeader = `
-    default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://pay.google.com;
-    style-src 'self' 'unsafe-inline';
-    img-src 'self' data: blob: ${backendUrl} https://*.supabase.co https://www.gstatic.com https://*.givex.com https://storage.googleapis.com;
-    font-src 'self' https://applepay.cdn-apple.com;
-    connect-src 'self' ${backendUrl} ${wsProtocol}://${backendHost}${devUrls} https://*.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com;
-    frame-src https://ecartpay.com https://checkout.ecartpay.com https://pay.ecart.com https://app.ecart.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com https://*.cardinalcommerce.com;
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
-  `
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  const cspHeader = buildCsp({
+    nonce,
+    backendUrl,
+    isDev,
+    strictDynamic: true,
+    frameSrc: FRAME_SRC,
+  });
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
@@ -44,20 +45,11 @@ export function middleware(request: NextRequest) {
     },
   });
 
-  response.headers.set("Content-Security-Policy", cspHeader);
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set(
-    "Strict-Transport-Security",
-    "max-age=31536000; includeSubDomains; preload",
-  );
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "Permissions-Policy",
-    'camera=(), microphone=(), geolocation=(), payment=(self "https://ecartpay.com" "https://checkout.ecartpay.com" "https://pay.ecart.com" "https://applepay.cdn-apple.com" "https://pay.google.com" "https://geo.cardinalcommerce.com")',
-  );
-  response.headers.set("X-DNS-Prefetch-Control", "off");
-  response.headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  applySecurityHeaders(response.headers, {
+    csp: cspHeader,
+    permissionsPolicy:
+      'camera=(), microphone=(), geolocation=(), payment=(self "https://ecartpay.com" "https://checkout.ecartpay.com" "https://pay.ecart.com" "https://applepay.cdn-apple.com" "https://pay.google.com" "https://geo.cardinalcommerce.com")',
+  });
 
   if (!request.cookies.get(LOCALE_COOKIE)) {
     const detected = negotiateLocale(request.headers.get("accept-language"));

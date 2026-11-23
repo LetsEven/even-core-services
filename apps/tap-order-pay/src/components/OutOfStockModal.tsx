@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { lockScroll, unlockScroll } from "@/utils/scrollLock";
+import { lockScroll, unlockScroll } from "@even/ui";
 
 interface OutOfStockModalProps {
   isOpen: boolean;
@@ -44,7 +44,7 @@ export default function OutOfStockModal({
           </div>
 
           <div className="space-y-4 md:space-y-5 lg:space-y-6">
-            <p className="text-gray-600 text-base md:text-lg lg:text-xl text-center">
+            <p className="text-tone-600 text-base md:text-lg lg:text-xl text-center">
               {itemName ? (
                 <>
                   <span className="font-medium text-black capitalize">

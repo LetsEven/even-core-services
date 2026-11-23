@@ -1,7 +1,6 @@
 import {
-  calculateCommissions as calculateServiceCommissions,
+  createServicePayments,
   formatMXN,
-  getCommissionRates as getServiceCommissionRates,
   type CommissionBreakdown,
   type CommissionRates,
 } from "@even/payments";
@@ -12,13 +11,7 @@ export const COMMISSION_SERVICE = "tap-and-pay" as const;
 
 export { formatMXN, type CommissionBreakdown, type CommissionRates };
 
-export function getCommissionRates(amount: number): CommissionRates {
-  return getServiceCommissionRates(amount, COMMISSION_SERVICE);
-}
+const payments = createServicePayments(COMMISSION_SERVICE);
 
-export function calculateCommissions(
-  baseAmount: number,
-  tipAmount: number,
-): CommissionBreakdown {
-  return calculateServiceCommissions(baseAmount, tipAmount, COMMISSION_SERVICE);
-}
+export const getCommissionRates = payments.getCommissionRates;
+export const calculateCommissions = payments.calculateCommissions;

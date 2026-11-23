@@ -15,23 +15,14 @@ import { authService } from "@/app/services/auth.service";
 import { useAuth } from "@/app/context/AuthContext";
 import TermsCheckbox from "@/app/components/TermsCheckbox";
 import { useGuest } from "@/app/context/GuestContext";
+import {
+  COUNTRIES,
+  formatPhoneNumber,
+  unwrapProfile,
+  usePhoneAuth,
+} from "@even/ui/diner";
 
-type Step = "phone" | "verify" | "profile";
-
-interface Country {
-  code: string;
-  flag: string;
-  name: string;
-}
-
-const countries: Country[] = [
-  { code: "+52", flag: "MX", name: "México" },
-  { code: "+1", flag: "US", name: "Estados Unidos" },
-  { code: "+34", flag: "ES", name: "España" },
-  { code: "+54", flag: "AR", name: "Argentina" },
-  { code: "+57", flag: "CO", name: "Colombia" },
-  { code: "+58", flag: "VE", name: "Venezuela" },
-];
+const countries = COUNTRIES;
 
 export default function AuthSelectionPage() {
   const t = useTranslations("Auth");
@@ -66,47 +57,49 @@ export default function AuthSelectionPage() {
     }
   };
 
-  const [step, setStep] = useState<Step>("phone");
-  const [countryCode, setCountryCode] = useState("+52");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [phoneNumberDisplay, setPhoneNumberDisplay] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState<number | "">("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // Envío del SMS en curso: el paso de código se muestra de inmediato
-  const [sendingCode, setSendingCode] = useState(false);
-  const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(0);
+  const auth = usePhoneAuth({
+    sendOtp: (fullPhone) => authService.sendPhoneOTP(fullPhone),
+    verifyOtp: verifyOTP,
+    saveProfile: updateProfile,
+    refreshProfile,
+    // Tras verificar el código se pide el perfil aparte: con nombre sigue el flujo, sin él pide el perfil.
+    hasProfile: async () => {
+      const profileResponse = await authService.getMyProfile();
+      if (!profileResponse.success || !profileResponse.data) return false;
+      const found = unwrapProfile(profileResponse.data);
+      return { firstName: found?.firstName, lastName: found?.lastName };
+    },
+    onAuthenticated: () => navigateWithTable("/payment-options", true),
+  });
+  const {
+    step,
+    phone,
+    countryCode,
+    setCountryCode,
+    phoneNumber,
+    phoneDisplay: phoneNumberDisplay,
+    otp,
+    setOtp,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    age,
+    setAge,
+    acceptedTerms,
+    setAcceptedTerms,
+    loading,
+    sendingCode,
+    error,
+    countdown,
+    changeNumber,
+  } = auth;
+  const handleSendOTP = auth.sendCode;
+  const handleVerifyOTP = auth.verifyCode;
+  const handleResendOTP = auth.resendCode;
+  const handleProfileSubmit = auth.submitProfile;
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const formatPhoneNumber = (num: string) => {
-    if (!num) return "";
-    const cleaned = num.replace(/\D/g, "");
-    if (cleaned.length === 10)
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    if (cleaned.length > 10) {
-      const cc = cleaned.slice(0, cleaned.length - 10);
-      const area = cleaned.slice(-10, -7);
-      const first = cleaned.slice(-7, -4);
-      const last = cleaned.slice(-4);
-      return `+${cc} (${area}) ${first}-${last}`;
-    }
-    return num;
-  };
-
-  const formatPhoneInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6)
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    if (cleaned.length <= 10)
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -141,9 +134,7 @@ export default function AuthSelectionPage() {
       }
       if (step === "verify") {
         // Absorbe el back como un paso atrás (verify -> phone), sin salir.
-        setStep("phone");
-        setOtp("");
-        setError("");
+        changeNumber();
         window.history.pushState({ evenAuthGuard: true }, "");
         return;
       }
@@ -151,7 +142,7 @@ export default function AuthSelectionPage() {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [step]);
+  }, [step, changeNumber]);
 
   // Bloquea el body para que iOS no deje la pantalla desplazada al cerrar el teclado.
   useEffect(() => {
@@ -172,116 +163,6 @@ export default function AuthSelectionPage() {
       document.body.style.height = prev.height;
     };
   }, []);
-
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSendingCode(true);
-    try {
-      const fullPhone = countryCode + phoneNumber;
-      setPhone(fullPhone);
-      setStep("verify");
-      const response = await authService.sendPhoneOTP(fullPhone);
-      if (response.success) {
-        setCountdown(60);
-      } else {
-        setStep("phone");
-        setError(response.error || t("errorSendCode"));
-      }
-    } catch {
-      setStep("phone");
-      setError(t("errorSendCodeGeneric"));
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    if (otp.length !== 6) {
-      setError(t("errorInvalidCodeLength"));
-      setLoading(false);
-      return;
-    }
-    try {
-      const response = await verifyOTP(phone, otp);
-      if (response.success) {
-        const profileResponse = await authService.getMyProfile();
-        if (profileResponse.success && profileResponse.data) {
-          const responseData = profileResponse.data as any;
-          const profile =
-            responseData.data?.profile ||
-            responseData.profile ||
-            responseData.data ||
-            responseData;
-          if (profile.firstName) {
-            await refreshProfile();
-            navigateWithTable("/payment-options", true);
-          } else {
-            setStep("profile");
-          }
-        } else {
-          setStep("profile");
-        }
-      } else {
-        setError(response.error || t("errorInvalidCode"));
-      }
-    } catch {
-      setError(t("errorVerifyCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-    setError("");
-    setLoading(true);
-    try {
-      const response = await authService.sendPhoneOTP(phone);
-      if (response.success) setCountdown(60);
-      else setError(response.error || t("errorResendCode"));
-    } catch {
-      setError(t("errorResendCode"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (age === "" || !acceptedTerms) return;
-    setError("");
-    setLoading(true);
-    try {
-      const birthYear = new Date().getUTCFullYear() - Number(age);
-      const response = await updateProfile({
-        firstName,
-        lastName,
-        birthDate: `${birthYear}-01-01`,
-        acceptedTerms: true,
-      });
-      if (response.success) {
-        await refreshProfile();
-        navigateWithTable("/payment-options", true);
-      } else {
-        setError(response.error || t("errorSaveProfile"));
-      }
-    } catch {
-      setError(t("errorSaveProfile"));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (validationError) {
     return <ValidationError errorType={validationError as any} />;
@@ -322,7 +203,7 @@ export default function AuthSelectionPage() {
 
           {/* Error */}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm">
+            <div className="mb-4 p-3 bg-danger-500/20 border border-danger-500 rounded-lg text-white text-sm">
               {error}
             </div>
           )}
@@ -338,7 +219,7 @@ export default function AuthSelectionPage() {
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="h-13 w-22.5 px-3 text-gray-700 font-medium bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer flex items-center justify-between gap-1.5"
+                        className="h-13 w-22.5 px-3 text-tone-700 font-medium bg-white border border-tone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer flex items-center justify-between gap-1.5"
                         disabled={loading}
                       >
                         <div className="flex items-center gap-1.5">
@@ -351,11 +232,11 @@ export default function AuthSelectionPage() {
                           />
                           <span className="text-sm">{countryCode}</span>
                         </div>
-                        <ChevronDown className="size-3 text-gray-500 shrink-0" />
+                        <ChevronDown className="size-3 text-tone-500 shrink-0" />
                       </button>
 
                       {isDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-tone-300 rounded-lg shadow-lg z-50 overflow-hidden">
                           {countries.map((country) => (
                             <button
                               key={country.code}
@@ -364,7 +245,7 @@ export default function AuthSelectionPage() {
                                 setCountryCode(country.code);
                                 setIsDropdownOpen(false);
                               }}
-                              className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-100 transition-colors text-left"
+                              className="w-full px-3 py-2 flex items-center gap-2 hover:bg-tone-100 transition-colors text-left"
                             >
                               <Flag
                                 code={country.flag}
@@ -374,7 +255,7 @@ export default function AuthSelectionPage() {
                                   borderRadius: 2,
                                 }}
                               />
-                              <span className="text-sm font-medium text-gray-700">
+                              <span className="text-sm font-medium text-tone-700">
                                 {country.code}
                               </span>
                             </button>
@@ -385,17 +266,13 @@ export default function AuthSelectionPage() {
 
                     {/* Phone Input */}
                     <div className="relative flex-1">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                       <input
                         required
                         type="tel"
                         value={phoneNumberDisplay}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, "");
-                          setPhoneNumber(value);
-                          setPhoneNumberDisplay(formatPhoneInput(value));
-                        }}
-                        className="h-13 w-full pl-10 pr-3 text-gray-700 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-even-evergreen"
+                        onChange={(e) => auth.changePhone(e.target.value)}
+                        className="h-13 w-full pl-10 pr-3 text-tone-700 bg-white border border-tone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-even-evergreen"
                         placeholder={t("phonePlaceholder")}
                         disabled={loading}
                         maxLength={14}
@@ -438,7 +315,7 @@ export default function AuthSelectionPage() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 placeholder="000000"
-                className="w-full px-3 py-3 text-gray-700 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
+                className="w-full px-3 py-3 text-tone-700 bg-white border border-tone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-even-evergreen text-center tracking-widest text-2xl"
                 required
                 disabled={loading}
                 autoFocus
@@ -488,13 +365,13 @@ export default function AuthSelectionPage() {
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tone-400 pointer-events-none" />
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder={t("firstNamePlaceholder")}
-                    className="h-12 w-full pl-10 pr-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
+                    className="h-12 w-full pl-10 pr-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
                     required
                     disabled={loading}
                   />
@@ -504,7 +381,7 @@ export default function AuthSelectionPage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder={t("lastNamePlaceholder")}
-                  className="h-12 w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
+                  className="h-12 w-full px-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen appearance-none"
                   disabled={loading}
                 />
               </div>
@@ -518,7 +395,7 @@ export default function AuthSelectionPage() {
                   onChange={(e) =>
                     setAge(e.target.value === "" ? "" : Number(e.target.value))
                   }
-                  className="h-12 w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer appearance-none"
+                  className="h-12 w-full px-3 text-tone-600 bg-white border border-tone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-even-evergreen cursor-pointer appearance-none"
                   disabled={loading}
                 >
                   <option value="" disabled>

@@ -9,6 +9,10 @@ import type { UseAuth } from "./types";
 export interface PersonalItemDiscount {
   id: string;
   percentage: number;
+  // Cada uso cubre una pieza; null = ilimitado
+  piezas: number | null;
+  // Usos sin contar el carrito (undefined = backend sin usos_libres)
+  usos?: number | null;
 }
 
 type DiscountMap = Map<number, PersonalItemDiscount>;
@@ -27,11 +31,23 @@ function buildMap(discounts: UserDiscount[]): DiscountMap {
     ) {
       continue;
     }
+    // Agotado de verdad; si solo está apartado en el carrito lo resuelve conCarrito()
+    if (
+      d.usos_libres !== undefined
+        ? d.usos_libres === 0
+        : d.piezas_restantes === 0
+    )
+      continue;
     const existing = map.get(d.menu_item_id);
     // No debería haber más de un descuento personal vivo para el mismo
     // producto, pero si lo hay, se queda con el de mayor %.
     if (!existing || d.discount_percentage > existing.percentage) {
-      map.set(d.menu_item_id, { id: d.id, percentage: d.discount_percentage });
+      map.set(d.menu_item_id, {
+        id: d.id,
+        percentage: d.discount_percentage,
+        piezas: d.piezas_restantes ?? null,
+        usos: d.usos_libres,
+      });
     }
   }
   return map;
@@ -54,18 +70,34 @@ export function createUsePersonalItemDiscounts({
   // usuario en la misma pantalla se seguiría sirviendo (instantáneamente, sin
   // red) la promesa ya resuelta del usuario previo.
   const cache = new Map<string, Promise<DiscountMap>>();
+  const suscriptores = new Set<() => void>();
+
+  /** Vuelve a pedir los descuentos (p. ej. cuando el carrito aparta o suelta una pieza). */
+  function invalidate() {
+    cache.clear();
+    suscriptores.forEach((avisar) => avisar());
+  }
 
   async function fetchMap(restaurantId: number): Promise<DiscountMap> {
     const response = await userDiscountsService.getActive(restaurantId);
     return buildMap(response.success && response.data ? response.data : []);
   }
 
-  return function usePersonalItemDiscounts(
+  function usePersonalItemDiscounts(
     restaurantId: number | null,
   ): DiscountMap {
     const { isAuthenticated, user } = useAuth();
     const userId = user?.id ?? null;
     const [map, setMap] = useState<DiscountMap>(new Map());
+    const [version, setVersion] = useState(0);
+
+    useEffect(() => {
+      const avisar = () => setVersion((v) => v + 1);
+      suscriptores.add(avisar);
+      return () => {
+        suscriptores.delete(avisar);
+      };
+    }, []);
 
     useEffect(() => {
       if (!restaurantId || !isAuthenticated || !userId) {
@@ -87,8 +119,27 @@ export function createUsePersonalItemDiscounts({
       return () => {
         cancelled = true;
       };
-    }, [restaurantId, isAuthenticated, userId]);
+    }, [restaurantId, isAuthenticated, userId, version]);
 
     return map;
-  };
+  }
+
+  return { usePersonalItemDiscounts, invalidate };
+}
+
+/**
+ * Descuento con las piezas que quedan restando el carrito local, para que la
+ * oferta se quite (o vuelva) en cuanto cambia el carrito, sin esperar al servidor.
+ */
+export function conCarrito(
+  d: PersonalItemDiscount | undefined,
+  items: { userDiscountId?: string | null; quantity: number }[],
+): PersonalItemDiscount | undefined {
+  if (!d || d.usos === undefined) return d;
+  if (d.usos === null) return { ...d, piezas: null };
+  const enCarrito = items
+    .filter((i) => i.userDiscountId === d.id)
+    .reduce((s, i) => s + i.quantity, 0);
+  const piezas = d.usos - enCarrito;
+  return piezas > 0 ? { ...d, piezas } : undefined;
 }

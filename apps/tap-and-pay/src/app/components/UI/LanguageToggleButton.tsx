@@ -4,8 +4,8 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Flag from "react-world-flags";
-import { setLocaleCookie } from "@/i18n/actions";
-import type { Locale } from "@/i18n/locale";
+import { setLocaleCookie } from "@even/i18n/actions";
+import type { Locale } from "@even/i18n/locale";
 
 export default function LanguageToggleButton() {
   const t = useTranslations("Common");

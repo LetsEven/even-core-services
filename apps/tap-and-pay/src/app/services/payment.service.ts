@@ -30,6 +30,8 @@ async function payDishOrder(params: {
   userId?: string;
   guestId?: string | null;
   guestName?: string | null;
+  tipAmount?: number;
+  paymentSource?: string | null;
 }): Promise<ApiResponse<unknown>> {
   return request(`/tap-pay/dishes/${params.dishId}/pay`, {
     method: "POST",
@@ -38,6 +40,8 @@ async function payDishOrder(params: {
       userId: params.userId,
       guestId: params.guestId,
       guestName: params.guestName,
+      tipAmount: params.tipAmount ?? 0,
+      paymentSource: params.paymentSource ?? null,
     }),
   });
 }
@@ -49,15 +53,20 @@ async function paySelectedDishes(params: {
   userId?: string;
   guestId?: string | null;
   guestName?: string | null;
+  tipAmount?: number;
+  paymentSource?: string | null;
 }): Promise<ApiResponse<unknown>> {
-  for (const dishId of params.dishIds) {
+  for (const [i, dishId] of params.dishIds.entries()) {
     try {
+      // Cada platillo es un pago aparte en el POS: la propina va solo en el primero
       await payDishOrder({
         dishId,
         paymentMethodId: params.paymentMethodId,
         userId: params.userId,
         guestId: params.guestId,
         guestName: params.guestName,
+        tipAmount: i === 0 ? (params.tipAmount ?? 0) : 0,
+        paymentSource: params.paymentSource ?? null,
       });
     } catch (error) {
       console.error(`Error paying dish ${dishId}:`, error);

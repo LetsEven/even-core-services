@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useOrderAnimation } from "@even/ui/diner";
 import { useTranslations } from "next-intl";
 import { CartItem } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
@@ -42,28 +42,6 @@ const OrderAnimation = ({
   const showImages = !!restaurant && restaurant.menu_show_images !== false;
   const { user, profile } = useAuth();
 
-  // Siempre apunta a la versión más reciente del callback para evitar closures obsoletos
-  const onConfirmRef = useRef(onConfirm);
-  useEffect(() => {
-    onConfirmRef.current = onConfirm;
-  }, [onConfirm]);
-
-  const onContinueRef = useRef(onContinue);
-  useEffect(() => {
-    onContinueRef.current = onContinue;
-  }, [onContinue]);
-
-  const onTimeoutRef = useRef(onTimeout);
-  useEffect(() => {
-    onTimeoutRef.current = onTimeout;
-  }, [onTimeout]);
-
-  const [animationState, setAnimationState] = useState<
-    "circle" | "content" | "greenCircle" | "success"
-  >("circle");
-  const [logoColorful, setLogoColorful] = useState(false);
-  const [showCancelButton, setShowCancelButton] = useState(true);
-
   const displayName = userName || profile?.firstName || tc("defaultUserName");
   const displayItems = orderedItems || [];
   const displayRestaurant = restaurant?.name || t("restaurantLabel");
@@ -71,154 +49,15 @@ const OrderAnimation = ({
   const userImage = profile?.photoUrl;
   const hasUserImage = !!userImage;
 
-  useEffect(() => {
-    const prev = {
-      overflow: document.body.style.overflow,
-      position: document.body.style.position,
-      width: document.body.style.width,
-      height: document.body.style.height,
-    };
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
-    document.body.style.height = "100%";
-    return () => {
-      document.body.style.overflow = prev.overflow;
-      document.body.style.position = prev.position;
-      document.body.style.width = prev.width;
-      document.body.style.height = prev.height;
-    };
-  }, []);
-
-  // Prevenir recarga de página durante la animación
-  useEffect(() => {
-    // Bloquear atajos de teclado (F5, Ctrl+R, Cmd+R)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === "F5" ||
-        (e.ctrlKey && e.key === "r") ||
-        (e.metaKey && e.key === "r")
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    // Mostrar diálogo de confirmación al intentar recargar/cerrar
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-      return "";
-    };
-
-    // Prevenir pull-to-refresh en Safari/iOS
-    const handleTouchMove = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        e.preventDefault();
-      }
-    };
-
-    // Aplicar estilos al body para prevenir overscroll
-    const originalOverscrollBehavior = document.body.style.overscrollBehavior;
-    document.body.style.overscrollBehavior = "none";
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.body.style.overscrollBehavior = originalOverscrollBehavior;
-    };
-  }, []);
-
-  // Coreografía cosmética (circle -> content -> greenCircle): esto solo
-  // controla ritmo visual y dispara el cobro real vía onConfirm — no depende
-  // de si el pago ya terminó, así que es seguro que corra en tiempos fijos.
-  useEffect(() => {
-    const contentTimer = setTimeout(() => {
-      setAnimationState("content");
-    }, 1500);
-
-    const cancelButtonTimer = setTimeout(() => {
-      setShowCancelButton(false);
-      // Confirmar la orden después de que expire el tiempo de cancelación
-      // Usamos el ref para siempre llamar la versión más reciente (evita closures obsoletos con profile=null)
-      if (onConfirmRef.current) {
-        onConfirmRef.current();
-      }
-    }, 4000);
-
-    const logoTimer = setTimeout(() => {
-      setLogoColorful(true);
-    }, 3500);
-
-    const greenCircleTimer = setTimeout(() => {
-      setAnimationState("greenCircle");
-    }, 5500);
-
-    return () => {
-      clearTimeout(contentTimer);
-      clearTimeout(cancelButtonTimer);
-      clearTimeout(logoTimer);
-      clearTimeout(greenCircleTimer);
-    };
-  }, []);
-
-  // A partir de "greenCircle" SÍ importa el pago real: antes navegábamos con
-  // un timer fijo (9s) sin importar si el pago/orden ya se habían confirmado
-  // — si esas llamadas tardaban más que eso, la pantalla de éxito se quedaba
-  // congelada para siempre porque nunca aparecía un orderId. Ahora se espera
-  // a que "orderId" llegue de verdad antes de mostrar el check y navegar.
-  useEffect(() => {
-    if (animationState !== "greenCircle" || !orderId) return;
-
-    // Dejar que la animación del círculo verde (1.5s) termine de expandirse
-    // antes de mostrar el check, para que no se sienta un salto brusco.
-    const successTimer = setTimeout(() => {
-      setAnimationState("success");
-    }, 1500);
-
-    return () => clearTimeout(successTimer);
-  }, [animationState, orderId]);
-
-  useEffect(() => {
-    if (animationState !== "success") return;
-
-    // Mantener el check visible un momento antes de navegar.
-    const continueTimer = setTimeout(() => {
-      handleContinue();
-    }, 1800);
-
-    return () => clearTimeout(continueTimer);
-  }, [animationState]);
-
-  // Red de seguridad: si el pago/orden nunca se confirma (ni éxito ni error)
-  // dentro de un tiempo razonable, no dejar al usuario congelado esperando
-  // — se avisa y se sale de la animación.
-  useEffect(() => {
-    if (animationState !== "greenCircle" || orderId) return;
-
-    const timeoutTimer = setTimeout(() => {
-      if (onTimeoutRef.current) {
-        onTimeoutRef.current();
-      } else {
-        handleContinue();
-      }
-    }, 20000);
-
-    return () => clearTimeout(timeoutTimer);
-  }, [animationState, orderId]);
-
-  const handleContinue = () => {
-    if (onContinueRef.current) {
-      onContinueRef.current();
-    } else {
-      router.push(`/${restaurantId}/order-tracking`);
-    }
-  };
+  const { animationState, logoColorful, showCancelButton, handleContinue } =
+    useOrderAnimation({
+      confirmed: !!orderId,
+      onConfirm,
+      onContinue,
+      onTimeout,
+      fallbackContinue: () => router.push(`/${restaurantId}/order-tracking`),
+      lockBody: true,
+    });
 
   const handleCancel = () => {
     if (onCancel) {
@@ -273,7 +112,7 @@ const OrderAnimation = ({
                 {/* Restaurante */}
                 <div className="pb-4 md:pb-6 lg:pb-7">
                   <div className="flex items-center gap-3 md:gap-4">
-                    <div className="size-10 md:size-12 lg:size-14 rounded-full border border-gray-400 bg-gray-100 overflow-hidden flex-shrink-0">
+                    <div className="size-10 md:size-12 lg:size-14 rounded-full border border-tone-400 bg-tone-100 overflow-hidden flex-shrink-0">
                       <img
                         src={
                           restaurant?.logo_url ||
@@ -287,7 +126,7 @@ const OrderAnimation = ({
                       <span className="text-black text-base md:text-lg lg:text-xl font-medium">
                         {displayRestaurant}
                       </span>
-                      <p className="text-xs md:text-sm lg:text-base text-gray-500">
+                      <p className="text-xs md:text-sm lg:text-base text-tone-500">
                         {t("restaurantLabel")}
                       </p>
                     </div>
@@ -301,10 +140,10 @@ const OrderAnimation = ({
                       <img
                         src={userImage}
                         alt={displayName}
-                        className="size-10 md:size-12 lg:size-14 rounded-full object-cover border border-gray-400 flex-shrink-0"
+                        className="size-10 md:size-12 lg:size-14 rounded-full object-cover border border-tone-400 flex-shrink-0"
                       />
                     ) : (
-                      <div className="size-10 md:size-12 lg:size-14 rounded-full border border-gray-400 bg-even-evergreen flex items-center justify-center flex-shrink-0">
+                      <div className="size-10 md:size-12 lg:size-14 rounded-full border border-tone-400 bg-even-evergreen flex items-center justify-center flex-shrink-0">
                         <span className="text-white text-base md:text-lg lg:text-xl font-bold">
                           {displayName.charAt(0).toUpperCase()}
                         </span>
@@ -314,7 +153,7 @@ const OrderAnimation = ({
                       <span className="text-black text-base md:text-lg lg:text-xl font-medium">
                         {displayName}
                       </span>
-                      <p className="text-xs md:text-sm lg:text-base text-gray-500">
+                      <p className="text-xs md:text-sm lg:text-base text-tone-500">
                         {t("nameFieldLabel")}
                       </p>
                     </div>
@@ -324,7 +163,7 @@ const OrderAnimation = ({
                 {/* Platillos ordenados */}
                 {displayItems.length > 0 && (
                   <div className="pt-4 md:pt-6 lg:pt-7">
-                    <p className="text-xs md:text-sm lg:text-base text-gray-500 mb-3 md:mb-4">
+                    <p className="text-xs md:text-sm lg:text-base text-tone-500 mb-3 md:mb-4">
                       {t("orderedDishesLabel")}
                     </p>
                     <div className="space-y-2 md:space-y-3 lg:space-y-4">
@@ -334,7 +173,7 @@ const OrderAnimation = ({
                           className="flex items-center gap-3 md:gap-4"
                         >
                           {showImages && (
-                            <div className="size-10 md:size-12 lg:size-14 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <div className="size-10 md:size-12 lg:size-14 bg-tone-300 rounded-sm md:rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
                               {item.images && item.images[0] ? (
                                 <img
                                   src={item.images[0]}
@@ -354,7 +193,7 @@ const OrderAnimation = ({
                             <p className="text-black text-sm md:text-base lg:text-lg capitalize">
                               {item.name}
                             </p>
-                            <p className="text-xs md:text-sm lg:text-base text-gray-500">
+                            <p className="text-xs md:text-sm lg:text-base text-tone-500">
                               {t("quantityLabel", { quantity: item.quantity })}
                             </p>
                           </div>

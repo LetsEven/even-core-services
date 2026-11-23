@@ -108,6 +108,20 @@ describe("chargeSavedCard", () => {
     expect(second).not.toBe(first);
   });
 
+  it("order_changed descarta el intento: la cuenta cambió en el POS", async () => {
+    const { run, processPayment, store } = setup([
+      fail("order_changed", { status: 409 }),
+      { success: true, payment: { id: "ep_1" } },
+    ]);
+
+    expect(await run()).toMatchObject({ status: "retryable", reason: "order_changed" });
+    expect(store.get()).toBeNull();
+    await run();
+
+    const [first, second] = processPayment.mock.calls.map((c) => c[0].intentKey);
+    expect(second).not.toBe(first);
+  });
+
   it("idempotency_unavailable es reintentable con la misma clave", async () => {
     const { run, store } = setup([fail("idempotency_unavailable", { status: 503 })]);
     const before = await store.ensure(cart);

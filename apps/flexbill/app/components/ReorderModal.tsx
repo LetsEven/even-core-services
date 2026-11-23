@@ -15,7 +15,7 @@ import OrderAnimation from "@/app/components/UI/OrderAnimation";
 import RestaurantClosedModal from "@/app/components/RestaurantClosedModal";
 import OutOfStockModal from "@/app/components/OutOfStockModal";
 import { getItemDisplayPrice } from "@/app/utils/commissionCalculator";
-import ItemCustomizations from "@/app/components/ItemCustomizations";
+import { ItemCustomizations } from "@even/ui/diner";
 
 interface ReorderModalProps {
   isOpen: boolean;
@@ -129,6 +129,20 @@ function ReorderModal({
     return ids;
   }, [menu]);
 
+  // Precio actual del menú (con su descuento), no el que se pagó en el pedido anterior
+  const preciosMenu = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const section of menu ?? []) {
+      for (const it of section.items ?? []) {
+        const base = Number(it.price);
+        m.set(it.id, it.discount > 0 ? base * (1 - it.discount / 100) : base);
+      }
+    }
+    return m;
+  }, [menu]);
+  const precioDe = (id: number | null | undefined, pagado: number) =>
+    (id != null ? preciosMenu.get(id) : undefined) ?? pagado;
+
   const getCartItem = (menuItemId: number) =>
     cartState.items.find((i) => i.id === menuItemId);
 
@@ -157,7 +171,7 @@ function ReorderModal({
         id: order.menu_item_id!,
         name: order.item,
         description: "",
-        price: order.price,
+        price: precioDe(order.menu_item_id, order.price),
         images: order.images,
         features: [],
         discount: 0,
@@ -210,7 +224,7 @@ function ReorderModal({
       id: order.menu_item_id!,
       name: order.item,
       description: "",
-      price: order.price,
+      price: precioDe(order.menu_item_id, order.price),
       images: order.images,
       features: [],
       discount: 0,
@@ -229,7 +243,7 @@ function ReorderModal({
         const qty = getSelectedQuantity(order.menu_item_id!);
         return (
           sum +
-          qty * getItemDisplayPrice(order.price + (order.extra_price || 0))
+          qty * getItemDisplayPrice(precioDe(order.menu_item_id, order.price) + (order.extra_price || 0))
         );
       }, 0),
     [uniqueItems, cartState.items],
@@ -447,7 +461,7 @@ function ReorderModal({
                       {/* Image */}
                       {showImages && (
                         <div className="shrink-0 relative">
-                          <div className="size-16 md:size-20 rounded-sm overflow-hidden bg-gray-300">
+                          <div className="size-16 md:size-20 rounded-sm overflow-hidden bg-tone-300">
                             {order.images &&
                             order.images.length > 0 &&
                             order.images[0] ? (
@@ -466,7 +480,7 @@ function ReorderModal({
                           </div>
                           {itemIsOutOfStock && (
                             <div className="absolute bottom-0.5 left-0.5">
-                              <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
+                              <span className="bg-danger-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
                                 {tc("outOfStockBadge")}
                               </span>
                             </div>
@@ -480,7 +494,7 @@ function ReorderModal({
                           {order.item}
                         </h3>
                         {!showImages && itemIsOutOfStock && (
-                          <span className="inline-block bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
+                          <span className="inline-block bg-danger-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
                             {tc("outOfStockBadge")}
                           </span>
                         )}
@@ -490,16 +504,16 @@ function ReorderModal({
                           formatPrice={(price) =>
                             price *
                             (getItemDisplayPrice(
-                              order.price + (order.extra_price || 0),
+                              precioDe(order.menu_item_id, order.price) + (order.extra_price || 0),
                             ) /
-                              (order.price + (order.extra_price || 0) || 1))
+                              (precioDe(order.menu_item_id, order.price) + (order.extra_price || 0) || 1))
                           }
                           className="mt-0.5"
                         />
                         <p className="text-xs md:text-sm text-white/60 mt-1">
                           $
                           {getItemDisplayPrice(
-                            order.price + (order.extra_price || 0),
+                            precioDe(order.menu_item_id, order.price) + (order.extra_price || 0),
                           ).toFixed(2)}
                         </p>
                       </div>

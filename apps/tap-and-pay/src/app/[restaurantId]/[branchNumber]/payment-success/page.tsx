@@ -19,12 +19,13 @@ import {
 } from "lucide-react";
 import { getCardTypeIcon } from "@/app/utils/cardIcons";
 import { useAuth } from "@/app/context/AuthContext";
-import InvoiceModal from "@/app/components/modals/InvoiceModal";
 import { invoiceService } from "@/app/services/invoice.service";
 import { ticketService } from "@/app/services/ticket.service";
 import { lockScroll, unlockScroll } from "@/app/utils/scrollLock";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
 import { useFormatter, useTranslations } from "next-intl";
+import { AddLoyaltyCardButton, InvoiceModal } from "@even/ui/diner";
+import { walletCardService } from "@/app/services/walletCard.service";
 
 export default function PaymentSuccessPage() {
   const t = useTranslations("PaymentSuccessPage");
@@ -408,10 +409,10 @@ export default function PaymentSuccessPage() {
                         {/* Estrella */}
                         <svg
                           className={`size-8 md:size-10 lg:size-12 transition-all ${
-                            isFilled ? "text-yellow-400" : "text-white"
+                            isFilled ? "text-caution-400" : "text-white"
                           }`}
                           fill="currentColor"
-                          stroke={isFilled ? "#facc15" : "black"}
+                          stroke={isFilled ? "var(--color-star)" : "black"}
                           strokeWidth="1"
                           viewBox="0 0 24 24"
                         >
@@ -426,7 +427,7 @@ export default function PaymentSuccessPage() {
                 {rating > 0 && !hasRated && (
                   <button
                     onClick={handleSubmitRating}
-                    className="px-5 md:px-6 py-1.5 md:py-2 bg-even-grass text-even-evergreen hover:from-[#2a6d77] hover:to-[#12323a] text-sm md:text-base font-medium rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg animate-fade-in"
+                    className="px-5 md:px-6 py-1.5 md:py-2 bg-even-grass text-even-evergreen text-sm md:text-base font-medium rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg animate-fade-in"
                     aria-label={t("submitRatingAriaLabel")}
                   >
                     {t("submitCta")}
@@ -453,7 +454,7 @@ export default function PaymentSuccessPage() {
               {restaurant?.billing_enabled !== false && (
                 <button
                   onClick={() => setIsInvoiceModalOpen(true)}
-                  className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100"
+                  className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-warm-100"
                 >
                   <FileText
                     className="size-5 md:size-6 lg:size-7"
@@ -463,10 +464,19 @@ export default function PaymentSuccessPage() {
                 </button>
               )}
 
+              {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene
+                  programa activo. Va junto a Facturar y Ver ticket porque
+                  es el momento en que el comensal ya se identifico para
+                  pagar: la tarjeta nace ligada a su cuenta. */}
+              <AddLoyaltyCardButton
+                restaurantId={parseInt(params?.restaurantId as string, 10)}
+                walletCardService={walletCardService}
+              />
+
               {/* Ticket btn */}
               <button
                 onClick={() => setIsTicketModalOpen(true)}
-                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100"
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-warm-100"
               >
                 <Receipt
                   className="size-5 md:size-6 lg:size-7"
@@ -480,6 +490,7 @@ export default function PaymentSuccessPage() {
       </div>
 
       <InvoiceModal
+        invoiceService={invoiceService}
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         transactionId={
@@ -554,8 +565,8 @@ export default function PaymentSuccessPage() {
                 <div className="space-y-2 md:space-y-3 lg:space-y-4">
                   {paymentDetails?.userName && (
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                      <div className="bg-warning-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-warning-600" />
                       </div>
                       <span className="text-sm md:text-base lg:text-lg">
                         {paymentDetails.userName}
@@ -563,8 +574,8 @@ export default function PaymentSuccessPage() {
                     </div>
                   )}
                   <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                    <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                    <div className="bg-info-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-info-600" />
                     </div>
                     <span className="text-sm md:text-base lg:text-lg">
                       {format.dateTime(new Date(), {
@@ -577,7 +588,7 @@ export default function PaymentSuccessPage() {
 
                   {paymentDetails?.cardLast4 && (
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-green-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                      <div className="bg-positive-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
                         <div className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center scale-150">
                           {getCardTypeIcon(
                             paymentDetails.cardBrand || "unknown",
@@ -615,7 +626,7 @@ export default function PaymentSuccessPage() {
                         >
                           {/* Image */}
                           {showImages && (
-                            <div className="size-14 md:size-16 lg:size-20 bg-gray-300 rounded-lg md:rounded-xl shrink-0 flex items-center justify-center overflow-hidden">
+                            <div className="size-14 md:size-16 lg:size-20 bg-tone-300 rounded-lg md:rounded-xl shrink-0 flex items-center justify-center overflow-hidden">
                               {dish.images?.[0] ? (
                                 <img
                                   src={dish.images[0]}
@@ -762,9 +773,9 @@ export default function PaymentSuccessPage() {
                 </h3>
                 <button
                   onClick={() => setIsBreakdownModalOpen(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                  className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
                 >
-                  <X className="size-5 md:size-6 lg:size-7 text-gray-500" />
+                  <X className="size-5 md:size-6 lg:size-7 text-tone-500" />
                 </button>
               </div>
             </div>
@@ -882,7 +893,7 @@ export default function PaymentSuccessPage() {
               {/* Sign Up Option */}
               <button
                 onClick={handleSignUp}
-                className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
+                className="w-full bg-white hover:bg-tone-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
               >
                 <div className="bg-even-grass text-even-evergreen p-2 md:p-2.5 lg:p-3 rounded-full group-hover:scale-110 transition-transform">
                   <LogIn className="size-5 md:size-6 lg:size-7 text-white" />
@@ -891,7 +902,7 @@ export default function PaymentSuccessPage() {
                   <h2 className="text-base md:text-lg lg:text-xl font-medium mb-0.5 md:mb-1">
                     {t("createAccountCta")}
                   </h2>
-                  <p className="text-xs md:text-sm lg:text-base text-gray-600">
+                  <p className="text-xs md:text-sm lg:text-base text-tone-600">
                     {t("createAccountDetail")}
                   </p>
                 </div>

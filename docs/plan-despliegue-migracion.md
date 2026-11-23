@@ -86,7 +86,7 @@ Leyenda: ✅ listo · ⚠️ parcial o por verificar · ❌ falta
 
 | # | Tema | Estado | Qué falta |
 |---|---|---|---|
-| C1 | Paridad con los repos originales | ⚠️ | Integrada hasta el 7-nov (PR #25). Los originales siguen fusionando: re-sincronizar justo antes del canary y del cutover. |
+| C1 | Paridad con los repos originales | ⚠️ | Integrada hasta el 19-nov (PR #25 hasta el 7-nov; el resto en la rama `integration/core-unification`). Los originales siguen fusionando: re-sincronizar justo antes del canary y del cutover. |
 | C2 | Comisiones | ✅ | `docs/comisiones.md`; coincide con el backend. Falta confirmar que el backend de prod tenga esa versión. |
 | C3 | Backend de producción | ⚠️ | Corre en Railway (según Arturo). Sin acceso todavía. Verificar versión (¿trae #561, #587, #589?), `PICK_AND_GO_URL` y `CORS_EXTRA_ORIGINS`. |
 | C4 | EcartPay y Apple Pay | ⚠️ | Producción ya cobra (938 transacciones). Verificar que el archivo `apple-developer-merchantid-domain-association` se sirva en el dominio de Pick & Go con el proyecto nuevo (las 5 apps lo traen en `public/.well-known`). |

@@ -10,7 +10,7 @@ import {
   BadgePercent,
 } from "lucide-react";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
-import { lockScroll, unlockScroll } from "@/utils/scrollLock";
+import { lockScroll, unlockScroll } from "@even/ui";
 import type { PromoActivation } from "@/services/promoActivations.service";
 import { useRestaurant } from "@/context/RestaurantContext";
 
@@ -201,7 +201,7 @@ function PromoActivationCard({
         </div>
       )}
 
-      {error && <p className="text-red-300 text-xs text-center">{error}</p>}
+      {error && <p className="text-danger-300 text-xs text-center">{error}</p>}
 
       <div className="flex items-center justify-center gap-3">
         {hasMultiplePromos && (

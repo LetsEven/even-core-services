@@ -1,6 +1,7 @@
 // Hooks y componentes de React. Se importan desde "@even/payments/react" para
 // que el núcleo ("@even/payments") siga sin depender de React.
 export { useEcartPay } from "./useEcartPay";
+export { useSavedCardCharge } from "./useSavedCardCharge";
 export {
   GUEST_ID_STORAGE_KEY,
   PaymentProvider,
@@ -19,3 +20,15 @@ export {
   type CardScannerLabels,
   type CardScannerProps,
 } from "./CardScanner";
+export {
+  useWalletPayments,
+  type ApplePaySuccessInfo,
+  type GooglePaySuccessInfo,
+  type UseWalletPaymentsOptions,
+  type WalletOrderPlan,
+} from "./useWalletPayments";
+export {
+  useWalletHold,
+  WALLET_HOLD_EXPIRY_MS,
+  type UseWalletHoldOptions,
+} from "./useWalletHold";

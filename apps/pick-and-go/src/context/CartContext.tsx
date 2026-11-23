@@ -17,6 +17,7 @@ import {
 } from "@even/cart";
 import { MenuItemData } from "../interfaces/menuItemData";
 import { cartService, CartItem as ApiCartItem } from "../services/cart.service";
+import { invalidarDescuentosPersonales } from "../hooks/usePersonalItemDiscounts";
 import { useAuth } from "./AuthContext";
 import { useGuest } from "./GuestContext";
 import { useRestaurant } from "./RestaurantContext";
@@ -62,6 +63,7 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
     isPromoItem: apiItem.isPromoItem || false,
     promoDiscountPercentage: apiItem.promoDiscountPercentage ?? null,
     userDiscountId: apiItem.userDiscountId || null,
+    discountMaxQuantity: apiItem.discountMaxQuantity ?? null,
   };
 }
 
@@ -93,6 +95,22 @@ const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+
+  // Cuando cambian las piezas con descuento personal, el menú vuelve a pedir cuántas quedan
+  const piezasConDescuento = state.items
+    .filter((i) => i.userDiscountId)
+    .map((i) => `${i.userDiscountId}:${i.quantity}`)
+    .join(",");
+  const piezasPrevias = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      piezasPrevias.current !== null &&
+      piezasPrevias.current !== piezasConDescuento
+    ) {
+      invalidarDescuentosPersonales();
+    }
+    piezasPrevias.current = piezasConDescuento;
+  }, [piezasConDescuento]);
   const [orderNotes, setOrderNotes] = React.useState("");
   const { user, isLoading: authLoading } = useAuth();
   const {
@@ -210,6 +228,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
 
       if (response.success && response.data) {
+        // Con descuento personal el servidor puede dividir la pieza (las de más van
+        // a precio normal en otra línea): se toma el carrito real en vez del optimista
+        if (item.userDiscountId) {
+          const fresh = await cartService.getCart();
+          if (fresh.success && fresh.data) {
+            const items = fresh.data.items.map(convertApiItemToCartItem);
+            dispatch({
+              type: "SET_CART",
+              payload: {
+                items,
+                ...computeTotals(items),
+                cartId: fresh.data.cart_id,
+              },
+            });
+            return;
+          }
+        }
         // Actualizar cartItemId real (solo para items nuevos, no incrementos)
         dispatch({
           type: "SET_CART_ITEM_ID",

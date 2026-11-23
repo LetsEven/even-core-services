@@ -56,18 +56,55 @@ export interface ConfirmResponse<TOrder> {
   success: boolean;
   data?: { order?: TOrder | null };
   code?: string;
+  /** HTTP status (undefined si hubo un fallo de red). Lo lee el predicado de cada app. */
+  status?: number;
+}
+
+/**
+ * Solo el 409 `confirm_in_progress`. Estricto; ya no es el predicado por
+ * defecto (ver `isConfirmRetryable`), queda para apps que lo pidan.
+ */
+export function isConfirmInProgress(result: { code?: string }): boolean {
+  return result.code === "confirm_in_progress";
+}
+
+/**
+ * Predicado de reintento por defecto de pollConfirm. El cobro ya se hizo, así
+ * que un /confirm que no resolvió se reintenta si fue `confirm_in_progress`,
+ * `confirm_conflict`, una red caída (sin status), 429 o 5xx. Los /confirm de
+ * Pick & Go, Room Service y Tap Order & Pay son idempotentes por
+ * `ecartpay_order_id`, así que reintentar es seguro. Cualquier otro 4xx es
+ * terminal.
+ */
+export function isConfirmRetryable(result: { code?: string; status?: number }): boolean {
+  return (
+    result.code === "confirm_in_progress" ||
+    result.code === "confirm_conflict" ||
+    result.status === undefined ||
+    result.status === 429 ||
+    result.status >= 500
+  );
+}
+
+export interface PollConfirmOptions<TOrder> extends PollOptions {
+  /**
+   * Decide si un /confirm que no resolvió se reintenta. Por defecto,
+   * `isConfirmRetryable`, igual para todas las apps.
+   */
+  isConfirmRetryable?: (result: ConfirmResponse<TOrder>) => boolean;
 }
 
 /**
  * Reintenta /confirm (de cada app: tap orders, room orders...) hasta que
- * resuelva o se agote el tiempo. Solo reintenta con 409 `confirm_in_progress`;
- * cualquier otro fallo es terminal. Siempre hace al menos un intento.
+ * resuelva o se agote el tiempo. Reintenta los fallos transitorios
+ * (ver `isConfirmRetryable`); cualquier otro fallo es terminal. Siempre hace al menos un intento.
  */
 export async function pollConfirm<TOrder>(
   confirm: () => Promise<ConfirmResponse<TOrder>>,
-  options?: PollOptions,
+  options?: PollConfirmOptions<TOrder>,
 ): Promise<{ success: true; order: TOrder } | { success: false }> {
   const { intervalMs, timeoutMs, sleep, now } = resolveOptions(options);
+  const isRetryable = options?.isConfirmRetryable ?? isConfirmRetryable;
   const deadline = now() + timeoutMs;
   let firstAttempt = true;
 
@@ -78,7 +115,7 @@ export async function pollConfirm<TOrder>(
     if (confirmResult.success && confirmResult.data?.order) {
       return { success: true, order: confirmResult.data.order };
     }
-    if (confirmResult.code !== "confirm_in_progress") {
+    if (!isRetryable(confirmResult)) {
       return { success: false };
     }
     await sleep(intervalMs);

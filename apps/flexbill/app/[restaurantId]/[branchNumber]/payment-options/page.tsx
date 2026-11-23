@@ -13,7 +13,7 @@ import { useValidateAccess } from "@/app/hooks/useValidateAccess";
 import ValidationError from "@/app/components/ValidationError";
 import { useAgentStatus } from "@/app/hooks/useAgentStatus";
 import { useRestaurant } from "@/app/context/RestaurantContext";
-import POSBlockedModal from "@/app/components/POSBlockedModal";
+import { POSBlockedModal } from "@even/ui/diner";
 
 export default function PaymentOptionsPage() {
   const t = useTranslations("PaymentOptionsPage");
@@ -138,6 +138,11 @@ export default function PaymentOptionsPage() {
   const unpaidAmount =
     state.tableSummary?.data?.data?.remaining_amount ||
     unpaidDishes.reduce((sum, dish) => sum + (dish.total_price || 0), 0);
+
+  // Sin ningún platillo que quepa en lo que falta no se ofrece pagar por platillos
+  const someDishFits = unpaidDishes.some(
+    (dish) => (dish.total_price || 0) - unpaidAmount <= 0.01,
+  );
 
   // Versiones para mostrar en pantalla (comisión ya incrustada) — nunca se
   // usan para armar los montos que se mandan a tip-selection, solo para que
@@ -330,12 +335,12 @@ export default function PaymentOptionsPage() {
                       className="w-full bg-white border-b border-stroke animate-pulse"
                     >
                       <div className="flex items-center gap-3 md:gap-4 lg:gap-5 py-3 md:py-4 lg:py-5 px-4 md:px-5 lg:px-6">
-                        <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md bg-gray-200"></div>
+                        <div className="size-16 md:size-20 lg:size-24 rounded-sm md:rounded-md bg-tone-200"></div>
                         <div className="flex-1">
-                          <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
-                          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                          <div className="h-5 bg-tone-200 rounded w-3/4 mb-2"></div>
+                          <div className="h-4 bg-tone-200 rounded w-1/2"></div>
                         </div>
-                        <div className="size-5 md:size-6 lg:size-7 bg-gray-200 rounded"></div>
+                        <div className="size-5 md:size-6 lg:size-7 bg-tone-200 rounded"></div>
                       </div>
                     </div>
                   ))}
@@ -346,12 +351,12 @@ export default function PaymentOptionsPage() {
               <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="py-4 md:py-8 lg:py-12 space-y-2 md:space-y-3 animate-pulse">
                   <div className="flex justify-between items-center">
-                    <div className="h-6 bg-gray-200 rounded w-32"></div>
-                    <div className="h-6 bg-gray-200 rounded w-24"></div>
+                    <div className="h-6 bg-tone-200 rounded w-32"></div>
+                    <div className="h-6 bg-tone-200 rounded w-24"></div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <div className="h-5 bg-gray-200 rounded w-24"></div>
-                    <div className="h-5 bg-gray-200 rounded w-20"></div>
+                    <div className="h-5 bg-tone-200 rounded w-24"></div>
+                    <div className="h-5 bg-tone-200 rounded w-20"></div>
                   </div>
                 </div>
               </div>
@@ -410,7 +415,7 @@ export default function PaymentOptionsPage() {
                 )}
 
                 {/* Opción 2: Seleccionar platillos específicos (TODOS los items disponibles) */}
-                {unpaidDishes.length > 0 && (
+                {unpaidDishes.length > 0 && someDishFits && (
                   <button
                     onClick={handleSelectItems}
                     className="w-full bg-white cursor-pointer border-b border-stroke active:bg-even-grass/10 transition-all duration-300"

@@ -65,4 +65,6 @@ export interface MenuItemData {
   promoActivationId?: string | null;
   promoDiscountPercentage?: number | null;
   userDiscountId?: string | null;
+  // Línea con descuento personal: máximo de piezas (null = sin tope)
+  discountMaxQuantity?: number | null;
 }

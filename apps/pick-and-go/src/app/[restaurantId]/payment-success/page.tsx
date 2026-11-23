@@ -31,13 +31,13 @@ import {
   type PickAndGoItem,
   type PickAndGoOrder,
 } from "../../../services/pickandgo.service";
-import InvoiceModal from "../../../components/modals/InvoiceModal";
 import OrderNotificationModal from "@/components/modals/OrderNotificationModal";
 import { invoiceService } from "../../../services/invoice.service";
 import { ticketService } from "../../../services/ticket.service";
-import { lockScroll, unlockScroll } from "../../../utils/scrollLock";
-import { useModalBackClose } from "@/hooks/useModalBackClose";
-import ItemCustomizations from "@/components/ItemCustomizations";
+import { lockScroll, unlockScroll, useModalBackClose } from "@even/ui";
+import { ItemCustomizations, InvoiceModal } from "@even/ui/diner";
+import { AddLoyaltyCardButton } from "@even/ui/diner";
+import { walletCardService } from "@/services/walletCard.service";
 
 const ReorderModal = lazy(
   () => import("../../../components/modals/ReorderModal"),
@@ -280,7 +280,6 @@ export default function PaymentSuccessPage() {
             localStorage.removeItem("even-payment-intent");
             localStorage.removeItem("even-completed-payment");
 
-            // Clear all session data after successful payment
             clearGuestSession();
           }
         } catch (e) {
@@ -299,8 +298,10 @@ export default function PaymentSuccessPage() {
 
   const clearGuestSession = async () => {
     if (typeof window !== "undefined") {
-      // Use authService to clear all session data (auth + guest)
-      authService.clearAllSessionData();
+      // Solo invitados: con token hay cuenta y borrarla obligaba a re-login en el siguiente pedido.
+      if (!authService.getAccessToken()) {
+        authService.clearAllSessionData();
+      }
 
       // Also clear any additional payment-related data
       localStorage.removeItem("even-pending-payment");
@@ -603,10 +604,10 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-80 justify-center px-6 md:px-8 lg:px-10 flex-1">
+          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-96 justify-center px-6 md:px-8 lg:px-10 py-8 md:py-10 lg:py-12 flex-1">
             {/* Action Buttons */}
             <div
-              className="space-y-3 md:space-y-4 lg:space-y-5"
+              className="space-y-4 md:space-y-5 lg:space-y-6"
               style={{
                 paddingBottom: "max(0rem, env(safe-area-inset-bottom))",
               }}
@@ -635,7 +636,7 @@ export default function PaymentSuccessPage() {
               {restaurant?.billing_enabled !== false && (
                 <button
                   onClick={() => setIsInvoiceModalOpen(true)}
-                  className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-stone-100"
+                  className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-warm-100"
                 >
                   <FileText
                     className="size-5 md:size-6 lg:size-7"
@@ -645,10 +646,25 @@ export default function PaymentSuccessPage() {
                 </button>
               )}
 
+              {/* Tarjeta de lealtad: se pinta sola si el restaurante tiene
+                  programa activo. Va junto a Facturar y Ver ticket porque
+                  es el momento en que el comensal ya se identifico para
+                  pagar: la tarjeta nace ligada a su cuenta.
+
+                  El id sale de la URL y NO de `restaurant?.id`: ese objeto
+                  lo llena un contexto asincrono y vale null hasta que
+                  responde. Con null el boton no consultaba nada y se
+                  escondia en silencio — sin error, sin rastro. La ruta
+                  siempre trae el id. */}
+              <AddLoyaltyCardButton
+                restaurantId={parseInt(restaurantId, 10)}
+                walletCardService={walletCardService}
+              />
+
               {/* Ticket btn */}
               <button
                 onClick={() => setIsTicketModalOpen(true)}
-                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-stone-100"
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-warm-100"
               >
                 <Receipt
                   className="size-5 md:size-6 lg:size-7"
@@ -660,7 +676,7 @@ export default function PaymentSuccessPage() {
               {/* Status btn */}
               <button
                 onClick={() => setIsStatusModalOpen(true)}
-                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-stone-100"
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-warm-100"
               >
                 <Calendar
                   className="size-5 md:size-6 lg:size-7"
@@ -674,6 +690,7 @@ export default function PaymentSuccessPage() {
       </div>
 
       <InvoiceModal
+        invoiceService={invoiceService}
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
         transactionId={
@@ -746,8 +763,8 @@ export default function PaymentSuccessPage() {
                 <div className="space-y-2 md:space-y-3 lg:space-y-4">
                   {paymentDetails?.userName && (
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                      <div className="bg-warning-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-warning-600" />
                       </div>
                       <span className="text-sm md:text-base lg:text-lg">
                         {paymentDetails.userName}
@@ -755,8 +772,8 @@ export default function PaymentSuccessPage() {
                     </div>
                   )}
                   <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                    <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                    <div className="bg-info-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-info-600" />
                     </div>
                     <span className="text-sm md:text-base lg:text-lg">
                       {format.dateTime(orderCreatedAt || new Date(), {
@@ -768,7 +785,7 @@ export default function PaymentSuccessPage() {
                   </div>
                   {paymentDetails?.cardLast4 && (
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-green-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                      <div className="bg-positive-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
                         <div className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center scale-150">
                           {getCardTypeIcon(
                             paymentDetails.cardBrand || "unknown",
@@ -917,9 +934,9 @@ export default function PaymentSuccessPage() {
                 </h3>
                 <button
                   onClick={() => setIsBreakdownModalOpen(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                  className="p-1 hover:bg-tone-100 rounded-full transition-colors cursor-pointer"
                 >
-                  <X className="size-5 md:size-6 lg:size-7 text-gray-500" />
+                  <X className="size-5 md:size-6 lg:size-7 text-tone-500" />
                 </button>
               </div>
             </div>
@@ -1089,7 +1106,7 @@ export default function PaymentSuccessPage() {
                               </span>
                             </div>
                             {extraMinutesAdded > 0 && (
-                              <span className="text-xs font-medium text-green-300 bg-green-500/20 border border-green-400/30 px-2 py-0.5 rounded-full">
+                              <span className="text-xs font-medium text-positive-300 bg-positive-500/20 border border-positive-400/30 px-2 py-0.5 rounded-full">
                                 {tc("extraMinutes", {
                                   minutes: extraMinutesAdded,
                                 })}
@@ -1106,17 +1123,17 @@ export default function PaymentSuccessPage() {
               <div className="px-6 md:px-8 lg:px-10 mb-4 md:mb-5 lg:mb-6">
                 <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
-                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-green-200">
-                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-green-600" />
+                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-positive-200">
+                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-positive-600" />
                     </div>
-                    <span className="text-xs md:text-sm font-medium text-green-100">
+                    <span className="text-xs md:text-sm font-medium text-positive-100">
                       {tc("statusPreparing")}
                     </span>
                   </div>
 
                   <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-white to-green-200"
+                      className="h-full rounded-full bg-gradient-to-r from-white to-positive-200"
                       style={{
                         width: (() => {
                           if (
@@ -1144,7 +1161,7 @@ export default function PaymentSuccessPage() {
                           "preparing") === "ready" ||
                         (activeOrder?.pick_and_go_order?.cooking_status ??
                           "preparing") === "delivered"
-                          ? "bg-green-100 border border-green-100"
+                          ? "bg-positive-100 border border-positive-100"
                           : "bg-white/10"
                       }`}
                     >
@@ -1154,7 +1171,7 @@ export default function PaymentSuccessPage() {
                             "preparing") === "ready" ||
                           (activeOrder?.pick_and_go_order?.cooking_status ??
                             "preparing") === "delivered"
-                            ? "text-green-600"
+                            ? "text-positive-600"
                             : "text-white"
                         }`}
                       />
@@ -1165,7 +1182,7 @@ export default function PaymentSuccessPage() {
                           "preparing") === "ready" ||
                         (activeOrder?.pick_and_go_order?.cooking_status ??
                           "preparing") === "delivered"
-                          ? "text-green-100"
+                          ? "text-positive-100"
                           : "text-white/60"
                       }`}
                     >
@@ -1178,7 +1195,7 @@ export default function PaymentSuccessPage() {
                       className={`h-full rounded-full transition-all duration-500 ${
                         (activeOrder?.pick_and_go_order?.cooking_status ??
                           "preparing") === "delivered"
-                          ? "w-full bg-gradient-to-r from-green-200 to-green-300"
+                          ? "w-full bg-gradient-to-r from-positive-200 to-positive-300"
                           : "w-0"
                       }`}
                     ></div>
@@ -1190,7 +1207,7 @@ export default function PaymentSuccessPage() {
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
                         (activeOrder?.pick_and_go_order?.cooking_status ??
                           "preparing") === "delivered"
-                          ? "bg-green-200 border border-green-300"
+                          ? "bg-positive-200 border border-positive-300"
                           : "bg-white/10"
                       }`}
                     >
@@ -1198,7 +1215,7 @@ export default function PaymentSuccessPage() {
                         className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
                           (activeOrder?.pick_and_go_order?.cooking_status ??
                             "preparing") === "delivered"
-                            ? "text-green-800"
+                            ? "text-positive-800"
                             : "text-white"
                         }`}
                         fill="currentColor"
@@ -1215,7 +1232,7 @@ export default function PaymentSuccessPage() {
                       className={`text-xs md:text-sm font-medium ${
                         (activeOrder?.pick_and_go_order?.cooking_status ??
                           "preparing") === "delivered"
-                          ? "text-green-100"
+                          ? "text-positive-100"
                           : "text-white/60"
                       }`}
                     >
@@ -1259,7 +1276,7 @@ export default function PaymentSuccessPage() {
                     >
                       {showImages && (
                         <div className="flex-shrink-0">
-                          <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden">
+                          <div className="size-16 md:size-20 lg:size-24 bg-tone-300 rounded-sm flex items-center justify-center overflow-hidden">
                             {dish.images?.[0] ? (
                               <img
                                 src={dish.images[0]}

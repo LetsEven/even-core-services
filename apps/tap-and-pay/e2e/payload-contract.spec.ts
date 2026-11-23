@@ -79,6 +79,8 @@ test("POST /payments, pay-amount y /payment-transactions: base y propina reales,
     guestId: expect.anything(),
     guestName: expect.anything(),
     paymentSource: null,
+    // even-backend #542: el cargo que respalda el abono (el mismo de /payment-transactions).
+    ecartpay_order_id: "pay_e2e_1",
   });
   const record = calls.find((c) => c.path === "/payment-transactions");
   expect(record?.body).toEqual({

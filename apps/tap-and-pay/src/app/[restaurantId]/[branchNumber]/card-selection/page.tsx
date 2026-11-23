@@ -15,9 +15,7 @@ import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/app/utils/cardIcons";
 import { useMsiConfig } from "@/app/hooks/useMsiConfig";
 import { useModalBackClose } from "@/app/hooks/useModalBackClose";
-import {
-  clearStoredPaymentIntent,
-} from "@/app/utils/paymentIdempotency";
+import { clearStoredPaymentIntent } from "@/app/utils/paymentIdempotency";
 import { useTranslations } from "next-intl";
 import {
   buildChargeRequest,
@@ -138,7 +136,6 @@ export default function CardSelectionPage() {
   const [confirmedPaymentId, setConfirmedPaymentId] = useState<string | null>(
     null,
   );
-
 
   // Establecer restaurantId y branchNumber desde los path params
   useEffect(() => {
@@ -530,6 +527,14 @@ export default function CardSelectionPage() {
         chargeSucceeded = true;
       }
 
+      // Cargo que respalda el abono: el backend lo verifica con EcartPay
+      // (even-backend #542). La tarjeta del sistema no genera cargo.
+      const abonoEcartpayOrderId = isApplePayProcessing
+        ? applePayPaymentId
+        : isGooglePayProcessing
+          ? googlePayPaymentId
+          : chargeEcartpayOrderId;
+
       // Ejecutar el pago según el tipo (incluyendo tarjeta del sistema). A
       // partir de acá el cargo ya se concretó (chargeSucceeded=true) — un
       // error de aquí en adelante no puede tratarse como "no se cobró".
@@ -546,6 +551,7 @@ export default function CardSelectionPage() {
             : isGooglePayProcessing
               ? "google_pay"
               : null,
+          ecartpayOrderId: abonoEcartpayOrderId,
         });
       } else if (paymentType === "equal-shares") {
         await paymentService.paySplitAmount({
@@ -561,6 +567,7 @@ export default function CardSelectionPage() {
             : isGooglePayProcessing
               ? "google_pay"
               : null,
+          ecartpayOrderId: abonoEcartpayOrderId,
         });
       } else if (
         paymentType === "full-bill" ||
@@ -585,6 +592,7 @@ export default function CardSelectionPage() {
             : isGooglePayProcessing
               ? "google_pay"
               : null,
+          ecartpayOrderId: abonoEcartpayOrderId,
         });
       }
 
@@ -1338,8 +1346,10 @@ export default function CardSelectionPage() {
                         return (
                           <>
                             {availableOptions.map((option) => {
-                              const totalWithCommission =
-                                computeMsiTotal(totalAmountCharged, option.rate);
+                              const totalWithCommission = computeMsiTotal(
+                                totalAmountCharged,
+                                option.rate,
+                              );
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 

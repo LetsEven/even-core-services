@@ -1,8 +1,10 @@
 # @even/crew-auth
 
+> **Temporal.** Sustituye a Clerk en Crew por ahora (dev/staging); la idea es volver a Clerk y retirar este servicio. Plan, inventario de lo que se borra y lo que se queda: [`docs/crew-auth-vuelta-a-clerk.md`](../../docs/crew-auth-vuelta-a-clerk.md).
+
 Servicio de autenticacion de Crew (roles y PIN por persona), independiente de Clerk. Hono + SQLite (better-sqlite3, WAL) + `jose` (JWT EdDSA) + scrypt de `node:crypto`. Node >= 22.
 
-Contrato: `crew-auth-spec.md` (Crew Auth independiente e intercambiable). Los permisos por rol viven en un unico archivo: `src/auth/roles.ts`.
+Contrato: este README (endpoints, tokens, lockout). Los permisos por rol viven en un unico archivo: `src/auth/roles.ts`.
 
 ## Correr en local
 

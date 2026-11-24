@@ -68,7 +68,7 @@ describe("tarifa por servicio", () => {
     },
   );
 
-  it.each(["tap-order-and-pay", "flex-bill", "tap-and-pay"])(
+  it.each(["tap-order-and-pay", "flex-bill", "tap-and-pay", "retail"])(
     "%s: 4%% restaurante y el cliente no paga comisión",
     (service) => {
       expect(getCommissionRates(100, service)).toEqual(SOLO_RESTAURANTE);

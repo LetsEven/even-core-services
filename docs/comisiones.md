@@ -9,6 +9,7 @@ Even cobra una tarifa plana del **4 %** sobre consumo + propina (más 16 % de IV
 | Tap Order & Pay | `tap-order-and-pay` | 4 % | 0 % | No |
 | FlexBill | `flex-bill` | 4 % | 0 % | No |
 | Tap & Pay | `tap-and-pay` | 4 % | 0 % | No |
+| Retail | `retail` | 4 % | 0 % | No (y sin propina) |
 
 Un servicio que no está en la tabla (o sin `service`) usa el reparto por defecto 2 % / 2 %.
 
@@ -25,6 +26,7 @@ Un servicio que no está en la tabla (o sin `service`) usa el reparto por defect
 | Room Service | `apps/room-service/src/utils/commissionCalculator.ts` |
 | Tap Order & Pay | `apps/tap-order-pay/src/utils/commissionCalculator.ts` |
 | Tap & Pay | `apps/tap-and-pay/src/app/utils/commissionCalculator.ts` |
+| Retail | `apps/retail/src/app/utils/commissionCalculator.ts` |
 | FlexBill | `apps/flexbill/app/utils/commissionCalculator.ts` |
 
 ## Cómo se calcula

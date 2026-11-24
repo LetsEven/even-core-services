@@ -74,6 +74,8 @@ export interface ProcessPaymentRequest {
   // Tap & Pay: identifican la orden (tap_pay_orders) para que el servidor
   // recalcule el monto en vez de cobrar el que manda el cliente. Opcionales.
   id_tap_pay_order?: string;
+  // Retail: el servidor cobra el total de la orden (retail_orders).
+  id_retail_order?: string;
 }
 
 /** Respuesta de POST /payments cuando el cobro se hizo (o se re-jugó). */
@@ -102,6 +104,8 @@ export interface WalletOrderRequest {
   // Tap & Pay: identifican la orden (tap_pay_orders) para que el servidor
   // recalcule el monto en vez de cobrar el que manda el cliente. Opcionales.
   id_tap_pay_order?: string;
+  // Retail: el servidor cobra el total de la orden (retail_orders).
+  id_retail_order?: string;
   payment_type?: string;
   selected_item_ids?: string[];
 }

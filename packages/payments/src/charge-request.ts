@@ -12,6 +12,8 @@ export interface ChargeOrderRef {
   id_table_order?: string | null;
   /** Tap & Pay: tap_pay_orders. */
   id_tap_pay_order?: string;
+  /** Retail: retail_orders (se cobra completa). */
+  id_retail_order?: string;
   payment_type?: string;
   selected_item_ids?: string[];
 }

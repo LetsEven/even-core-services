@@ -23,6 +23,8 @@ export interface TransactionOrderRef {
   id_tap_orders_and_pay?: string | null;
   /** Tap & Pay. */
   id_tap_pay_order?: string | null;
+  /** Retail. */
+  id_retail_order?: string | null;
   payment_type?: string;
   selected_item_ids?: string[];
 }

@@ -43,7 +43,8 @@ export type CommissionService =
   | "room-service"
   | "tap-order-and-pay"
   | "tap-and-pay"
-  | "flex-bill";
+  | "flex-bill"
+  | "retail";
 
 /** IVA vigente en México (16 %) como fracción. Espejo de even-backend/src/config/fiscal.js. */
 export const IVA_RATE = 0.16;
@@ -76,6 +77,7 @@ export const SERVICE_COMMISSION_RATES: Partial<
   "tap-order-and-pay": SOLO_RESTAURANTE,
   "flex-bill": SOLO_RESTAURANTE,
   "tap-and-pay": SOLO_RESTAURANTE,
+  retail: SOLO_RESTAURANTE,
 };
 
 // Alias que acepta el backend para el mismo servicio.

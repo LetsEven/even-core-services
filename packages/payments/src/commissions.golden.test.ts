@@ -107,8 +107,8 @@ describe("regla 4: subtotal + propina mostrados suman el total", () => {
 });
 
 describe("la tabla de tarifas es la única fuente", () => {
-  it("solo TOP, FB y TP están en SERVICE_COMMISSION_RATES (PG/RS usan el default 2/2)", () => {
-    expect(Object.keys(SERVICE_COMMISSION_RATES).sort()).toEqual(["flex-bill", "tap-and-pay", "tap-order-and-pay"]);
+  it("solo TOP, FB, TP y Retail están en SERVICE_COMMISSION_RATES (PG/RS usan el default 2/2)", () => {
+    expect(Object.keys(SERVICE_COMMISSION_RATES).sort()).toEqual(["flex-bill", "retail", "tap-and-pay", "tap-order-and-pay"]);
   });
 });
 

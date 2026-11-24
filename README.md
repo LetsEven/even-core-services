@@ -1,6 +1,6 @@
 # Even Checkout Core
 
-Monorepo de las apps de cliente de Even (Tap & Pay, Tap Order & Pay, Pick & Go, Room Service y FlexBill).
+Monorepo de las apps de cliente de Even (Tap & Pay, Tap Order & Pay, Pick & Go, Room Service, FlexBill y Retail).
 Cada app se despliega por separado, pero todas comparten el mismo núcleo de checkout y pagos.
 
 ## Estructura
@@ -13,6 +13,7 @@ apps/
   pick-and-go/        Pick & Go (migrada desde LetsEven/even-pick-and-go)
   tap-and-pay/        Tap & Pay (migrada desde LetsEven/even-tap-and-pay)
   flexbill/           FlexBill: dividir y pagar la cuenta de la mesa (migrada desde LetsEven/even-flexbill)
+  retail/             Retail: el QR permanente de la sucursal muestra la orden que da de alta crew y se paga completa
 packages/
   payments/           @even/payments    Flujo de pago con Ecart Pay, tarjetas, Apple Pay, CardScanner
   api-client/         @even/api-client  Cliente HTTP tipado para even-backend

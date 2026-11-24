@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@import "@even/ui/theme.css";
+@import "@even/ui/diner.css";
+
+/* Fixed: starts fully opaque at tiny scale — avoids blend with white background */
+@keyframes expand-green-from-logo {
+  0% {
+    transform: scale(0.01);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(50);
+    opacity: 1;
+  }
+}
+
+/* Modal slide animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDownModal {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.animate-slide-up-modal {
+  animation: slideUp 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animated_checkmark svg {
+  width: 100px;
+  display: block;
+  margin: 40px auto 0;
+}
+.animated_checkmark .path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 0;
+}
+.animated_checkmark .path.circle {
+  -webkit-animation: dash 0.9s ease-in-out;
+  animation: dash 0.9s ease-in-out;
+}
+.animated_checkmark .path.line {
+  stroke-dashoffset: 1000;
+  -webkit-animation: dash 0.9s 0.35s ease-in-out forwards;
+  animation: dash 0.9s 0.35s ease-in-out forwards;
+}
+.animated_checkmark .path.check {
+  stroke-dashoffset: -100;
+  -webkit-animation: dash-check 0.9s 0.35s ease-in-out forwards;
+  animation: dash-check 0.9s 0.35s ease-in-out forwards;
+}
+
+@-webkit-keyframes dash {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes dash {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@-webkit-keyframes dash-check {
+  0% {
+    stroke-dashoffset: -100;
+  }
+  100% {
+    stroke-dashoffset: 900;
+  }
+}
+@keyframes dash-check {
+  0% {
+    stroke-dashoffset: -100;
+  }
+  100% {
+    stroke-dashoffset: 900;
+  }
+}
+
+@layer components {
+  .myradio {
+    @apply w-4 h-4 bg-tone-100 border border-tone-300 rounded-full cursor-pointer;
+    @apply focus:outline-none;
+    @apply checked:bg-even-grass checked:border-transparent;
+    @apply appearance-none relative;
+  }
+
+  .myradio:checked::before {
+    content: "";
+    @apply absolute inset-0 m-auto w-1.5 h-1.5 bg-white rounded-full;
+  }
+}
+
+/* Fix para inputs en Safari/iOS - evita deformación y zoom */
+input,
+select,
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 0.5rem;
+  font-size: 16px;
+}
+
+input[type="date"] {
+  -webkit-appearance: none;
+  min-height: 48px;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2.22 4.47a.75.75 0 0 1 1.06 0L6 7.19l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L2.22 5.53a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-button,
+  .animate-bounce-in,
+  .circle-animation,
+  .green-circle-from-logo,
+  .pulse-ring,
+  .animate-fade-in,
+  .animate-simple-fade-in,
+  .animate-slide-up,
+  .animate-logo-fade-in {
+    animation: none;
+  }
+}

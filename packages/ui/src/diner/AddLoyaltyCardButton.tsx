@@ -34,9 +34,12 @@ import {
 export default function AddLoyaltyCardButton({
   restaurantId,
   walletCardService,
+  pagoId,
 }: {
   restaurantId: number | null | undefined;
   walletCardService: WalletCardService;
+  /** El pago de esta pantalla: al agregar la tarjeta, esa orden cuenta. */
+  pagoId?: string | null;
 }) {
   const t = useTranslations("LoyaltyCard");
 
@@ -71,7 +74,7 @@ export default function AddLoyaltyCardButton({
     setEmitiendo(true);
 
     try {
-      const { saveUrl } = await walletCardService.emitir(restaurantId);
+      const { saveUrl } = await walletCardService.emitir(restaurantId, pagoId);
 
       // Un `window.open` aquí lo come el bloqueador de ventanas emergentes
       // de iOS, porque para entonces el clic ya no es "reciente". Navegar
@@ -89,7 +92,7 @@ export default function AddLoyaltyCardButton({
     } finally {
       setEmitiendo(false);
     }
-  }, [restaurantId, walletCardService, t]);
+  }, [restaurantId, walletCardService, pagoId, t]);
 
   if (!disponible?.puede) return null;
 

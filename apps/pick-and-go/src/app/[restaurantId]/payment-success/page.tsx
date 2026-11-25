@@ -659,6 +659,9 @@ export default function PaymentSuccessPage() {
               <AddLoyaltyCardButton
                 restaurantId={parseInt(restaurantId, 10)}
                 walletCardService={walletCardService}
+                pagoId={
+                  paymentDetails?.transactionId || paymentDetails?.paymentId || paymentId
+                }
               />
 
               {/* Ticket btn */}

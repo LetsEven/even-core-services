@@ -69,12 +69,17 @@ export function createWalletCardService(requestWithAuth: Requester) {
       return res.success ? (res.data ?? null) : null;
     },
 
-    async emitir(restaurantId: number): Promise<TarjetaEmitida> {
+    /** `pagoId`: el pago de esta pantalla, que cuenta aunque haya sido de invitado. */
+    async emitir(
+      restaurantId: number,
+      pagoId?: string | null,
+    ): Promise<TarjetaEmitida> {
       const res = await requestWithAuth<TarjetaEmitida>("/loyalty/wallet/pase", {
         method: "POST",
         body: JSON.stringify({
           restaurant_id: restaurantId,
           provider: esIOS() ? "apple" : "google",
+          ...(pagoId ? { payment_transaction_id: pagoId } : {}),
         }),
       });
 

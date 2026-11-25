@@ -17,7 +17,10 @@ export {
 
 const sharedPaymentService = createPaymentService(requestWithAuth);
 
-function request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+function request<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<ApiResponse<T>> {
   return requestWithAuth<T>(endpoint, options);
 }
 
@@ -32,6 +35,8 @@ async function payDishOrder(params: {
   guestName?: string | null;
   tipAmount?: number;
   paymentSource?: string | null;
+  // Cargo de EcartPay que respalda el abono (even-backend #542); el backend lo verifica.
+  ecartpayOrderId?: string | null;
 }): Promise<ApiResponse<unknown>> {
   return request(`/tap-pay/dishes/${params.dishId}/pay`, {
     method: "POST",
@@ -42,6 +47,7 @@ async function payDishOrder(params: {
       guestName: params.guestName,
       tipAmount: params.tipAmount ?? 0,
       paymentSource: params.paymentSource ?? null,
+      ecartpay_order_id: params.ecartpayOrderId ?? undefined,
     }),
   });
 }
@@ -55,6 +61,8 @@ async function paySelectedDishes(params: {
   guestName?: string | null;
   tipAmount?: number;
   paymentSource?: string | null;
+  // Cargo de EcartPay que respalda el abono (even-backend #542); el backend lo verifica.
+  ecartpayOrderId?: string | null;
 }): Promise<ApiResponse<unknown>> {
   for (const [i, dishId] of params.dishIds.entries()) {
     try {
@@ -67,6 +75,7 @@ async function paySelectedDishes(params: {
         guestName: params.guestName,
         tipAmount: i === 0 ? (params.tipAmount ?? 0) : 0,
         paymentSource: params.paymentSource ?? null,
+        ecartpayOrderId: params.ecartpayOrderId,
       });
     } catch (error) {
       console.error(`Error paying dish ${dishId}:`, error);
@@ -87,6 +96,8 @@ async function payOrderAmount(params: {
   guestName?: string | null;
   paymentMethodId: string | null;
   paymentSource?: string | null;
+  // Cargo de EcartPay que respalda el abono (even-backend #542); el backend lo verifica.
+  ecartpayOrderId?: string | null;
 }): Promise<ApiResponse<unknown>> {
   return request(`/tap-pay/orders/${params.orderId}/pay-amount`, {
     method: "POST",
@@ -97,6 +108,7 @@ async function payOrderAmount(params: {
       guestId: params.guestId,
       guestName: params.guestName,
       paymentSource: params.paymentSource ?? null,
+      ecartpay_order_id: params.ecartpayOrderId ?? undefined,
     }),
   });
 }
@@ -112,6 +124,8 @@ async function paySplitAmount(params: {
   guestName?: string | null;
   paymentMethodId: string | null;
   paymentSource?: string | null;
+  // Cargo de EcartPay que respalda el abono (even-backend #542); el backend lo verifica.
+  ecartpayOrderId?: string | null;
 }): Promise<ApiResponse<unknown>> {
   return request(`/tap-pay/orders/${params.orderId}/pay-split`, {
     method: "POST",
@@ -122,6 +136,7 @@ async function paySplitAmount(params: {
       guestId: params.guestId,
       guestName: params.guestName,
       paymentSource: params.paymentSource ?? null,
+      ecartpay_order_id: params.ecartpayOrderId ?? undefined,
     }),
   });
 }

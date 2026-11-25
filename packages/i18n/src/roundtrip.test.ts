@@ -27,13 +27,33 @@ const LOCALES = ["es", "en"] as const;
 const readOwn = (app: string, locale: string): Messages =>
   JSON.parse(readFileSync(resolve(REPO_ROOT, APPS[app], "messages", `${locale}.json`), "utf8"));
 
+/**
+ * Textos que cambiaron a propósito después de `BASE_COMMIT` (app -> namespace -> clave -> texto por idioma).
+ * Cualquier otra diferencia sigue siendo un error de la migración.
+ */
+const CAMBIOS_INTENCIONALES: Record<string, Record<string, Record<string, Record<string, string>>>> = {
+  // Dividir la cuenta ahora parte del total de la mesa, ya no de "lo que falta".
+  flexbill: { TipSelectionPage: { splitTitle: { es: "Divide la cuenta", en: "Split the bill" } } },
+  "tap-and-pay": { TipSelectionPage: { splitTitle: { es: "Divide la cuenta", en: "Split the bill" } } },
+};
+
+function aplicarCambiosIntencionales(base: Messages, app: string, locale: string): Messages {
+  const out = structuredClone(base) as Record<string, Record<string, unknown>>;
+  for (const [ns, claves] of Object.entries(CAMBIOS_INTENCIONALES[app] ?? {})) {
+    for (const [clave, porIdioma] of Object.entries(claves)) {
+      if (out[ns] && clave in out[ns]) out[ns][clave] = porIdioma[locale];
+    }
+  }
+  return out as Messages;
+}
+
 function readBase(app: string, locale: string): Messages {
   const out = execFileSync("git", ["show", `${BASE_COMMIT}:${APPS[app]}/messages/${locale}.json`], {
     cwd: REPO_ROOT,
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
   });
-  return JSON.parse(out);
+  return aplicarCambiosIntencionales(JSON.parse(out), app, locale);
 }
 
 function baseAvailable(): boolean {
@@ -79,9 +99,11 @@ describe.each(LOCALES)("mensajes compartidos (%s)", (locale) => {
       for (const [ns, value] of Object.entries(base)) {
         expect(pick(merged[ns], value), `${app}/${locale}: ${ns}`).toEqual(value);
       }
-      // Lo único extra son namespaces compartidos que esa app no tenía (nadie los lee ahí).
+      // Lo único extra son namespaces compartidos que esa app no tenía (nadie los lee ahí) o namespaces
+      // propios nuevos de funciones posteriores a la migración.
+      const own = readOwn(app, locale);
       const extras = Object.keys(merged).filter((ns) => !(ns in base));
-      expect(extras.every((ns) => ns in shared)).toBe(true);
+      expect(extras.every((ns) => ns in shared || ns in own)).toBe(true);
       expect(Object.keys(merged).sort()).toEqual([...Object.keys(base), ...extras].sort());
     });
   });
